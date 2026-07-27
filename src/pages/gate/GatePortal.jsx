@@ -53,7 +53,7 @@ export const GatePortal = () => {
     return (
       <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center p-4">
         <div className="bg-[#121212] border border-neutral-800 p-6 rounded text-center space-y-2">
-          <p className="font-black text-sm uppercase tracking-wider text-brand-green">MEMUAT GATE PORTAL VENUE...</p>
+          <p className="font-black text-sm uppercase tracking-wider text-brand-green">MEMUAT GATE VENUE...</p>
         </div>
       </div>
     );
@@ -86,7 +86,7 @@ export const GatePortal = () => {
           <div className="flex items-center space-x-2">
             <Badge variant="purple" className="text-[9px] px-1.5 py-0 flex items-center gap-1">
               <ShieldCheck className="w-3 h-3" />
-              <span>PORTAL VENUE</span>
+              <span>POS GATE VENUE</span>
             </Badge>
             <Badge variant="green" className="text-[9px] px-1.5 py-0">● GATE ONLINE</Badge>
           </div>

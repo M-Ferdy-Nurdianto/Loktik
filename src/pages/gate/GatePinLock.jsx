@@ -24,7 +24,7 @@ export const GatePinLock = ({ eventName, correctPin = '1029', onSuccess }) => {
         <div className="border-b border-neutral-800 pb-4 space-y-2">
           <div className="flex items-center space-x-2">
             <Badge variant="purple" className="text-[9px] px-2 py-0.5">
-              SECURITY GATE PORTAL
+              POS GATE VENUE
             </Badge>
           </div>
           <h1 className="text-2xl font-black uppercase tracking-tight text-white leading-none">
@@ -63,7 +63,7 @@ export const GatePinLock = ({ eventName, correctPin = '1029', onSuccess }) => {
 
           <Button type="submit" variant="green" fullWidth className="py-3.5 text-sm font-black justify-center">
             <Check className="w-5 h-5 mr-2" />
-            <span>MASUK PORTAL VENUE</span>
+            <span>MASUK GATE VENUE</span>
           </Button>
         </form>
 

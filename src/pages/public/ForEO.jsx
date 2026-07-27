@@ -10,16 +10,34 @@ export const ForEO = () => {
 
   const pricingTiers = [
     {
-      name: 'PAKET DIRECT TIKET',
-      price: 'Rp0 (0% KOMISI)',
-      subtitle: 'Duit Tiket 100% Utuh Masuk ke Rekening / QRIS Panitia',
+      name: 'PAKET 3 BULAN',
+      price: 'Rp250.000',
+      period: '/ 3 Bulan',
+      badge: 'BISA SEMUA EVENT',
+      subtitle: 'Akses Bebas Jualan Tiket 0% Komisi Selama 3 Bulan',
       features: [
         '0% Potongan Komisi Per Tiket',
-        'Transfer Direct ke Rekening / QRIS Panitia',
-        'Gate Portal & Realtime Scanner HP Staf',
+        'Direct Transfer ke Rekening / QRIS Panitia',
+        'Unlimited Bikin Event & Kategori Tiket',
+        'Gate Venue & Realtime Scanner HP Staf',
         'Kasir OTS Venue Fast-Issue Direct',
-        'Fitur Emergency Guest List Check-in',
-        'Akses Banyak HP Staf Tanpa Batas',
+        'Emergency Guest List & Multi-Device Staf',
+      ],
+      highlight: false,
+    },
+    {
+      name: 'PAKET 1 TAHUN (PROMO)',
+      price: 'Rp500.000',
+      period: '/ 1 Tahun',
+      badge: 'PROMO HEMAT 50%',
+      subtitle: 'Paket Hemat Bebas Jualan Tiket Selama 1 Tahun Penuh',
+      features: [
+        '0% Potongan Komisi Per Tiket',
+        'Direct Transfer ke Rekening / QRIS Panitia',
+        'Unlimited Bikin Event & Kategori Tiket',
+        'Gate Venue & Realtime Scanner HP Staf',
+        'Kasir OTS Venue Fast-Issue Direct',
+        'Emergency Guest List & Multi-Device Staf',
       ],
       highlight: true,
     },
@@ -36,7 +54,7 @@ export const ForEO = () => {
     },
     {
       title: '3. AMAN BUAT STAF VENUE (GATE PIN)',
-      desc: 'Kamu bisa share link Gate Portal (/gate/slug-event) dan PIN 1029 ke panitia pintu masuk atau kasir OTS tanpa takut password akun utama EO kamu ketahuan.',
+      desc: 'Kamu bisa share link Gate Venue (/gate/slug-event) dan PIN 1029 ke panitia pintu masuk atau kasir OTS tanpa takut password akun utama EO kamu ketahuan.',
     },
     {
       title: '4. PENUKARAN GELANG & PROTEKSI SCAN',
@@ -45,10 +63,10 @@ export const ForEO = () => {
   ];
 
   const steps = [
-    { num: '01', title: 'LOGIN AKUN EO', desc: 'Masuk ke portal panitia pake akun EO kamu.' },
+    { num: '01', title: 'LOGIN AKUN EO', desc: 'Masuk ke dashboard panitia pake akun EO kamu.' },
     { num: '02', title: 'INPUT DETAIL EVENT', desc: 'Upload poster, set QRIS / No Rekening, terus bikin tier tiket.' },
     { num: '03', title: 'SHARE LINK TIKET', desc: 'Sebar link event-mu, pembeli langsung transfer direct ke panitia.' },
-    { num: '04', title: 'SCAN AT VENUE', desc: 'Kasih link Gate Portal & PIN 1029 ke tim pintu masuk & kasir OTS.' },
+    { num: '04', title: 'SCAN AT VENUE', desc: 'Kasih link Gate Venue & PIN 1029 ke tim pintu masuk & kasir OTS.' },
   ];
 
   return (
@@ -74,24 +92,54 @@ export const ForEO = () => {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {pricingTiers.map((tier, idx) => (
-            <Card key={idx} variant="dark" className="p-6 border-brand-green/40 bg-neutral-900/80 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-800 pb-4">
+            <Card
+              key={idx}
+              variant="dark"
+              className={`p-6 border flex flex-col justify-between space-y-4 ${
+                tier.highlight
+                  ? 'border-brand-green/60 bg-gradient-to-b from-[#141d14] to-[#121212] shadow-[0_0_20px_rgba(57,255,20,0.15)]'
+                  : 'border-neutral-800 bg-[#121212]'
+              }`}
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+                  <Badge variant={tier.highlight ? 'green' : 'purple'} className="text-[9px] px-2 py-0.5">
+                    {tier.badge}
+                  </Badge>
+                  <span className="text-[10px] font-mono text-neutral-500 font-bold uppercase">BERLANGGANAN</span>
+                </div>
+
                 <div>
                   <h3 className="text-lg font-black uppercase text-white">{tier.name}</h3>
-                  <p className="text-xs text-neutral-400">{tier.subtitle}</p>
+                  <div className="flex items-baseline space-x-1 mt-1">
+                    <span className="text-3xl font-black font-mono text-brand-green">{tier.price}</span>
+                    <span className="text-xs font-mono text-neutral-400">{tier.period}</span>
+                  </div>
+                  <p className="text-xs text-neutral-400 font-medium mt-1 leading-relaxed">{tier.subtitle}</p>
                 </div>
-                <div className="text-2xl font-black font-mono text-brand-green">{tier.price}</div>
+
+                <div className="space-y-2 pt-2 border-t border-neutral-800">
+                  {tier.features.map((feat, fIdx) => (
+                    <div key={fIdx} className="flex items-center space-x-2 text-xs font-bold text-neutral-300">
+                      <CheckCircle2 className="w-4 h-4 text-brand-green shrink-0" />
+                      <span>{feat}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
-                {tier.features.map((feat, fIdx) => (
-                  <div key={fIdx} className="flex items-center space-x-2 text-xs font-bold text-neutral-300">
-                    <CheckCircle2 className="w-4 h-4 text-brand-green shrink-0" />
-                    <span>{feat}</span>
-                  </div>
-                ))}
+              <div className="pt-4">
+                <Button
+                  variant={tier.highlight ? 'green' : 'purple'}
+                  fullWidth
+                  size="md"
+                  onClick={() => navigate('/eo/login')}
+                  className="font-black justify-center"
+                >
+                  PILIH {tier.name}
+                </Button>
               </div>
             </Card>
           ))}
@@ -139,10 +187,10 @@ export const ForEO = () => {
       <Card variant="dark" className="p-8 space-y-4 border-brand-green/40 bg-gradient-to-r from-neutral-950 via-neutral-900 to-black text-center">
         <h2 className="text-2xl font-black uppercase text-white">MAU BIKIN EVENT SEKARANG?</h2>
         <p className="text-xs text-neutral-400 max-w-lg mx-auto font-medium">
-          Masuk ke portal panitia, bikin event-mu, dan langsung jualan tiket tanpa potongan biaya komisi.
+          Masuk ke dashboard panitia, bikin event-mu, dan langsung jualan tiket tanpa potongan biaya komisi.
         </p>
         <Button variant="green" size="lg" onClick={() => navigate('/eo/login')} className="mx-auto px-8 font-black">
-          MASUK PORTAL EO / PANITIA <ArrowRight className="w-4 h-4 ml-2" />
+          MASUK DASHBOARD EO / PANITIA <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </Card>
     </div>
