@@ -71,13 +71,15 @@ export const createGuestOrder = async (orderPayload, items) => {
  * Fetch live orders for EO Dashboard with tickets scan status and EO data isolation.
  */
 export const getLiveOrdersForEo = async (eoUsername = null) => {
+  if (!eoUsername) return [];
+
   let targetEventIds = null;
 
-  if (eoUsername && eoUsername.toLowerCase() !== 'broferadm') {
+  if (eoUsername.toLowerCase() !== 'broferadm') {
     const { data: myEvents, error: evErr } = await supabase
       .from('events')
       .select('id')
-      .or(`created_by.eq.${eoUsername},created_by.is.null`);
+      .eq('created_by', eoUsername);
 
     if (evErr) throw new Error(evErr.message);
     targetEventIds = (myEvents || []).map((e) => e.id);

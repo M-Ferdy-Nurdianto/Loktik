@@ -24,7 +24,9 @@ export const getAllEventsForEo = async (eoUsername = null) => {
     .order('created_at', { ascending: false });
 
   if (eoUsername && eoUsername.toLowerCase() !== 'broferadm') {
-    query = query.or(`created_by.eq.${eoUsername},created_by.is.null`);
+    query = query.eq('created_by', eoUsername);
+  } else if (!eoUsername) {
+    return [];
   }
 
   const { data, error } = await query;
