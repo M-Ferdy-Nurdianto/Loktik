@@ -27,16 +27,16 @@ export const LandingPage = () => {
       <section className="relative pt-12 pb-16 border-b border-neutral-800 bg-gradient-to-b from-[#141414] via-[#0d0d0d] to-[#0a0a0a]">
         <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-6 text-center">
           <Badge variant="green" className="py-1 px-3 text-xs tracking-widest">
-            EXPLORE EVENT &amp; TIKET LOKAL
+            PLATFORM TIKET GIGS &amp; EVENT LOKAL
           </Badge>
 
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tighter uppercase leading-[0.95] text-white max-w-4xl mx-auto">
-            TEMUKAN &amp; BELI TIKET <br />
-            <span className="text-brand-green">EVENT FAVORITMU</span>
+            AMBIL TIKET EVENT <br />
+            <span className="text-brand-green">INDEPENDEN FAVORITMU</span>
           </h1>
 
           <p className="text-sm sm:text-base text-neutral-300 font-medium max-w-2xl mx-auto leading-relaxed">
-            Platform tiket resmi untuk konser, bazar UMKM, seminar, workshop, hingga acara komunitas. Pesan tiket langsung dari panitia tanpa biaya tambahan.
+            Langsung amankan tiket gigs, bazar, seminar, &amp; festival lokal. Direct transaksi ke panitia tanpa ribet, tanpa potongan biaya aneh-aneh.
           </p>
 
           {/* Event Search Input */}
@@ -47,7 +47,7 @@ export const LandingPage = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari nama event, artis, atau lokasi..."
+                placeholder="Cari gigs, nama event, atau venue..."
                 className="w-full pl-12 pr-4 py-3.5 bg-neutral-900 text-white font-medium text-sm rounded-lg border border-neutral-700 focus:outline-none focus:border-brand-green focus:ring-1 focus:ring-brand-green placeholder:text-neutral-500 shadow-lg"
               />
             </div>
@@ -59,10 +59,10 @@ export const LandingPage = () => {
       <section id="events" className="max-w-7xl mx-auto px-4 md:px-8 space-y-8">
         <div className="border-b border-neutral-800 pb-4">
           <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
-            DAFTAR EVENT AKTIF
+            GIGS &amp; EVENT PILIHAN
           </h2>
           <p className="text-xs text-neutral-400 font-semibold mt-1">
-            Pilih event dan pesan tiket resmi secara langsung
+            Pilih event kesukaanmu terus beli tiketnya direct dari panitia
           </p>
         </div>
 

@@ -7,10 +7,10 @@ export const TermsSection = () => {
     <section className="max-w-7xl mx-auto px-4 md:px-8 pt-8 space-y-6 text-left">
       <div className="border-b border-neutral-800 pb-4 space-y-1">
         <h2 className="text-2xl sm:text-3xl font-black uppercase text-white tracking-tight">
-          SYARAT &amp; KETENTUAN (S&amp;K)
+          SYARAT &amp; KETENTUAN (S&amp;K ATURAN MAIN)
         </h2>
         <p className="text-xs font-bold text-neutral-400 uppercase">
-          Ketentuan penggunaan tiket online LokTik bagi Pembeli &amp; Panitia Event.
+          Aturan main simpel buat pembeli &amp; panitia event di LokTik.
         </p>
       </div>
 
@@ -18,30 +18,30 @@ export const TermsSection = () => {
         <Card variant="dark" className="p-5 space-y-3 border-neutral-800">
           <div className="flex items-center space-x-2 text-brand-green">
             <ShieldCheck className="w-5 h-5" />
-            <h3 className="text-sm font-extrabold uppercase text-white">1. PERAN PLATFORM</h3>
+            <h3 className="text-sm font-extrabold uppercase text-white">1. SISTEM DIRECT PAYMENT</h3>
           </div>
           <p className="text-neutral-400 font-medium leading-relaxed">
-            LokTik adalah penyedia sistem tiket direct. Uang tiket ditransfer langsung ke rekening / QRIS Panitia Event (EO). LokTik tidak menahan dana Anda.
+            LokTik itu penyedia sistem tiket direct. Uang tiket langsung dikirim ke rekening/QRIS panitia acara. Duit kamu aman, nggak bakal ditahan platform.
           </p>
         </Card>
 
         <Card variant="dark" className="p-5 space-y-3 border-neutral-800">
           <div className="flex items-center space-x-2 text-brand-purple">
             <AlertTriangle className="w-5 h-5" />
-            <h3 className="text-sm font-extrabold uppercase text-white">2. TANGGUNG JAWAB EVENT</h3>
+            <h3 className="text-sm font-extrabold uppercase text-white">2. ACARA &amp; REFUND EVENT</h3>
           </div>
           <p className="text-neutral-400 font-medium leading-relaxed">
-            Pelaksanaan acara, artis, jam open gate, dan pengembalian dana (*refund*) merupakan tanggung jawab penuh Panitia Event (EO) bersangkutan.
+            Jalan acara, lineup artis, open gate, dan urusan refund misal acara batal itu 100% jadi ranah &amp; tanggung jawab panitia EO bersangkutan.
           </p>
         </Card>
 
         <Card variant="dark" className="p-5 space-y-3 border-neutral-800">
           <div className="flex items-center space-x-2 text-brand-blue">
             <FileText className="w-5 h-5" />
-            <h3 className="text-sm font-extrabold uppercase text-white">3. PENUKARAN TIKET</h3>
+            <h3 className="text-sm font-extrabold uppercase text-white">3. TIKET &amp; GELANG VENUE</h3>
           </div>
           <p className="text-neutral-400 font-medium leading-relaxed">
-            Satu (1) QR Code tiket berlaku untuk satu (1) kali scan di pintu masuk venue (*wristband exchange*). Tiket otomatis hangus setelah di-scan.
+            Satu QR Code tiket berlaku buat 1 kali scan pas ganti gelang di venue. Begitu beres di-scan, status tiket otomatis hangus biar gak dipake ulang.
           </p>
         </Card>
       </div>

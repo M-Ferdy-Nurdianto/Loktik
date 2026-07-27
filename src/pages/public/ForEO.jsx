@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Ticket, QrCode, Smartphone, Zap, ArrowRight, DollarSign, FileText, CheckCircle2, HelpCircle } from 'lucide-react';
+import { ShieldCheck, Ticket, QrCode, Smartphone, Zap, ArrowRight, DollarSign, FileText, CheckCircle2 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -12,14 +12,14 @@ export const ForEO = () => {
     {
       name: 'PAKET DIRECT TIKET',
       price: 'Rp0 (0% KOMISI)',
-      subtitle: '100% Hasil Penjualan Masuk ke Rekening EO',
+      subtitle: 'Duit Tiket 100% Utuh Masuk ke Rekening / QRIS Panitia',
       features: [
-        '0% Potongan Komisi Tiket Platform',
-        'Transfer Langsung ke Bank / QRIS Panitia',
-        'Gate Portal & Live Realtime Scanner HP',
+        '0% Potongan Komisi Per Tiket',
+        'Transfer Direct ke Rekening / QRIS Panitia',
+        'Gate Portal & Realtime Scanner HP Staf',
         'Kasir OTS Venue Fast-Issue Direct',
         'Fitur Emergency Guest List Check-in',
-        'Akses Multi-Device Tanpa Batas Staf',
+        'Akses Banyak HP Staf Tanpa Batas',
       ],
       highlight: true,
     },
@@ -27,28 +27,28 @@ export const ForEO = () => {
 
   const eoTerms = [
     {
-      title: '1. KEABSAHAN REKENING & DANA PEMBELI',
-      desc: 'Seluruh pembayaran tiket ditransfer langsung oleh Pembeli ke nomor rekening bank atau barcode QRIS milik Panitia Event (EO). LokTik tidak menampung, memotong, atau menahan dana tiket.',
+      title: '1. REKENING & DANA TIKET DIRECT',
+      desc: 'Pembayaran tiket langsung dikirim pembeli ke rekening bank atau QRIS panitia acara. LokTik nggak megang, nggak motong, dan nggak nahan duit tiket kamu.',
     },
     {
       title: '2. TANGGUNG JAWAB EVENT & REFUND',
-      desc: 'Panitia Event (EO) bertanggung jawab 100% atas pelaksanaan acara, jadwal open gate, keabsahan tiket, dan proses Pengembalian Dana (Refund) apabila terjadi penundaan atau pembatalan acara.',
+      desc: 'Panitia EO bertanggung jawab penuh atas jalan acara, jadwal venue, keabsahan tiket, dan proses refund misal acara ditunda atau batal.',
     },
     {
-      title: '3. KEAMANAN AKSES STAF VENUE (GATE PIN)',
-      desc: 'EO dapat membagikan tautan Gate Portal (/gate/slug-event) dan Event PIN (1029) kepada staf pintu masuk/kasir OTS tanpa perlu memberikan password akun utama EO.',
+      title: '3. AMAN BUAT STAF VENUE (GATE PIN)',
+      desc: 'Kamu bisa share link Gate Portal (/gate/slug-event) dan PIN 1029 ke panitia pintu masuk atau kasir OTS tanpa takut password akun utama EO kamu ketahuan.',
     },
     {
-      title: '4. PENUKARAN TIKET & BUKTI SCAN',
-      desc: 'Satu (1) QR Code tiket berlaku untuk satu (1) kali scan di lokasi venue. Tiket yang telah di-scan otomatis terkunci atomic (is_scanned = true) untuk mencegah tiket ganda.',
+      title: '4. PENUKARAN GELANG & PROTEKSI SCAN',
+      desc: 'Satu QR Code tiket cuma bisa di-scan 1 kali pas penukaran gelang di venue. Setelah di-scan, status tiket otomatis terkunci biar nggak bisa dipake ganda.',
     },
   ];
 
   const steps = [
-    { num: '01', title: 'LOGIN AKUN EO', desc: 'Masuk ke portal panitia melalui halaman login EO.' },
-    { num: '02', title: 'BUAT EVENT & TIKET', desc: 'Isi detail acara, upload poster & QRIS, lalu tentukan kategori tiket.' },
-    { num: '03', title: 'SEBARKAN LINK EVENT', desc: 'Publikasikan link event dan terima transfer langsung dari pembeli.' },
-    { num: '04', title: 'AKSES GATE PORTAL', desc: 'Buka Gate Portal untuk tim venue melakukan scan & kasir OTS di lokasi.' },
+    { num: '01', title: 'LOGIN AKUN EO', desc: 'Masuk ke portal panitia pake akun EO kamu.' },
+    { num: '02', title: 'INPUT DETAIL EVENT', desc: 'Upload poster, set QRIS / No Rekening, terus bikin tier tiket.' },
+    { num: '03', title: 'SHARE LINK TIKET', desc: 'Sebar link event-mu, pembeli langsung transfer direct ke panitia.' },
+    { num: '04', title: 'SCAN AT VENUE', desc: 'Kasih link Gate Portal & PIN 1029 ke tim pintu masuk & kasir OTS.' },
   ];
 
   return (
@@ -56,13 +56,13 @@ export const ForEO = () => {
       {/* Header Banner */}
       <div className="border-b border-neutral-800 pb-6 space-y-3">
         <Badge variant="purple" className="text-[10px] px-2.5 py-0.5">
-          PANITIA &amp; EVENT ORGANIZER DIRECTORY
+          PANITIA &amp; EVENT ORGANIZER GUIDE
         </Badge>
         <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight text-white leading-none">
-          PANDUAN LENGKAP, TARIF, &amp; S&amp;K PANITIA EO
+          INFO LENGKAP, PRICING, &amp; S&amp;K BIKIN EVENT
         </h1>
         <p className="text-xs sm:text-sm text-neutral-400 max-w-3xl leading-relaxed">
-          Informasi transparan mengenai tarif layanan 0% komisi, alur kerja sistem tiket direct, dan Syarat &amp; Ketentuan resmi bagi penyelenggara acara di LokTik.
+          Semua info transparan soal skema zero komisi, alur kerja simpel, dan S&amp;K resmi buat kamu yang mau bikin event di LokTik.
         </p>
       </div>
 
@@ -70,7 +70,7 @@ export const ForEO = () => {
       <div className="space-y-4">
         <div className="border-b border-neutral-800 pb-2">
           <h2 className="text-xl font-black uppercase text-brand-green tracking-tight flex items-center gap-2">
-            <DollarSign className="w-5 h-5" /> TRANSPARANSI SKEMA BIAYA (PRICING EO)
+            <DollarSign className="w-5 h-5" /> SKEMA BIAYA &amp; PRICING
           </h2>
         </div>
 
@@ -102,7 +102,7 @@ export const ForEO = () => {
       <div className="space-y-4">
         <div className="border-b border-neutral-800 pb-2">
           <h2 className="text-xl font-black uppercase text-brand-purple tracking-tight flex items-center gap-2">
-            <Zap className="w-5 h-5" /> 4 LANGKAH MUDAH MULAI JUAL TIKET
+            <Zap className="w-5 h-5" /> 4 LANGKAH SIMPEL BIKIN EVENT
           </h2>
         </div>
 
@@ -121,7 +121,7 @@ export const ForEO = () => {
       <div className="space-y-4">
         <div className="border-b border-neutral-800 pb-2">
           <h2 className="text-xl font-black uppercase text-brand-blue tracking-tight flex items-center gap-2">
-            <FileText className="w-5 h-5" /> SYARAT &amp; KETENTUAN (S&amp;K) KHUSUS PANITIA EO
+            <FileText className="w-5 h-5" /> SYARAT &amp; KETENTUAN (S&amp;K) PANITIA
           </h2>
         </div>
 
@@ -137,9 +137,9 @@ export const ForEO = () => {
 
       {/* Bottom CTA Card */}
       <Card variant="dark" className="p-8 space-y-4 border-brand-green/40 bg-gradient-to-r from-neutral-950 via-neutral-900 to-black text-center">
-        <h2 className="text-2xl font-black uppercase text-white">SIAP KELOLA TIKET EVENT ANDA SEKARANG?</h2>
+        <h2 className="text-2xl font-black uppercase text-white">MAU BIKIN EVENT SEKARANG?</h2>
         <p className="text-xs text-neutral-400 max-w-lg mx-auto font-medium">
-          Masuk ke portal panitia, publikasikan event Anda, dan nikmati penjualan tiket tanpa potongan biaya platform.
+          Masuk ke portal panitia, bikin event-mu, dan langsung jualan tiket tanpa potongan biaya komisi.
         </p>
         <Button variant="green" size="lg" onClick={() => navigate('/eo/login')} className="mx-auto px-8 font-black">
           MASUK PORTAL EO / PANITIA <ArrowRight className="w-4 h-4 ml-2" />
