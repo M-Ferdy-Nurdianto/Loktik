@@ -27,7 +27,7 @@ export const AdBannerSection = () => {
 
         <div className="pt-2 border-t border-neutral-800">
           <a
-            href="https://wa.me/6281234567890?text=Halo%20Admin%20LokTik,%20saya%20tertarik%20pasang%20iklan%20sponsor"
+            href="https://wa.me/6285765907580?text=Halo%20Admin%20LokTik,%20saya%20tertarik%20pasang%20iklan%20sponsor"
             target="_blank"
             rel="noopener noreferrer"
             className="block"

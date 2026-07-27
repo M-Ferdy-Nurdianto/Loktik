@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, X, MessageSquare, Inbox, RefreshCw, Eye, Send, Bot, Banknote, ShoppingBag, Clock, Filter, Layers, ChevronDown, ChevronUp, Sparkles, Key } from 'lucide-react';
+import { Check, X, MessageSquare, Inbox, RefreshCw, Eye, Send, Bot, Banknote, ShoppingBag, Clock, Filter, Layers, ChevronDown, ChevronUp, Sparkles, Key, FileSpreadsheet, FileText } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -166,6 +166,254 @@ Terima Kasih!
     }
   };
 
+  const exportToExcel = () => {
+    if (filteredOrders.length === 0) {
+      alert('Tidak ada data pesanan untuk di-export ke Excel/CSV.');
+      return;
+    }
+
+    const eventTitle = selectedEventObj ? selectedEventObj.name : 'Semua Event';
+    const filename = `Rekap_Penjualan_LokTik_${eventTitle.replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
+
+    const headers = [
+      'No',
+      'Tipe Pesanan',
+      'Kode Tiket / Barcode',
+      'Nama Pembeli',
+      'No WhatsApp',
+      'Nama Event',
+      'Kategori Tiket',
+      'Jumlah Tiket',
+      'Total Bayar (Rp)',
+      'Status Pesanan',
+      'Tanggal Pesan',
+    ];
+
+    const rows = filteredOrders.map((o, idx) => {
+      const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
+      const prettyCode = generatePrettyRedeemCode(o.events?.name || 'Event', seed);
+      const isOts = o.guest_name.startsWith('Pembeli OTS');
+      const orderType = isOts ? 'OTS VENUE' : 'PO ONLINE';
+      return [
+        idx + 1,
+        `"${orderType}"`,
+        `"${prettyCode}"`,
+        `"${o.guest_name.replace(/"/g, '""')}"`,
+        `"${o.guest_wa}"`,
+        `"${(o.events?.name || '').replace(/"/g, '""')}"`,
+        `"${(o.ticket_categories?.name || 'Tiket Standard').replace(/"/g, '""')}"`,
+        o.quantity || 1,
+        o.total_price || 0,
+        `"${o.status === 'paid' ? 'LUNAS' : o.status === 'need_reupload' ? 'REUPLOAD' : 'PENDING'}"`,
+        `"${formatDateTime(o.created_at)}"`,
+      ];
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPDF = () => {
+    if (filteredOrders.length === 0) {
+      alert('Tidak ada data pesanan untuk di-export ke PDF.');
+      return;
+    }
+
+    const eventTitle = selectedEventObj ? selectedEventObj.name : 'SEMUA EVENT LOKTIK';
+
+    // Separate PO Online vs OTS Venue Orders
+    const poOrders = filteredOrders.filter((o) => !o.guest_name.startsWith('Pembeli OTS'));
+    const otsOrders = filteredOrders.filter((o) => o.guest_name.startsWith('Pembeli OTS'));
+
+    const poPaid = poOrders.filter((o) => o.status === 'paid');
+    const otsPaid = otsOrders.filter((o) => o.status === 'paid');
+
+    const poOmset = poPaid.reduce((sum, o) => sum + (o.total_price || 0), 0);
+    const otsOmset = otsPaid.reduce((sum, o) => sum + (o.total_price || 0), 0);
+    const totalOmset = poOmset + otsOmset;
+
+    const poTickets = poPaid.reduce((sum, o) => sum + (o.quantity || 1), 0);
+    const otsTickets = otsPaid.reduce((sum, o) => sum + (o.quantity || 1), 0);
+    const totalTicketsSold = poTickets + otsTickets;
+
+    const reportWindow = window.open('', '_blank');
+    if (!reportWindow) {
+      alert('Pop-up terblokir oleh browser. Izinkan pop-up untuk mencetak PDF.');
+      return;
+    }
+
+    const generatePoRows = (orderList) => {
+      if (orderList.length === 0) {
+        return `<tr><td colspan="7" style="padding:12px;text-align:center;color:#6b7280;font-style:italic;">Tidak ada transaksi Online Pre-Order (PO).</td></tr>`;
+      }
+      return orderList.map((o, idx) => {
+        const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
+        const prettyCode = generatePrettyRedeemCode(o.events?.name || 'Event', seed);
+        const categoryName = o.ticket_categories?.name || 'Tiket Standard';
+        return `
+          <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:7px 10px;text-align:center;color:#64748b;font-weight:600;">${idx + 1}</td>
+            <td style="padding:7px 10px;font-family:monospace;font-weight:700;color:#0f172a;">${prettyCode}</td>
+            <td style="padding:7px 10px;font-weight:700;color:#1e293b;">${o.guest_name}</td>
+            <td style="padding:7px 10px;font-family:monospace;color:#475569;">${o.guest_wa}</td>
+            <td style="padding:7px 10px;color:#334155;font-weight:600;">${categoryName} (${o.quantity || 1}x)</td>
+            <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a;">${formatRupiah(o.total_price)}</td>
+            <td style="padding:7px 10px;text-align:center;">
+              <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;background:${o.status === 'paid' ? '#f0fdf4' : '#fef2f2'};color:${o.status === 'paid' ? '#15803d' : '#b91c1c'};border:1px solid ${o.status === 'paid' ? '#bbf7d0' : '#fecaca'};">
+                ${o.status.toUpperCase()}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    const generateOtsRows = (orderList) => {
+      if (orderList.length === 0) {
+        return `<tr><td colspan="6" style="padding:12px;text-align:center;color:#6b7280;font-style:italic;">Tidak ada transaksi Kasir Venue (OTS).</td></tr>`;
+      }
+      return orderList.map((o, idx) => {
+        const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
+        const prettyCode = generatePrettyRedeemCode(o.events?.name || 'Event', seed);
+        const categoryName = o.ticket_categories?.name || 'Tiket Standard';
+        const methodLabel = o.guest_name.includes('QRIS') ? 'QRIS VENUE' : 'TUNAI / CASH';
+        return `
+          <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:7px 10px;text-align:center;color:#64748b;font-weight:600;">${idx + 1}</td>
+            <td style="padding:7px 10px;font-family:monospace;font-weight:700;color:#0f172a;">${prettyCode}</td>
+            <td style="padding:7px 10px;font-weight:700;color:#0369a1;">${methodLabel}</td>
+            <td style="padding:7px 10px;color:#334155;font-weight:600;">${categoryName} (${o.quantity || 1}x)</td>
+            <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a;">${formatRupiah(o.total_price)}</td>
+            <td style="padding:7px 10px;text-align:center;">
+              <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">
+                LUNAS (OTS)
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    reportWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>REKAP LAPORAN PENJUALAN - ${eventTitle}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 30px; color: #1e293b; font-size: 11px; background: #fff; }
+          .header { border-bottom: 2px solid #0f172a; padding-bottom: 14px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+          .header h1 { margin: 0; font-size: 20px; font-weight: 900; text-transform: uppercase; color: #0f172a; letter-spacing: -0.5px; }
+          .header p { margin: 4px 0 0 0; color: #475569; font-size: 11px; font-weight: 500; }
+          
+          .stats-grid { display: flex; gap: 12px; margin-bottom: 24px; }
+          .stat-box { border: 1px solid #cbd5e1; padding: 12px 14px; flex: 1; border-radius: 6px; background: #f8fafc; }
+          .stat-box h4 { margin: 0 0 4px 0; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; }
+          .stat-box .val { font-size: 18px; font-weight: 900; margin: 0; color: #0f172a; }
+          .stat-box .sub { font-size: 10px; color: #64748b; margin-top: 2px; font-weight: 600; }
+          
+          .section-title { font-size: 12px; font-weight: 900; text-transform: uppercase; margin: 20px 0 8px 0; padding-bottom: 4px; border-bottom: 1.5px solid #0f172a; color: #0f172a; display: flex; justify-content: space-between; align-items: center; }
+          .section-badge { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; color: #334155; }
+          
+          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11px; }
+          th { background: #0f172a; color: #ffffff; padding: 8px 10px; border: 1px solid #0f172a; text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; }
+          
+          .footer-section { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: center; font-size: 10px; color: #64748b; }
+          @media print { button { display: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1>LOKTIK — LAPORAN REKAPITULASI PENJUALAN</h1>
+            <p><strong>EVENT:</strong> ${eventTitle} | <strong>PANITIA EO:</strong> ${eoUsername}</p>
+          </div>
+          <div style="text-align:right;">
+            <p><strong>TANGGAL CETAK:</strong> ${new Date().toLocaleDateString('id-ID')}</p>
+          </div>
+        </div>
+
+        {/* SUMMARY STATS GRID */}
+        <div class="stats-grid">
+          <div class="stat-box">
+            <h4>Total Omset Keseluruhan</h4>
+            <p class="val">${formatRupiah(totalOmset)}</p>
+            <p class="sub">${totalTicketsSold} Tiket Terjual</p>
+          </div>
+          <div class="stat-box">
+            <h4>1. Omset Pre-Order (PO Online)</h4>
+            <p class="val">${formatRupiah(poOmset)}</p>
+            <p class="sub">${poTickets} Tiket (${poPaid.length} Transaksi)</p>
+          </div>
+          <div class="stat-box">
+            <h4>2. Omset Kasir Venue (OTS)</h4>
+            <p class="val">${formatRupiah(otsOmset)}</p>
+            <p class="sub">${otsTickets} Tiket (${otsPaid.length} Transaksi)</p>
+          </div>
+        </div>
+
+        {/* TABLE 1: PRE-ORDER (PO ONLINE) */}
+        <div class="section-title">
+          <span>1. DAFTAR PESANAN ONLINE (PRE-ORDER / PO)</span>
+          <span class="section-badge">${poOrders.length} PESANAN</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:center;width:30px;">#</th>
+              <th>Kode Tiket</th>
+              <th>Nama Pembeli</th>
+              <th>No WhatsApp</th>
+              <th>Kategori Tiket</th>
+              <th style="text-align:right;">Total Bayar</th>
+              <th style="text-align:center;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${generatePoRows(poOrders)}
+          </tbody>
+        </table>
+
+        {/* TABLE 2: ON THE SPOT (OTS VENUE) */}
+        <div class="section-title" style="margin-top:30px;">
+          <span>2. DAFTAR PENJUALAN VENUE (ON THE SPOT / OTS)</span>
+          <span class="section-badge">${otsOrders.length} TRANSAKSI</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:center;width:30px;">#</th>
+              <th>Kode Tiket</th>
+              <th>Metode Pembayaran</th>
+              <th>Kategori Tiket</th>
+              <th style="text-align:right;">Total Bayar</th>
+              <th style="text-align:center;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${generateOtsRows(otsOrders)}
+          </tbody>
+        </table>
+
+        <div class="footer-section">
+          <p>Dokumen rekapitulasi penjualan ini diringkas secara otomatis oleh platform LokTik Direct Event Ticketing (loktik.web.id).</p>
+        </div>
+
+        <script>
+          window.onload = function() { window.print(); };
+        </script>
+      </body>
+      </html>
+    `);
+    reportWindow.document.close();
+  };
+
   return (
     <div className="space-y-6 text-left">
       {previewProofUrl && (
@@ -265,11 +513,17 @@ Terima Kasih!
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant={botStatus === 'online' ? 'green' : 'yellow'}>
             <Bot className="w-3 h-3 mr-1 inline" />
             {botStatus === 'online' ? 'BOT WA ONLINE' : 'BOT WA STANDBY'}
           </Badge>
+          <Button variant="green" size="sm" onClick={exportToExcel} className="font-bold">
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1" /> EXPORT EXCEL
+          </Button>
+          <Button variant="purple" size="sm" onClick={exportToPDF} className="font-bold">
+            <FileText className="w-3.5 h-3.5 mr-1" /> EXPORT PDF
+          </Button>
           <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
             <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> REFRESH DB
           </Button>

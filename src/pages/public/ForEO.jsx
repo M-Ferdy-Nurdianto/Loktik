@@ -1,9 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Ticket, QrCode, Smartphone, Zap, ArrowRight, DollarSign, FileText, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Ticket, QrCode, Smartphone, Zap, ArrowRight, DollarSign, FileText, CheckCircle2, Clock } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { FaqSection } from '../../components/landing/FaqSection';
 
 export const ForEO = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export const ForEO = () => {
       period: '/ 3 Bulan',
       badge: 'BISA SEMUA EVENT',
       subtitle: 'Akses Bebas Jualan Tiket 0% Komisi Selama 3 Bulan',
+      waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20Berlangganan%20LokTik%203%20Bulan%20(Rp250.000).',
       features: [
         '0% Potongan Komisi Per Tiket',
         'Direct Transfer ke Rekening / QRIS Panitia',
@@ -31,6 +33,7 @@ export const ForEO = () => {
       period: '/ 1 Tahun',
       badge: 'PROMO HEMAT 50%',
       subtitle: 'Paket Hemat Bebas Jualan Tiket Selama 1 Tahun Penuh',
+      waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20Promo%20LokTik%201%20Tahun%20(Rp500.000).',
       features: [
         '0% Potongan Komisi Per Tiket',
         'Direct Transfer ke Rekening / QRIS Panitia',
@@ -135,15 +138,22 @@ export const ForEO = () => {
               </div>
 
               <div className="pt-4">
-                <Button
-                  variant={tier.highlight ? 'green' : 'purple'}
-                  fullWidth
-                  size="md"
-                  onClick={() => navigate('/eo/login')}
-                  className="font-black justify-center"
+                <a
+                  href={`https://wa.me/6285765907580?text=${tier.waText}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
                 >
-                  PILIH {tier.name}
-                </Button>
+                  <Button
+                    variant={tier.highlight ? 'green' : 'purple'}
+                    fullWidth
+                    size="md"
+                    className="font-black justify-center flex items-center space-x-2"
+                  >
+                    <span>PESAN {tier.name} VIA WA</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </a>
               </div>
             </Card>
           ))}
@@ -187,15 +197,44 @@ export const ForEO = () => {
         </div>
       </div>
 
+      {/* HIGHLIGHT ALERT BOX: RETENSI DATA 2 MINGGU (Placed right above FAQ) */}
+      <Card variant="dark" className="p-5 border border-brand-yellow/60 bg-brand-yellow/10 space-y-2">
+        <div className="flex items-center space-x-2 text-brand-yellow">
+          <Clock className="w-5 h-5 shrink-0" />
+          <h3 className="text-sm font-black uppercase tracking-wide">PENTING: ATURAN RETENSI DATA EVENT (OTOMATIS HAPUS 2 MINGGU)</h3>
+        </div>
+        <p className="text-xs text-neutral-200 font-medium leading-relaxed pl-7">
+          Setiap data event, daftar transaksi pesanan, tiket QR Code, dan bukti bayar yang sudah selesai akan <strong className="text-brand-yellow underline">otomatis dibersihkan &amp; dihapus oleh sistem 14 hari (2 minggu) setelah tanggal event berakhir</strong>. Harap lakukan ekspor/rekapan data penjualan sebelum batas waktu tersebut (peta tombol <strong className="text-brand-green">EXPORT EXCEL</strong> &amp; <strong className="text-brand-purple">EXPORT PDF</strong> tersedia di Dashboard EO).
+        </p>
+      </Card>
+
+      {/* FAQ Section Included Directly on EO Page */}
+      <div className="pt-4 border-t border-neutral-800">
+        <FaqSection />
+      </div>
+
       {/* Bottom CTA Card */}
       <Card variant="dark" className="p-8 space-y-4 border-brand-green/40 bg-gradient-to-r from-neutral-950 via-neutral-900 to-black text-center">
-        <h2 className="text-2xl font-black uppercase text-white">MAU BIKIN EVENT SEKARANG?</h2>
+        <h2 className="text-2xl font-black uppercase text-white">MAU BERLANGGANAN &amp; BIKIN EVENT SEKARANG?</h2>
         <p className="text-xs text-neutral-400 max-w-lg mx-auto font-medium">
-          Masuk ke dashboard panitia, bikin event-mu, dan langsung jualan tiket tanpa potongan biaya komisi.
+          Pesan layanan platform via WhatsApp (0857-6590-7580) atau masuk ke dashboard panitia jika sudah memiliki akun.
         </p>
-        <Button variant="green" size="lg" onClick={() => navigate('/eo/login')} className="mx-auto px-8 font-black">
-          MASUK DASHBOARD EO / PANITIA <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <a
+            href="https://wa.me/6285765907580?text=Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20layanan%20platform%20LokTik%20untuk%20event%20saya."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto"
+          >
+            <Button variant="green" size="lg" className="w-full sm:w-auto px-6 font-black flex items-center justify-center space-x-2">
+              <span>PESAN VIA WA (0857-6590-7580)</span>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </a>
+          <Button variant="outline" size="lg" onClick={() => navigate('/eo/login')} className="w-full sm:w-auto px-6 font-black">
+            LOGIN DASHBOARD EO
+          </Button>
+        </div>
       </Card>
     </div>
   );

@@ -1,9 +1,35 @@
 import { supabase } from './supabase';
 
 /**
+ * Automatically purge events & related orders/tickets older than 14 days (2 weeks).
+ */
+export const purgeExpiredEvents = async () => {
+  try {
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: expiredEvents } = await supabase
+      .from('events')
+      .select('id')
+      .lt('event_date', fourteenDaysAgo);
+
+    if (expiredEvents && expiredEvents.length > 0) {
+      const expiredIds = expiredEvents.map((e) => e.id);
+      await supabase.from('orders').delete().in('event_id', expiredIds);
+      await supabase.from('ticket_categories').delete().in('event_id', expiredIds);
+      await supabase.from('events').delete().in('id', expiredIds);
+    }
+  } catch (err) {
+    // Non-blocking cleanup warning
+    console.warn('Auto purge expired events notice:', err?.message);
+  }
+};
+
+/**
  * Fetch active events for landing page catalog (public for all visitors).
  */
 export const getActiveEvents = async () => {
+  // Fire background cleanup for expired events > 14 days
+  purgeExpiredEvents();
+
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from('events')
