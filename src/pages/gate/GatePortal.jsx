@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { QrCode, Users, Ticket, ShieldCheck, ArrowLeft, LogOut } from 'lucide-react';
+import { QrCode, Users, Ticket, ShieldCheck, LogOut } from 'lucide-react';
 import { getEventBySlug } from '../../services/apiEvents';
 import { GatePinLock } from './GatePinLock';
 import { Scanner } from './Scanner';
 import { GuestList } from './GuestList';
 import { OtsCashier } from './OtsCashier';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
 
 export const GatePortal = () => {
   const { eventSlug } = useParams();
@@ -13,7 +15,7 @@ export const GatePortal = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
   const [isPinVerified, setIsPinVerified] = useState(false);
-  const [activeTab, setActiveTab] = useState('scanner'); // 'scanner' | 'guest-list' | 'ots'
+  const [activeTab, setActiveTab] = useState('scanner');
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -49,9 +51,9 @@ export const GatePortal = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FFE600] flex items-center justify-center p-4">
-        <div className="bg-white border-4 border-black p-6 font-black text-xl uppercase shadow-[6px_6px_0px_#000]">
-          MEMUAT GATE PORTAL VENUE...
+      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center p-4">
+        <div className="bg-[#121212] border border-neutral-800 p-6 rounded text-center space-y-2">
+          <p className="font-black text-sm uppercase tracking-wider text-brand-green">MEMUAT GATE PORTAL VENUE...</p>
         </div>
       </div>
     );
@@ -59,10 +61,10 @@ export const GatePortal = () => {
 
   if (errorMsg || !event) {
     return (
-      <div className="min-h-screen bg-[#FF3333] flex items-center justify-center p-4">
-        <div className="bg-white border-4 border-black p-6 font-black text-lg uppercase shadow-[6px_6px_0px_#000] text-center space-y-4">
-          <p>{errorMsg || 'EVENT TIDAK DITEMUKAN'}</p>
-          <Link to="/" className="inline-block px-4 py-2 bg-black text-white text-xs uppercase font-black border-2 border-black">
+      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center p-4">
+        <div className="bg-[#121212] border border-brand-red/40 p-6 rounded text-center space-y-4 max-w-sm">
+          <p className="text-brand-red font-black text-sm uppercase">{errorMsg || 'EVENT TIDAK DITEMUKAN'}</p>
+          <Link to="/" className="inline-block px-4 py-2 bg-neutral-900 text-white text-xs font-bold uppercase rounded border border-neutral-800">
             KEMBALI KE BERANDA
           </Link>
         </div>
@@ -77,71 +79,71 @@ export const GatePortal = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-[#39FF14] selection:text-black p-3 sm:p-6 space-y-4">
-      {/* NEO-BRUTALIST HEADER BAR */}
-      <div className="bg-white text-black p-4 border-4 border-black shadow-[6px_6px_0px_#39FF14] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
-        <div>
-          <div className="inline-flex items-center space-x-1 bg-[#8B5CF6] text-white px-2 py-0.5 text-[10px] font-black uppercase border border-black mb-1">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>PORTAL GERBANG VENUE</span>
+    <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-brand-green selection:text-black p-4 sm:p-6 space-y-5 max-w-5xl mx-auto text-left">
+      {/* STREETWEAR HEADER BAR */}
+      <div className="bg-[#121212] p-4 rounded border border-neutral-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2">
+            <Badge variant="purple" className="text-[9px] px-1.5 py-0 flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" />
+              <span>PORTAL VENUE</span>
+            </Badge>
+            <Badge variant="green" className="text-[9px] px-1.5 py-0">● GATE ONLINE</Badge>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight leading-none text-black">
+          <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
             {event.name}
           </h1>
         </div>
 
         <div className="flex items-center space-x-2">
-          <button
-            onClick={handleGateLogout}
-            className="px-3 py-2 bg-[#FF3333] hover:bg-[#d92626] text-white font-black text-xs uppercase border-2 border-black shadow-[2px_2px_0px_#000] flex items-center space-x-1 cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
+          <Button variant="outline" size="sm" onClick={handleGateLogout} className="text-brand-red hover:bg-brand-red/10 border-brand-red/30">
+            <LogOut className="w-4 h-4 mr-1.5" />
             <span>KELUAR GATE</span>
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* NEO-BRUTALIST TAB NAVIGATION */}
+      {/* STREETWEAR TAB NAVIGATION */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <button
           onClick={() => setActiveTab('scanner')}
-          className={`py-3.5 px-2 font-black text-xs sm:text-sm uppercase border-4 border-black transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+          className={`py-3 px-2 font-black text-xs sm:text-sm uppercase rounded transition-colors flex items-center justify-center space-x-2 cursor-pointer ${
             activeTab === 'scanner'
-              ? 'bg-[#39FF14] text-black shadow-[4px_4px_0px_#FFF]'
-              : 'bg-[#181818] text-white hover:bg-neutral-800'
+              ? 'bg-brand-green text-black shadow-[0_0_12px_rgba(57,255,20,0.3)]'
+              : 'bg-[#121212] text-neutral-400 border border-neutral-800 hover:text-white hover:bg-neutral-900'
           }`}
         >
-          <QrCode className="w-5 h-5 stroke-[2.5]" />
+          <QrCode className="w-4 h-4" />
           <span>1. SCANNER</span>
         </button>
 
         <button
           onClick={() => setActiveTab('guest-list')}
-          className={`py-3.5 px-2 font-black text-xs sm:text-sm uppercase border-4 border-black transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+          className={`py-3 px-2 font-black text-xs sm:text-sm uppercase rounded transition-colors flex items-center justify-center space-x-2 cursor-pointer ${
             activeTab === 'guest-list'
-              ? 'bg-[#06B6D4] text-black shadow-[4px_4px_0px_#FFF]'
-              : 'bg-[#181818] text-white hover:bg-neutral-800'
+              ? 'bg-brand-blue text-black shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+              : 'bg-[#121212] text-neutral-400 border border-neutral-800 hover:text-white hover:bg-neutral-900'
           }`}
         >
-          <Users className="w-5 h-5 stroke-[2.5]" />
+          <Users className="w-4 h-4" />
           <span>2. GUEST LIST</span>
         </button>
 
         <button
           onClick={() => setActiveTab('ots')}
-          className={`py-3.5 px-2 font-black text-xs sm:text-sm uppercase border-4 border-black transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+          className={`py-3 px-2 font-black text-xs sm:text-sm uppercase rounded transition-colors flex items-center justify-center space-x-2 cursor-pointer ${
             activeTab === 'ots'
-              ? 'bg-[#FFE600] text-black shadow-[4px_4px_0px_#FFF]'
-              : 'bg-[#181818] text-white hover:bg-neutral-800'
+              ? 'bg-brand-yellow text-black shadow-[0_0_12px_rgba(255,230,0,0.3)]'
+              : 'bg-[#121212] text-neutral-400 border border-neutral-800 hover:text-white hover:bg-neutral-900'
           }`}
         >
-          <Ticket className="w-5 h-5 stroke-[2.5]" />
+          <Ticket className="w-4 h-4" />
           <span>3. KASIR OTS</span>
         </button>
       </div>
 
       {/* ACTIVE GATE VIEW */}
-      <div className="pt-2">
+      <div>
         {activeTab === 'scanner' && <Scanner eventId={event.id} eventName={event.name} />}
         {activeTab === 'guest-list' && <GuestList eventId={event.id} />}
         {activeTab === 'ots' && <OtsCashier eventId={event.id} />}
