@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #0a0a0a;
+    color: #ffffff;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+  }
+}
+
+/* Streetwear Editorial Accents */
+.border-accent-green {
+  border-color: #39FF14;
+}
+.border-accent-purple {
+  border-color: #8B5CF6;
+}
+.border-accent-blue {
+  border-color: #06B6D4;
+}
+
+.bg-card-dark {
+  background-color: #121212;
+}
+
+.bg-card-hover {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.bg-card-hover:hover {
+  background-color: #1a1a1a;
+  border-color: rgba(57, 255, 20, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Hide scrollbar for clean scrollable containers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom sleek dark scrollbar across the app */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #121212;
+}
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #39FF14;
+}

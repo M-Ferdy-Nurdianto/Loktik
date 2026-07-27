@@ -1,0 +1,36 @@
+{
+  "name": "loktik",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npx vite --host 0.0.0.0",
+    "build": "npx vite build",
+    "bot": "node server/wa-bot.cjs",
+    "tunnel": "npx cloudflared tunnel --url http://localhost:3000",
+    "lint": "eslint .",
+    "preview": "npx vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.48.1",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
+    "cors": "^2.8.6",
+    "express": "^4.22.2",
+    "html5-qrcode": "^2.3.8",
+    "jsqr": "^1.4.0",
+    "lucide-react": "^0.474.0",
+    "qrcode-terminal": "^0.12.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.1.5",
+    "whatsapp-web.js": "^1.34.7"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.0.11"
+  }
+}

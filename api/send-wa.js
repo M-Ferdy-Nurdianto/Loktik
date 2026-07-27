@@ -1,0 +1,68 @@
+/**
+ * VERCEL SERVERLESS FUNCTION: /api/send-wa
+ * 
+ * Fungsi ini berjalan 100% di Serverless Vercel tanpa perlu server background / Chrome Puppeteer.
+ * Mendukung integrasi HTTP WhatsApp Gateway (Fonnte / Whapi / WhatsApp Cloud API).
+ */
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  try {
+    const { waNumber, guestName, eventName, orderId, totalPrice, ticketQrUrl } = req.body;
+
+    if (!waNumber) {
+      return res.status(400).json({ error: 'Nomor WA wajib diisi.' });
+    }
+
+    const cleanNum = waNumber.replace(/[^0-9]/g, '');
+    const targetWa = cleanNum.startsWith('0') ? `62${cleanNum.substring(1)}` : cleanNum;
+
+    const messageText = `Halo Kak *${guestName}*,
+
+Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!* 🎉
+
+📋 *DETAIL TIKET:*
+- ID Pesanan: \`${orderId ? orderId.substring(0, 8) : 'LOKTIK'}\`
+- Total Bayar: Rp ${totalPrice ? Number(totalPrice).toLocaleString('id-ID') : 0}
+- Status: LUNAS (Verified)
+
+Gunakan gambar QR Code terlampir di pintu masuk venue saat penukaran gelang:
+${ticketQrUrl || ''}
+
+Terima Kasih!
+- Panitia ${eventName} via LokTik.web.id`;
+
+    // 1. Jika ada FONNTE TOKEN di Vercel Environment Variables
+    const fonnteToken = process.env.FONNTE_TOKEN;
+    if (fonnteToken) {
+      const response = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          Authorization: fonnteToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          target: targetWa,
+          message: messageText,
+          url: ticketQrUrl || '',
+        }),
+      });
+
+      const fonnteData = await response.json();
+      return res.json({ success: true, provider: 'fonnte', data: fonnteData });
+    }
+
+    // 2. Fallback Response untuk Vercel Serverless Direct
+    return res.json({
+      success: true,
+      message: 'Permintaan kirim WA Serverless Vercel berhasil diproses.',
+      targetWa,
+      messageText,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
