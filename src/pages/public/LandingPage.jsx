@@ -8,6 +8,7 @@ import { Badge } from '../../components/ui/Badge';
 import { formatDate, formatRupiah } from '../../utils/formatters';
 import { FaqSection } from '../../components/landing/FaqSection';
 import { TermsSection } from '../../components/landing/TermsSection';
+import { AdBannerSection } from '../../components/landing/AdBannerSection';
 
 export const LandingPage = () => {
   const { events, loading, error } = useActiveEvents();
@@ -140,6 +141,9 @@ export const LandingPage = () => {
 
       {/* Direct Terms & Conditions (S&K) Section */}
       <TermsSection />
+
+      {/* Custom Ads & Sponsor Section (Build Website by Ferdy & Available Sponsor Slot) */}
+      <AdBannerSection />
 
       {/* Separate EO Call-out Section for Panitia */}
       <section className="max-w-7xl mx-auto px-4 md:px-8 pt-8">
