@@ -103,8 +103,8 @@ export const LandingPage = () => {
           <div className="space-y-4">
             {filteredEvents.map((evt, index) => (
               <Card key={evt.id} variant="dark" hover className="p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 border border-neutral-800">
-                {/* Left side: Poster Image */}
-                <div className="w-full md:w-56 h-48 md:h-36 bg-neutral-900 rounded-lg overflow-hidden shrink-0 relative border border-neutral-800">
+                {/* Left side: Poster Image (Instagram Feed 1:1 Aspect Ratio) */}
+                <div className="w-36 sm:w-44 aspect-square bg-neutral-900 rounded-lg overflow-hidden shrink-0 relative border border-neutral-800">
                   {evt.poster_url ? (
                     <img
                       src={evt.poster_url}
