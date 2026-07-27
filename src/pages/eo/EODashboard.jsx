@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ShoppingBag, QrCode, Ticket, User, MessageSquare, PlusCircle, List } from 'lucide-react';
+import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -9,8 +9,6 @@ import { OverviewStats } from '../../components/dashboard/OverviewStats';
 import { MyEventsTab } from '../../components/dashboard/MyEventsTab';
 import { CreateEventTab } from '../../components/dashboard/CreateEventTab';
 import { OrderManagerTab } from '../../components/dashboard/OrderManagerTab';
-import { OtsCashierTab } from '../../components/dashboard/OtsCashierTab';
-import { ScannerTab } from '../../components/dashboard/ScannerTab';
 import { getAllEventsForEo } from '../../services/apiEvents';
 import { getLiveOrdersForEo } from '../../services/apiOrders';
 
@@ -138,30 +136,6 @@ export const EODashboard = () => {
               <ShoppingBag className="w-4 h-4" />
               <span>Manajemen Pesanan</span>
             </button>
-
-            <button
-              onClick={() => setActiveTab('ots')}
-              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider flex items-center space-x-3 transition-colors ${
-                activeTab === 'ots'
-                  ? 'bg-brand-yellow text-black font-black shadow-[0_0_12px_rgba(255,230,0,0.3)]'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
-              }`}
-            >
-              <Ticket className="w-4 h-4" />
-              <span>Kasir OTS Venue</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('scanner')}
-              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider flex items-center space-x-3 transition-colors ${
-                activeTab === 'scanner'
-                  ? 'bg-white text-black font-black'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
-              }`}
-            >
-              <QrCode className="w-4 h-4" />
-              <span>Gate Scanner</span>
-            </button>
           </nav>
         </div>
 
@@ -199,8 +173,6 @@ export const EODashboard = () => {
           {activeTab === 'my-events' && <MyEventsTab onNavigateToCreate={() => setActiveTab('create-event')} />}
           {activeTab === 'create-event' && <CreateEventTab onEventCreated={() => setActiveTab('my-events')} />}
           {activeTab === 'orders' && <OrderManagerTab />}
-          {activeTab === 'ots' && <OtsCashierTab />}
-          {activeTab === 'scanner' && <ScannerTab />}
         </div>
       </main>
     </div>

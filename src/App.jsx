@@ -10,6 +10,7 @@ import { Terms } from './pages/public/Terms';
 import { EOLogin } from './pages/eo/EOLogin';
 import { EODashboard } from './pages/eo/EODashboard';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { GatePortal } from './pages/gate/GatePortal';
 
 export const App = () => {
   return (
@@ -25,6 +26,7 @@ export const App = () => {
             <Route path="/eo/login" element={<EOLogin />} />
             <Route path="/eo/dashboard" element={<EODashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/gate/:eventSlug" element={<GatePortal />} />
             <Route path="/event/:slug" element={<EventDetail />} />
             <Route path="/event/:slug/checkout" element={<Checkout />} />
           </Routes>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Eye, Power, RefreshCw, Plus, ExternalLink, Inbox } from 'lucide-react';
+import { Calendar, Eye, Power, RefreshCw, Plus, ExternalLink, Inbox, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -102,14 +102,23 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-neutral-800 gap-2">
+              <div className="flex flex-wrap items-center justify-between pt-2 border-t border-neutral-800 gap-2">
                 <Link
                   to={`/event/${evt.slug}`}
                   target="_blank"
-                  className="px-3 py-1.5 bg-neutral-950 hover:bg-neutral-800 text-brand-blue border border-brand-blue/30 text-xs font-bold rounded flex items-center space-x-1"
+                  className="px-2.5 py-1.5 bg-neutral-950 hover:bg-neutral-800 text-brand-blue border border-brand-blue/30 text-xs font-bold rounded flex items-center space-x-1"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>LIHAT WEBSITE</span>
+                  <span>WEBSITE</span>
+                </Link>
+
+                <Link
+                  to={`/gate/${evt.slug}`}
+                  target="_blank"
+                  className="px-2.5 py-1.5 bg-brand-purple/20 hover:bg-brand-purple/30 text-brand-purple border border-brand-purple/40 text-xs font-black rounded flex items-center space-x-1"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>GATE PORTAL (PIN: 1029)</span>
                 </Link>
 
                 <Button
