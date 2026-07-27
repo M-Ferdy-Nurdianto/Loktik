@@ -51,6 +51,9 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
         <div>
           <h3 className="text-lg font-black uppercase text-white">DAFTAR EVENT SAYA (TERISOLASI AKUN)</h3>
           <p className="text-xs text-neutral-400">Kelola event khusus buatan akun {eoUsername}.</p>
+          <p className="text-[10px] text-brand-yellow font-mono font-bold mt-1 uppercase">
+            RETENSI DATA: Event &amp; tiket otomatis dibersihkan sistem 14 hari (2 minggu) setelah tanggal acara selesai.
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" onClick={fetchEvents} disabled={loading}>

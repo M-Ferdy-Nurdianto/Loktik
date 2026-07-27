@@ -60,6 +60,10 @@ export const ForEO = () => {
       title: '4. PENUKARAN GELANG & PROTEKSI SCAN',
       desc: 'Satu QR Code tiket cuma bisa di-scan 1 kali pas penukaran gelang di venue. Setelah di-scan, status tiket otomatis terkunci biar nggak bisa dipake ganda.',
     },
+    {
+      title: '5. RETENSI DATA EVENT & TIKET (OTOMATIS HAPUS 2 MINGGU)',
+      desc: 'Data event, transaksi pesanan, dan unit tiket yang sudah selesai akan dibersihkan/dihapus otomatis oleh sistem 2 minggu (14 hari) setelah tanggal acara berakhir.',
+    },
   ];
 
   const steps = [

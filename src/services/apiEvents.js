@@ -4,10 +4,12 @@ import { supabase } from './supabase';
  * Fetch active events for landing page catalog (public for all visitors).
  */
 export const getActiveEvents = async () => {
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from('events')
     .select('id, slug, name, description, poster_url, event_date, open_gate, status, payment_details')
     .eq('status', 'active')
+    .gte('event_date', fourteenDaysAgo)
     .order('event_date', { ascending: true });
 
   if (error) throw new Error(error.message);
