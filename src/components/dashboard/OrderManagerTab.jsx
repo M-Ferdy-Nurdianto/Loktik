@@ -128,7 +128,7 @@ Terima Kasih!
 
       const result = await response.json();
       if (result.success) {
-        alert(`✅ Tiket Kode ${prettyCode} & QR Code otomatis terkirim via WA ke ${order.guest_name}!`);
+        alert(`Tiket Kode ${prettyCode} & QR Code otomatis terkirim via WA ke ${order.guest_name}!`);
         return true;
       }
     } catch (e) {

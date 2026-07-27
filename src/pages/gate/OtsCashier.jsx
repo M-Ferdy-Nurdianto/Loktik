@@ -65,7 +65,7 @@ export const OtsCashier = ({ eventId }) => {
 
       await createGuestOrder(orderPayload, orderItems);
 
-      setSuccessMsg(`BERHASIL! 🎟️ ${qty} TIKET '${selectedCat.name.toUpperCase()}' LUNAS (${paymentMethod}). GELANG DISERAHKAN.`);
+      setSuccessMsg(`BERHASIL! ${qty} TIKET '${selectedCat.name.toUpperCase()}' LUNAS (${paymentMethod}). GELANG DISERAHKAN.`);
       setQty(1);
     } catch (err) {
       alert(err.message || 'Gagal memproses transaksi OTS.');
@@ -174,7 +174,7 @@ export const OtsCashier = ({ eventId }) => {
               disabled={submitting}
               className="py-3 text-sm font-black justify-center text-black"
             >
-              {submitting ? 'MEMPROSES...' : '⚡ LUNAS & CETAK GELANG (OTS)'}
+              {submitting ? 'MEMPROSES...' : 'LUNAS & CETAK GELANG (OTS)'}
             </Button>
           </div>
         </form>

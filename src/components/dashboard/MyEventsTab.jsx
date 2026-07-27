@@ -64,7 +64,7 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
 
       {errorMsg && (
         <p className="text-xs text-brand-red font-bold uppercase bg-red-950/40 p-3 rounded-md border border-brand-red/40">
-          ⚠️ {errorMsg}
+          {errorMsg}
         </p>
       )}
 

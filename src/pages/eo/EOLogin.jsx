@@ -59,7 +59,7 @@ export const EOLogin = () => {
               onClick={handleDirectLoginEO}
               className="p-3 bg-brand-purple/20 border border-brand-purple text-white rounded-md text-xs font-black uppercase hover:bg-brand-purple transition-all text-center space-y-1 shadow-[0_0_10px_rgba(139,92,246,0.2)]"
             >
-              <div>🎪 LOGIN EO</div>
+              <div>LOGIN EO</div>
               <div className="text-[9px] font-mono font-normal opacity-80 text-brand-yellow">eo_lokal / password123</div>
             </button>
 
@@ -68,7 +68,7 @@ export const EOLogin = () => {
               onClick={handleDirectLoginAdmin}
               className="p-3 bg-brand-green/20 border border-brand-green text-white rounded-md text-xs font-black uppercase hover:bg-brand-green hover:text-black transition-all text-center space-y-1 shadow-[0_0_10px_rgba(57,255,20,0.2)]"
             >
-              <div>👑 LOGIN ADMIN</div>
+              <div>LOGIN ADMIN</div>
               <div className="text-[9px] font-mono font-normal opacity-80 text-brand-yellow">BroFerADM / FerADM</div>
             </button>
           </div>
@@ -93,7 +93,7 @@ export const EOLogin = () => {
 
           {errorMsg && (
             <p className="text-xs text-brand-red font-bold uppercase bg-red-950/40 p-2.5 rounded-md border border-brand-red/40">
-              ⚠️ {errorMsg}
+              {errorMsg}
             </p>
           )}
 

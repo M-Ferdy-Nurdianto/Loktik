@@ -213,7 +213,7 @@ export const Scanner = ({ eventId, eventName }) => {
                   : 'bg-[#181818] text-neutral-400 border border-neutral-800 hover:text-white'
               }`}
             >
-              {mode === 'camera' ? '📷 KAMERA' : mode === 'upload' ? '🖼️ UPLOAD' : '⌨️ MANUAL'}
+              {mode === 'camera' ? 'KAMERA' : mode === 'upload' ? 'UPLOAD' : 'MANUAL'}
             </button>
           ))}
         </div>
