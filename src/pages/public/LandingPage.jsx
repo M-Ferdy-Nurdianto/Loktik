@@ -6,13 +6,12 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { formatDate, formatRupiah } from '../../utils/formatters';
+import { FaqSection } from '../../components/landing/FaqSection';
+import { TermsSection } from '../../components/landing/TermsSection';
 
 export const LandingPage = () => {
   const { events, loading, error } = useActiveEvents();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('ALL');
-
-  const categories = ['ALL', 'KONSER & MUSIK', 'BAZAR & FESTIVAL', 'SEMINAR & WORKSHOP', 'KOMUNITAS'];
 
   // Filter events based on search query
   const filteredEvents = events.filter((evt) => {
@@ -57,32 +56,13 @@ export const LandingPage = () => {
 
       {/* Category Pills & Event Directory */}
       <section id="events" className="max-w-7xl mx-auto px-4 md:px-8 space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-neutral-800 pb-4 gap-4">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
-              DAFTAR EVENT AKTIF
-            </h2>
-            <p className="text-xs text-neutral-400 font-semibold mt-1">
-              Pilih event dan pesan tiket resmi secara langsung
-            </p>
-          </div>
-
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap gap-2">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${
-                  selectedCategory === cat
-                    ? 'bg-brand-green text-black font-black'
-                    : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+        <div className="border-b border-neutral-800 pb-4">
+          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
+            DAFTAR EVENT AKTIF
+          </h2>
+          <p className="text-xs text-neutral-400 font-semibold mt-1">
+            Pilih event dan pesan tiket resmi secara langsung
+          </p>
         </div>
 
         {/* Event Grid */}
@@ -154,6 +134,12 @@ export const LandingPage = () => {
           </div>
         )}
       </section>
+
+      {/* Direct FAQ Section */}
+      <FaqSection />
+
+      {/* Direct Terms & Conditions (S&K) Section */}
+      <TermsSection />
 
       {/* Separate EO Call-out Section for Panitia */}
       <section className="max-w-7xl mx-auto px-4 md:px-8 pt-8">
