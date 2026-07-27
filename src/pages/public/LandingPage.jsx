@@ -100,47 +100,55 @@ export const LandingPage = () => {
             <p className="text-xs text-neutral-400">Coba ubah kata kunci pencarian Anda.</p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEvents.map((evt) => (
-              <Card key={evt.id} variant="dark" hover className="flex flex-col justify-between space-y-4 p-5">
-                <div className="space-y-3">
-                  <div className="w-full h-52 bg-neutral-900 rounded-md overflow-hidden relative border border-neutral-800">
-                    {evt.poster_url ? (
-                      <img
-                        src={evt.poster_url}
-                        alt={evt.name}
-                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-neutral-600 font-bold text-base uppercase">
-                        LOKTIK EVENT
-                      </div>
-                    )}
-                    <Badge variant="purple" className="absolute top-3 left-3">
-                      EVENT LOKAL
-                    </Badge>
+          <div className="space-y-4">
+            {filteredEvents.map((evt, index) => (
+              <Card key={evt.id} variant="dark" hover className="p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 border border-neutral-800">
+                {/* Left side: Poster Image */}
+                <div className="w-full md:w-56 h-48 md:h-36 bg-neutral-900 rounded-lg overflow-hidden shrink-0 relative border border-neutral-800">
+                  {evt.poster_url ? (
+                    <img
+                      src={evt.poster_url}
+                      alt={evt.name}
+                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-neutral-600 font-bold text-xs uppercase">
+                      LOKTIK EVENT
+                    </div>
+                  )}
+                  <Badge variant="purple" className="absolute top-2 left-2 text-[9px] px-1.5 py-0">
+                    EVENT LOKAL
+                  </Badge>
+                </div>
+
+                {/* Right side: Numbering, Title, Date, Description */}
+                <div className="flex-1 space-y-2 text-left w-full">
+                  <div className="flex items-center space-x-2 text-xs font-mono text-neutral-400">
+                    <span className="font-black text-brand-green text-sm">{index + 1}.</span>
+                    <div className="flex items-center space-x-1.5 text-brand-green font-semibold">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>{formatDate(evt.event_date)}</span>
+                    </div>
                   </div>
 
-                  <h3 className="text-lg font-extrabold uppercase tracking-tight text-white line-clamp-2">
+                  <h3 className="text-lg sm:text-xl font-extrabold uppercase tracking-tight text-white leading-snug">
                     {evt.name}
                   </h3>
 
-                  <div className="flex items-center space-x-2 text-xs font-semibold text-brand-green">
-                    <Calendar className="w-4 h-4 shrink-0" />
-                    <span>{formatDate(evt.event_date)}</span>
-                  </div>
-
-                  <p className="text-xs text-neutral-400 font-medium line-clamp-2">
-                    {evt.description}
+                  <p className="text-xs text-neutral-400 font-medium line-clamp-2 leading-relaxed">
+                    {evt.description || 'Tidak ada deskripsi acara.'}
                   </p>
                 </div>
 
-                <Link to={`/event/${evt.slug}`} className="block pt-2">
-                  <Button variant="green" fullWidth size="md">
-                    BELI TIKET
-                  </Button>
-                </Link>
+                {/* Action Button */}
+                <div className="w-full md:w-auto shrink-0 pt-2 md:pt-0">
+                  <Link to={`/event/${evt.slug}`}>
+                    <Button variant="green" size="md" className="w-full md:w-auto px-6 font-bold">
+                      BELI TIKET
+                    </Button>
+                  </Link>
+                </div>
               </Card>
             ))}
           </div>
