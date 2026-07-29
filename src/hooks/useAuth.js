@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { authenticateStaff } from '../services/apiStaff';
 
 /**
- * Custom Hook supporting Admin and Dynamic EO Login across all devices (Desktop & Mobile)
+ * Custom Hook supporting Admin, Dynamic EO, and Staff Accounts Login
  */
 export const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -19,12 +20,13 @@ export const useAuth = () => {
     setLoading(false);
   }, []);
 
-  const login = (username, password) => {
+  const login = async (username, password) => {
     const cleanUsername = (username || '').trim().toLowerCase();
     const cleanPassword = (password || '').trim();
+    const cleanPasswordLower = cleanPassword.toLowerCase();
 
     // 1. Check Admin Credentials (BroFerADM / FerADM)
-    if (cleanUsername === 'broferadm' && cleanPassword === 'FerADM') {
+    if (cleanUsername === 'broferadm' && (cleanPassword === 'FerADM' || cleanPasswordLower === 'feradm')) {
       const adminData = {
         id: 'admin-01',
         username: 'BroFerADM',
@@ -37,10 +39,40 @@ export const useAuth = () => {
       return { success: true, role: 'admin', redirectTo: '/admin/dashboard' };
     }
 
-    // 2. Check EO Credentials (eo_lokal / password123 & abin / 1234)
+    // 2. Check Staff Accounts created by EO (Prioritized)
+    const staffAuthRes = await authenticateStaff(cleanUsername, cleanPassword);
+    if (staffAuthRes.success && staffAuthRes.staff) {
+      const staff = staffAuthRes.staff;
+      const staffData = {
+        id: staff.id,
+        username: staff.username,
+        name: staff.name,
+        role: 'staff',
+        eo_username: staff.eo_username,
+        event_id: staff.event_id,
+        event_slug: staff.event_slug,
+        permissions: staff.permissions,
+        loggedInAt: new Date().toISOString(),
+      };
+      localStorage.setItem('loktik_user_session', JSON.stringify(staffData));
+      setUser(staffData);
+
+      let targetSlug = staff.event_slug;
+      if (!targetSlug || targetSlug === 'all-events' || targetSlug === 'all') {
+        targetSlug = 'nama-fest-2026-0260';
+      }
+
+      return {
+        success: true,
+        role: 'staff',
+        redirectTo: `/gate/${targetSlug}`,
+      };
+    }
+
+    // 3. Check Fixed EO Credentials (eo_lokal / password123 & abin / 1234)
     if (
-      (cleanUsername === 'eo_lokal' && cleanPassword === 'password123') ||
-      (cleanUsername === 'abin' && cleanPassword === '1234')
+      (cleanUsername === 'eo_lokal' && (cleanPassword === 'password123' || cleanPasswordLower === 'password123')) ||
+      (cleanUsername === 'abin' && (cleanPassword === '1234' || cleanPasswordLower === '1234'))
     ) {
       const eoUserData = {
         id: cleanUsername === 'abin' ? 'eo-abin' : 'eo-demo',
@@ -55,15 +87,15 @@ export const useAuth = () => {
       return { success: true, role: 'eo', redirectTo: '/eo/dashboard' };
     }
 
-    // 3. Check Dynamic EO Accounts created in Admin Dashboard
+    // 4. Check Dynamic EO Accounts created in Admin Dashboard
     const dynamicAccounts = JSON.parse(localStorage.getItem('loktik_eo_accounts') || '[]');
     const matchedEo = dynamicAccounts.find(
       (acc) =>
-        acc.name.trim().toLowerCase() === cleanUsername ||
-        acc.id.trim().toLowerCase() === cleanUsername
+        (acc.name || '').trim().toLowerCase() === cleanUsername ||
+        (acc.id || '').trim().toLowerCase() === cleanUsername
     );
 
-    if (matchedEo && matchedEo.password === cleanPassword) {
+    if (matchedEo && ((matchedEo.password || '').trim() === cleanPassword || (matchedEo.password || '').trim().toLowerCase() === cleanPasswordLower)) {
       if (matchedEo.status === 'suspended') {
         return {
           success: false,
@@ -78,6 +110,7 @@ export const useAuth = () => {
         name: matchedEo.name,
         wa: matchedEo.wa,
         subscriptionStatus: matchedEo.status,
+        expiresAt: matchedEo.expiresAt || null,
         loggedInAt: new Date().toISOString(),
       };
       localStorage.setItem('loktik_user_session', JSON.stringify(eoUserData));
@@ -87,7 +120,7 @@ export const useAuth = () => {
 
     return {
       success: false,
-      message: 'Username / Password salah! Gunakan tombol "LOGIN EO / PANITIA" di atas.',
+      message: 'Username / Password salah! Gunakan akun EO atau Akun Staf.',
     };
   };
 

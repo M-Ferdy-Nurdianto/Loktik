@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List } from 'lucide-react';
+import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List, Users } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -9,6 +9,7 @@ import { OverviewStats } from '../../components/dashboard/OverviewStats';
 import { MyEventsTab } from '../../components/dashboard/MyEventsTab';
 import { CreateEventTab } from '../../components/dashboard/CreateEventTab';
 import { OrderManagerTab } from '../../components/dashboard/OrderManagerTab';
+import { StaffManagerTab } from '../../components/dashboard/StaffManagerTab';
 import { getAllEventsForEo } from '../../services/apiEvents';
 import { getLiveOrdersForEo } from '../../services/apiOrders';
 
@@ -65,19 +66,46 @@ export const EODashboard = () => {
     navigate('/');
   };
 
+  const getSubExpiryInfo = () => {
+    let expDate = user?.expiresAt || user?.subscriptionExpiresAt;
+    if (!expDate) {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      expDate = d.toISOString().split('T')[0];
+    }
+    try {
+      const target = new Date(expDate);
+      const today = new Date();
+      const diffTime = target - today;
+      const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+      const dateStr = target.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+
+      return { dateStr, diffDays };
+    } catch (e) {
+      return { dateStr: '30 Hari', diffDays: 30 };
+    }
+  };
+
+  const { dateStr: subExpiryDate, diffDays: remainingDays } = getSubExpiryInfo();
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col md:flex-row text-left">
-      {/* LEFT SIDEBAR */}
-      <aside className="w-full md:w-64 bg-[#121212] border-r border-neutral-800 p-5 flex flex-col justify-between shrink-0 space-y-6">
+      {/* LEFT SIDEBAR (FIXED STICKY FOR DESKTOP) */}
+      <aside className="w-full md:w-64 bg-[#121212] border-r border-neutral-800 p-5 flex flex-col justify-between shrink-0 space-y-6 md:sticky md:top-0 md:h-screen md:overflow-y-auto no-scrollbar">
         <div className="space-y-6">
           {/* EO Profile Card */}
           <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-lg space-y-3">
             <div className="flex items-center space-x-2">
-              <div className="p-2 bg-brand-purple/20 text-brand-purple rounded-md border border-brand-purple/40">
+              <div className="p-2 bg-brand-green/20 text-brand-green rounded-md border border-brand-green/40">
                 <User className="w-5 h-5" />
               </div>
               <div className="overflow-hidden">
-                <Badge variant="purple" className="text-[9px] px-1.5 py-0">AKUN EO / PANITIA</Badge>
+                <Badge variant="green" className="text-[9px] px-1.5 py-0">AKUN EO / PANITIA</Badge>
                 <h3 className="text-base font-black uppercase text-white truncate">{eoName}</h3>
               </div>
             </div>
@@ -91,9 +119,16 @@ export const EODashboard = () => {
               </div>
             </div>
 
-            <div className="text-[10px] text-neutral-400 font-semibold flex items-center justify-between">
-              <span>STATUS:</span>
-              <span className="text-brand-green font-extrabold uppercase">● SUBSCRIBED</span>
+            {/* Subscription Expiry Timer Card */}
+            <div className="p-2.5 bg-neutral-950 rounded border border-neutral-800 space-y-1.5">
+              <div className="text-[10px] text-neutral-400 font-bold flex items-center justify-between">
+                <span>STATUS:</span>
+                <span className="text-brand-green font-black uppercase">● SUBSCRIBED</span>
+              </div>
+              <div className="text-[10px] font-mono font-bold flex items-center justify-between border-t border-neutral-800/80 pt-1.5">
+                <span className="text-neutral-500 uppercase">EXPIRED:</span>
+                <span className="text-brand-yellow font-black">{subExpiryDate} ({remainingDays} HARI)</span>
+              </div>
             </div>
           </div>
 
@@ -105,7 +140,7 @@ export const EODashboard = () => {
               onClick={() => setActiveTab('my-events')}
               className={`w-full px-3.5 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider flex items-center space-x-3 transition-colors ${
                 activeTab === 'my-events'
-                  ? 'bg-brand-green text-black font-black shadow-[0_0_12px_rgba(57,255,20,0.3)]'
+                  ? 'bg-brand-green text-black font-black'
                   : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
               }`}
             >
@@ -117,7 +152,7 @@ export const EODashboard = () => {
               onClick={() => setActiveTab('create-event')}
               className={`w-full px-3.5 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider flex items-center space-x-3 transition-colors ${
                 activeTab === 'create-event'
-                  ? 'bg-brand-purple text-white font-black shadow-[0_0_12px_rgba(139,92,246,0.3)]'
+                  ? 'bg-brand-green text-black font-black'
                   : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
               }`}
             >
@@ -129,12 +164,24 @@ export const EODashboard = () => {
               onClick={() => setActiveTab('orders')}
               className={`w-full px-3.5 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider flex items-center space-x-3 transition-colors ${
                 activeTab === 'orders'
-                  ? 'bg-brand-blue text-black font-black shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+                  ? 'bg-brand-green text-black font-black'
                   : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
               }`}
             >
               <ShoppingBag className="w-4 h-4" />
               <span>Manajemen Pesanan</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('staff-manager')}
+              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider flex items-center space-x-3 transition-colors ${
+                activeTab === 'staff-manager'
+                  ? 'bg-brand-green text-black font-black'
+                  : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Manajemen Staf</span>
             </button>
           </nav>
         </div>
@@ -173,6 +220,7 @@ export const EODashboard = () => {
           {activeTab === 'my-events' && <MyEventsTab onNavigateToCreate={() => setActiveTab('create-event')} />}
           {activeTab === 'create-event' && <CreateEventTab onEventCreated={() => setActiveTab('my-events')} />}
           {activeTab === 'orders' && <OrderManagerTab />}
+          {activeTab === 'staff-manager' && <StaffManagerTab />}
         </div>
       </main>
     </div>

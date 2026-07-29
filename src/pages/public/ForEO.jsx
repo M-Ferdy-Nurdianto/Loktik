@@ -94,34 +94,34 @@ export const ForEO = () => {
       {/* Pricing Section */}
       <div className="space-y-4">
         <div className="border-b border-neutral-800 pb-2">
-          <h2 className="text-xl font-black uppercase text-brand-green tracking-tight flex items-center gap-2">
+          <h2 className="text-xl font-black uppercase text-brand-blue tracking-tight flex items-center gap-2">
             <DollarSign className="w-5 h-5" /> SKEMA BIAYA &amp; PRICING
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {pricingTiers.map((tier, idx) => (
             <Card
               key={idx}
               variant="dark"
-              className={`p-6 border flex flex-col justify-between space-y-4 ${
+              className={`p-4 sm:p-6 border flex flex-col justify-between space-y-4 touch-press ${
                 tier.highlight
-                  ? 'border-brand-green/60 bg-gradient-to-b from-[#141d14] to-[#121212] shadow-[0_0_20px_rgba(57,255,20,0.15)]'
+                  ? 'border-brand-blue/60 bg-gradient-to-b from-[#0c1920] to-[#121212] shadow-[0_0_20px_rgba(6,182,212,0.15)]'
                   : 'border-neutral-800 bg-[#121212]'
               }`}
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-                  <Badge variant={tier.highlight ? 'green' : 'purple'} className="text-[9px] px-2 py-0.5">
+                  <Badge variant={tier.highlight ? 'blue' : 'blue'} className="text-[9px] px-2 py-0.5 font-extrabold">
                     {tier.badge}
                   </Badge>
                   <span className="text-[10px] font-mono text-neutral-500 font-bold uppercase">BERLANGGANAN</span>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-black uppercase text-white">{tier.name}</h3>
-                  <div className="flex items-baseline space-x-1 mt-1">
-                    <span className="text-3xl font-black font-mono text-brand-green">{tier.price}</span>
+                  <h3 className="text-base sm:text-lg font-black uppercase text-white">{tier.name}</h3>
+                  <div className="flex items-baseline space-x-1.5 mt-1">
+                    <span className="text-2xl sm:text-3xl font-black font-mono text-brand-blue">{tier.price}</span>
                     <span className="text-xs font-mono text-neutral-400">{tier.period}</span>
                   </div>
                   <p className="text-xs text-neutral-400 font-medium mt-1 leading-relaxed">{tier.subtitle}</p>
@@ -130,25 +130,25 @@ export const ForEO = () => {
                 <div className="space-y-2 pt-2 border-t border-neutral-800">
                   {tier.features.map((feat, fIdx) => (
                     <div key={fIdx} className="flex items-center space-x-2 text-xs font-bold text-neutral-300">
-                      <CheckCircle2 className="w-4 h-4 text-brand-green shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-brand-blue shrink-0" />
                       <span>{feat}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="pt-4">
+              <div className="pt-3 sm:pt-4">
                 <a
                   href={`https://wa.me/6285765907580?text=${tier.waText}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block"
+                  className="block touch-press"
                 >
                   <Button
-                    variant={tier.highlight ? 'green' : 'purple'}
+                    variant="blue"
                     fullWidth
                     size="md"
-                    className="font-black justify-center flex items-center space-x-2"
+                    className="min-h-[46px] font-black justify-center flex items-center space-x-2 text-xs sm:text-sm uppercase tracking-wider"
                   >
                     <span>PESAN {tier.name} VIA WA</span>
                     <ArrowRight className="w-4 h-4" />
@@ -163,17 +163,17 @@ export const ForEO = () => {
       {/* Step by Step Workflow */}
       <div className="space-y-4">
         <div className="border-b border-neutral-800 pb-2">
-          <h2 className="text-xl font-black uppercase text-brand-purple tracking-tight flex items-center gap-2">
-            <Zap className="w-5 h-5" /> 4 LANGKAH SIMPEL BIKIN EVENT
+          <h2 className="text-lg sm:text-xl font-black uppercase text-brand-blue tracking-tight flex items-center gap-2">
+            <Zap className="w-5 h-5 shrink-0" /> 4 LANGKAH SIMPEL BIKIN EVENT
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           {steps.map((st, idx) => (
-            <Card key={idx} variant="dark" className="p-5 border-neutral-800 space-y-2">
-              <span className="text-2xl font-black font-mono text-brand-purple">{st.num}</span>
-              <h3 className="text-sm font-black uppercase text-white">{st.title}</h3>
-              <p className="text-xs text-neutral-400 font-medium leading-relaxed">{st.desc}</p>
+            <Card key={idx} variant="dark" className="p-3.5 sm:p-5 border-neutral-800 space-y-1.5 sm:space-y-2">
+              <span className="text-xl sm:text-2xl font-black font-mono text-brand-blue">{st.num}</span>
+              <h3 className="text-xs sm:text-sm font-black uppercase text-white leading-tight">{st.title}</h3>
+              <p className="text-[11px] sm:text-xs text-neutral-400 font-medium leading-relaxed">{st.desc}</p>
             </Card>
           ))}
         </div>
@@ -182,14 +182,14 @@ export const ForEO = () => {
       {/* EO Terms & Conditions Section */}
       <div className="space-y-4">
         <div className="border-b border-neutral-800 pb-2">
-          <h2 className="text-xl font-black uppercase text-brand-blue tracking-tight flex items-center gap-2">
-            <FileText className="w-5 h-5" /> SYARAT &amp; KETENTUAN (S&amp;K) PANITIA
+          <h2 className="text-lg sm:text-xl font-black uppercase text-brand-blue tracking-tight flex items-center gap-2">
+            <FileText className="w-5 h-5 shrink-0" /> SYARAT &amp; KETENTUAN (S&amp;K) PANITIA
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
           {eoTerms.map((term, idx) => (
-            <Card key={idx} variant="dark" className="p-5 space-y-2 border-neutral-800">
+            <Card key={idx} variant="dark" className="p-4 sm:p-5 space-y-1.5 border-neutral-800">
               <h3 className="text-xs font-extrabold uppercase text-brand-blue tracking-wide">{term.title}</h3>
               <p className="text-xs text-neutral-400 font-medium leading-relaxed">{term.desc}</p>
             </Card>
@@ -198,13 +198,13 @@ export const ForEO = () => {
       </div>
 
       {/* HIGHLIGHT ALERT BOX: RETENSI DATA 2 MINGGU (Placed right above FAQ) */}
-      <Card variant="dark" className="p-5 border border-brand-yellow/60 bg-brand-yellow/10 space-y-2">
+      <Card variant="dark" className="p-4 sm:p-5 border border-brand-yellow/60 bg-brand-yellow/10 space-y-2">
         <div className="flex items-center space-x-2 text-brand-yellow">
           <Clock className="w-5 h-5 shrink-0" />
-          <h3 className="text-sm font-black uppercase tracking-wide">PENTING: ATURAN RETENSI DATA EVENT (OTOMATIS HAPUS 2 MINGGU)</h3>
+          <h3 className="text-xs sm:text-sm font-black uppercase tracking-wide">PENTING: ATURAN RETENSI DATA EVENT (OTOMATIS HAPUS 2 MINGGU)</h3>
         </div>
-        <p className="text-xs text-neutral-200 font-medium leading-relaxed pl-7">
-          Setiap data event, daftar transaksi pesanan, tiket QR Code, dan bukti bayar yang sudah selesai akan <strong className="text-brand-yellow underline">otomatis dibersihkan &amp; dihapus oleh sistem 14 hari (2 minggu) setelah tanggal event berakhir</strong>. Harap lakukan ekspor/rekapan data penjualan sebelum batas waktu tersebut (peta tombol <strong className="text-brand-green">EXPORT EXCEL</strong> &amp; <strong className="text-brand-purple">EXPORT PDF</strong> tersedia di Dashboard EO).
+        <p className="text-xs text-neutral-200 font-medium leading-relaxed sm:pl-7">
+          Setiap data event, daftar transaksi pesanan, tiket QR Code, dan bukti bayar yang sudah selesai akan <strong className="text-brand-yellow underline">otomatis dibersihkan &amp; dihapus oleh sistem 14 hari (2 minggu) setelah tanggal event berakhir</strong>. Harap lakukan ekspor/rekapan data penjualan sebelum batas waktu tersebut (peta tombol <strong className="text-brand-blue">EXPORT EXCEL</strong> &amp; <strong className="text-brand-purple">EXPORT PDF</strong> tersedia di Dashboard EO).
         </p>
       </Card>
 
@@ -214,8 +214,8 @@ export const ForEO = () => {
       </div>
 
       {/* Bottom CTA Card */}
-      <Card variant="dark" className="p-8 space-y-4 border-brand-green/40 bg-gradient-to-r from-neutral-950 via-neutral-900 to-black text-center">
-        <h2 className="text-2xl font-black uppercase text-white">MAU BERLANGGANAN &amp; BIKIN EVENT SEKARANG?</h2>
+      <Card variant="dark" className="p-5 sm:p-8 space-y-4 border-brand-blue/40 bg-gradient-to-r from-neutral-950 via-neutral-900 to-black text-center">
+        <h2 className="text-xl sm:text-2xl font-black uppercase text-white">MAU BERLANGGANAN &amp; BIKIN EVENT SEKARANG?</h2>
         <p className="text-xs text-neutral-400 max-w-lg mx-auto font-medium">
           Pesan layanan platform via WhatsApp (0857-6590-7580) atau masuk ke dashboard panitia jika sudah memiliki akun.
         </p>
@@ -224,14 +224,14 @@ export const ForEO = () => {
             href="https://wa.me/6285765907580?text=Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20layanan%20platform%20LokTik%20untuk%20event%20saya."
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto touch-press"
           >
-            <Button variant="green" size="lg" className="w-full sm:w-auto px-6 font-black flex items-center justify-center space-x-2">
+            <Button variant="blue" size="lg" className="w-full sm:w-auto px-6 min-h-[46px] font-black flex items-center justify-center space-x-2 text-xs sm:text-sm">
               <span>PESAN VIA WA (0857-6590-7580)</span>
               <ArrowRight className="w-4 h-4" />
             </Button>
           </a>
-          <Button variant="outline" size="lg" onClick={() => navigate('/eo/login')} className="w-full sm:w-auto px-6 font-black">
+          <Button variant="outline" size="lg" onClick={() => navigate('/eo/login')} className="w-full sm:w-auto px-6 min-h-[46px] font-black text-xs sm:text-sm touch-press border-brand-blue/30 text-brand-blue">
             LOGIN DASHBOARD EO
           </Button>
         </div>

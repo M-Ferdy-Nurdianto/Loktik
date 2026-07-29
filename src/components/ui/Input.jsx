@@ -40,7 +40,7 @@ export const Input = ({
           className={`
             w-full px-4 py-2.5 bg-neutral-900 text-white font-medium text-sm rounded-md
             border border-neutral-700 transition-all duration-200
-            focus:outline-none focus:border-brand-green focus:ring-1 focus:ring-brand-green
+            focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue
             placeholder:text-neutral-500
             ${isPassword ? 'pr-11' : ''}
             ${error ? 'border-brand-red bg-red-950/20' : ''}

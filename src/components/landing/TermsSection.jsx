@@ -16,7 +16,7 @@ export const TermsSection = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-neutral-300">
         <Card variant="dark" className="p-5 space-y-3 border-neutral-800">
-          <div className="flex items-center space-x-2 text-brand-green">
+          <div className="flex items-center space-x-2 text-brand-blue">
             <ShieldCheck className="w-5 h-5" />
             <h3 className="text-sm font-extrabold uppercase text-white">1. SISTEM DIRECT PAYMENT</h3>
           </div>

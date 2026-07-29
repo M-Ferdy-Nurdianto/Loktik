@@ -14,9 +14,13 @@ export const EOLogin = () => {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleLoginSubmit = (e) => {
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    const result = login(username, password);
+    setIsLoggingIn(true);
+    const result = await login(username, password);
+    setIsLoggingIn(false);
     if (result.success) {
       navigate(result.redirectTo);
     } else {
@@ -24,15 +28,28 @@ export const EOLogin = () => {
     }
   };
 
-  const handleDirectLoginEO = () => {
-    const result = login('eo_lokal', 'password123');
+  const handleDirectLoginEO = async () => {
+    setIsLoggingIn(true);
+    const result = await login('eo_lokal', 'password123');
+    setIsLoggingIn(false);
     if (result.success) {
       navigate(result.redirectTo);
     }
   };
 
-  const handleDirectLoginAdmin = () => {
-    const result = login('BroFerADM', 'FerADM');
+  const handleDirectLoginAdmin = async () => {
+    setIsLoggingIn(true);
+    const result = await login('BroFerADM', 'FerADM');
+    setIsLoggingIn(false);
+    if (result.success) {
+      navigate(result.redirectTo);
+    }
+  };
+
+  const handleDirectLoginStaff = async () => {
+    setIsLoggingIn(true);
+    const result = await login('staf_gate1', '1234');
+    setIsLoggingIn(false);
     if (result.success) {
       navigate(result.redirectTo);
     }
@@ -42,34 +59,43 @@ export const EOLogin = () => {
     <div className="max-w-md mx-auto px-4 py-12 text-left">
       <Card variant="dark" className="p-8 space-y-6 border-neutral-800 shadow-2xl">
         <div className="space-y-2 text-center">
-          <Badge variant="purple">PORTAL LOGIN LOKTIK</Badge>
-          <h1 className="text-2xl font-black uppercase text-white tracking-tight">MASUK KE PORTAL</h1>
-          <p className="text-xs text-neutral-400 font-medium">Masuk sebagai Admin Platform Owner atau Panitia / EO.</p>
+          <Badge variant="blue">UNIFIED LOGIN AKUN LOKTIK</Badge>
+          <h1 className="text-2xl font-black uppercase text-white tracking-tight">MASUK AKUN</h1>
+          <p className="text-xs text-neutral-400 font-medium">Masuk sebagai Admin Platform, Panitia EO, atau Akun Staf Gate.</p>
         </div>
 
         {/* 1-TAP INSTANT LOGIN BUTTONS FOR MOBILE */}
         <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-lg space-y-3">
-          <p className="text-[11px] font-black text-brand-green uppercase tracking-wider flex items-center space-x-1">
+          <p className="text-[11px] font-black text-brand-blue uppercase tracking-wider flex items-center space-x-1">
             <Zap className="w-3.5 h-3.5" />
             <span>1-TAP INSTANT LOGIN HP:</span>
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={handleDirectLoginEO}
-              className="p-3 bg-brand-purple/20 border border-brand-purple text-white rounded-md text-xs font-black uppercase hover:bg-brand-purple transition-all text-center space-y-1 shadow-[0_0_10px_rgba(139,92,246,0.2)]"
+              className="p-2.5 bg-brand-blue/20 border border-brand-blue text-white rounded-md text-[11px] font-black uppercase hover:bg-brand-blue hover:text-black transition-all text-center space-y-0.5"
             >
               <div>LOGIN EO</div>
-              <div className="text-[9px] font-mono font-normal opacity-80 text-brand-yellow">eo_lokal / password123</div>
+              <div className="text-[8px] font-mono font-normal opacity-80 text-brand-yellow truncate">eo_lokal / password123</div>
             </button>
 
             <button
               type="button"
               onClick={handleDirectLoginAdmin}
-              className="p-3 bg-brand-green/20 border border-brand-green text-white rounded-md text-xs font-black uppercase hover:bg-brand-green hover:text-black transition-all text-center space-y-1 shadow-[0_0_10px_rgba(57,255,20,0.2)]"
+              className="p-2.5 bg-brand-blue/20 border border-brand-blue text-white rounded-md text-[11px] font-black uppercase hover:bg-brand-blue hover:text-black transition-all text-center space-y-0.5"
             >
               <div>LOGIN ADMIN</div>
-              <div className="text-[9px] font-mono font-normal opacity-80 text-brand-yellow">BroFerADM / FerADM</div>
+              <div className="text-[8px] font-mono font-normal opacity-80 text-brand-yellow truncate">BroFerADM / FerADM</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDirectLoginStaff}
+              className="p-2.5 bg-brand-purple/20 border border-brand-purple text-white rounded-md text-[11px] font-black uppercase hover:bg-brand-purple hover:text-white transition-all text-center space-y-0.5"
+            >
+              <div>STAF GATE</div>
+              <div className="text-[8px] font-mono font-normal opacity-80 text-brand-purple truncate">staf_gate1 / 1234</div>
             </button>
           </div>
         </div>
@@ -78,7 +104,7 @@ export const EOLogin = () => {
           <Input
             label="USERNAME / NAMA EO"
             required
-            placeholder="Contoh: eo_lokal atau abin"
+            placeholder="Masukkan Username / Nama EO..."
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
@@ -86,7 +112,7 @@ export const EOLogin = () => {
             label="PASSWORD"
             type="password"
             required
-            placeholder="Masukkan password Anda..."
+            placeholder="Masukkan Password..."
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -97,8 +123,8 @@ export const EOLogin = () => {
             </p>
           )}
 
-          <Button type="submit" variant="green" fullWidth size="lg">
-            MASUK DASHBOARD
+          <Button type="submit" variant="blue" fullWidth size="lg" disabled={isLoggingIn}>
+            {isLoggingIn ? 'MEMPROSES...' : 'MASUK DASHBOARD'}
           </Button>
         </form>
       </Card>

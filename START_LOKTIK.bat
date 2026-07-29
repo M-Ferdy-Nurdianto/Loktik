@@ -21,7 +21,7 @@ echo.
 echo =================================================================
 echo  [SUCCESS] LokTik Berhasil Dijalankan!
 echo  - Frontend Web: http://localhost:3000
-echo  - Akses Mobile (HP): http://[IP_LAPTOP_ANDA]:3000
+echo  - Akses Mobile (HP): http://192.168.1.7:3000
 echo  - WA Bot Server: http://localhost:5000
 echo =================================================================
 echo.

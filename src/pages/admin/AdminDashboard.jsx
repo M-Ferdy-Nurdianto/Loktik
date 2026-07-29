@@ -1,34 +1,77 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Trash2, Power, MessageSquare, Plus, Inbox, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { LogOut, Trash2, Power, MessageSquare, Plus, Inbox, Eye, EyeOff, KeyRound, Calendar } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
+import { CustomSelect } from '../../components/ui/CustomSelect';
+import { formatDate } from '../../utils/formatters';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
+  const getOneMonthExpiry = () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
   // Load EO Accounts from localStorage so accounts persist and are accessible for login
   const [eoAccounts, setEoAccounts] = useState(() => {
     try {
       const saved = localStorage.getItem('loktik_eo_accounts');
-      return saved ? JSON.parse(saved) : [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.length > 0) return parsed;
+      }
+      return [
+        {
+          id: 'EO-101',
+          name: 'eo_lokal',
+          wa: '085765907580',
+          password: 'password123',
+          status: 'active',
+          subscriptionPlan: '1_month',
+          subscriptionExpiresAt: getOneMonthExpiry(),
+        },
+        {
+          id: 'EO-102',
+          name: 'abin',
+          wa: '081234567890',
+          password: '1234',
+          status: 'active',
+          subscriptionPlan: '1_month',
+          subscriptionExpiresAt: getOneMonthExpiry(),
+        },
+      ];
     } catch (e) {
       return [];
     }
   });
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newEo, setNewEo] = useState({ name: '', wa: '', password: '' });
+  const [newEo, setNewEo] = useState({ name: '', wa: '', password: '', plan: '1_month' });
   const [showPasswords, setShowPasswords] = useState({});
 
-  // Sync with localStorage on any change
   useEffect(() => {
     localStorage.setItem('loktik_eo_accounts', JSON.stringify(eoAccounts));
   }, [eoAccounts]);
+
+  const planOptions = [
+    { value: 'test', label: 'TEST (1 HARI / TEST TRIAL)' },
+    { value: '1_month', label: '1 BULAN (TRIAL / BASIC)' },
+    { value: '3_months', label: '3 BULAN (REGULER)' },
+    { value: '1_year', label: '1 TAHUN (PROMO / ANNUAL)' },
+  ];
+
+  const calculateExpiryDate = (plan) => {
+    const now = Date.now();
+    let days = 30;
+    if (plan === 'test') days = 1;
+    else if (plan === '1_month') days = 30;
+    else if (plan === '3_months') days = 90;
+    else if (plan === '1_year') days = 365;
+    return new Date(now + days * 24 * 60 * 60 * 1000).toISOString();
+  };
 
   const handleToggleStatus = (eoId) => {
     setEoAccounts((prev) =>
@@ -62,11 +105,12 @@ export const AdminDashboard = () => {
       wa: newEo.wa.replace(/[^0-9]/g, ''),
       password: newEo.password.trim(),
       status: 'active',
-      activeEvents: 0,
+      subscriptionPlan: newEo.plan,
+      subscriptionExpiresAt: calculateExpiryDate(newEo.plan),
     };
 
     setEoAccounts((prev) => [createdEo, ...prev]);
-    setNewEo({ name: '', wa: '', password: '' });
+    setNewEo({ name: '', wa: '', password: '', plan: '1_month' });
     setShowAddModal(false);
   };
 
@@ -115,20 +159,20 @@ export const AdminDashboard = () => {
           </p>
         </Card>
         <Card variant="dark" className="p-5 space-y-1 border-neutral-800">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase">TOTAL TIKET TERDISPUS</p>
-          <p className="text-2xl font-black text-brand-purple">0 Tiket</p>
+          <p className="text-[10px] font-bold text-neutral-400 uppercase">PAKET LANGGANAN</p>
+          <p className="text-2xl font-black text-brand-purple">ACTIVE</p>
         </Card>
       </div>
 
-      {/* Add EO Form Header */}
-      <Card variant="dark" className="p-6 space-y-6 border-neutral-800">
+      {/* Account Management Section */}
+      <Card variant="dark" className="p-6 space-y-6 text-left border-neutral-800">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-neutral-800 pb-3 gap-3">
           <div>
-            <h3 className="text-lg font-black uppercase text-white">MANAJEMEN AKUN BERLANGGANAN EO</h3>
-            <p className="text-xs text-neutral-400 font-medium">Buat akun EO baru, atur password login EO, dan kelola nomor WhatsApp.</p>
+            <h3 className="text-lg font-black uppercase text-white">MANAJEMEN AKUN EO / PANITIA</h3>
+            <p className="text-xs text-neutral-400">Buat akun EO baru, tentukan durasi langganan &amp; soft lock akun.</p>
           </div>
           <Button variant="green" size="sm" onClick={() => setShowAddModal(!showAddModal)}>
-            <Plus className="w-4 h-4 mr-1" /> {showAddModal ? 'TUTUP FORM' : 'TAMBAH EO BARU'}
+            <Plus className="w-4 h-4 mr-1" /> {showAddModal ? 'BATAL' : 'TAMBAH EO BARU'}
           </Button>
         </div>
 
@@ -139,18 +183,18 @@ export const AdminDashboard = () => {
               <KeyRound className="w-4 h-4" />
               <span>BUAT AKUN &amp; PASSWORD EO BARU</span>
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <Input
                 label="NAMA EO / PANITIA *"
                 required
-                placeholder="Contoh: abin"
+                placeholder="Masukkan Username / Nama EO..."
                 value={newEo.name}
                 onChange={(e) => setNewEo({ ...newEo, name: e.target.value })}
               />
               <Input
                 label="NO. WHATSAPP EO *"
                 required
-                placeholder="Contoh: 081234567890"
+                placeholder="Masukkan Nomor WhatsApp..."
                 value={newEo.wa}
                 onChange={(e) => setNewEo({ ...newEo, wa: e.target.value })}
               />
@@ -158,12 +202,21 @@ export const AdminDashboard = () => {
                 label="PASSWORD UNTUK EO *"
                 type="password"
                 required
-                placeholder="Buat password login EO (misal: 1234)..."
+                placeholder="Password login..."
                 value={newEo.password}
                 onChange={(e) => setNewEo({ ...newEo, password: e.target.value })}
               />
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-300 block mb-1.5">PAKET LANGGANAN *</label>
+                <CustomSelect
+                  options={planOptions}
+                  value={newEo.plan}
+                  onChange={(val) => setNewEo({ ...newEo, plan: val })}
+                  accentColor="green"
+                />
+              </div>
             </div>
-            <Button type="submit" variant="green" size="sm">
+            <Button type="submit" variant="green" size="sm" className="font-bold uppercase">
               SIMPAN &amp; BUAT AKUN EO
             </Button>
           </form>
@@ -182,9 +235,10 @@ export const AdminDashboard = () => {
               <thead className="bg-neutral-900 text-neutral-400 font-bold uppercase border-b border-neutral-800">
                 <tr>
                   <th className="p-3">ID EO</th>
-                  <th className="p-3">NAMA EO / PANITIA (USERNAME)</th>
-                  <th className="p-3">NO. WHATSAPP EO</th>
-                  <th className="p-3">PASSWORD EO</th>
+                  <th className="p-3">NAMA EO (USERNAME)</th>
+                  <th className="p-3">NO. WHATSAPP</th>
+                  <th className="p-3">PASSWORD</th>
+                  <th className="p-3">S/D EXPIRED</th>
                   <th className="p-3">STATUS</th>
                   <th className="p-3 text-right">KONTROL AKSES</th>
                 </tr>
@@ -219,9 +273,12 @@ export const AdminDashboard = () => {
                         </button>
                       </div>
                     </td>
+                    <td className="p-3 font-mono text-brand-yellow font-bold">
+                      {formatDate(eo.subscriptionExpiresAt || getOneMonthExpiry())}
+                    </td>
                     <td className="p-3">
                       <Badge variant={eo.status === 'active' ? 'green' : 'red'}>
-                        {eo.status === 'active' ? 'SUBSCRIPTION ACTIVE' : 'SOFT-LOCKED'}
+                        {eo.status === 'active' ? 'AKTIF' : 'SOFT-LOCKED'}
                       </Badge>
                     </td>
                     <td className="p-3 text-right space-x-2">

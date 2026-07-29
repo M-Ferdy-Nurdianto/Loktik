@@ -18,13 +18,13 @@ export const Card = ({
   };
 
   const hoverStyle = hover
-    ? 'transition-all duration-300 hover:border-brand-green/60 hover:-translate-y-1 hover:shadow-[0_4px_20px_rgba(57,255,20,0.15)]'
+    ? 'transition-all duration-300 hover:border-brand-blue/60 hover:-translate-y-1 hover:shadow-[0_4px_20px_rgba(6,182,212,0.15)]'
     : '';
 
   return (
     <div
       className={`
-        p-6 relative overflow-hidden backdrop-blur-sm
+        p-6 relative backdrop-blur-sm
         ${variantMap[variant] || variantMap.dark}
         ${hoverStyle}
         ${className}

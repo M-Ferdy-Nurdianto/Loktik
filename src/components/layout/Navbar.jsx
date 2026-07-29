@@ -17,47 +17,44 @@ export const Navbar = () => {
   const isEoPage = location.pathname.startsWith('/for-eo') || location.pathname.startsWith('/eo');
 
   return (
-    <header className="w-full bg-[#0a0a0a]/90 backdrop-blur-md border-b border-neutral-800/80 py-4 px-4 md:px-8 sticky top-0 z-50">
+    <header className="w-full bg-[#0a0a0a]/95 backdrop-blur-md border-b border-neutral-800/80 py-3 sm:py-4 px-3 sm:px-8 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center space-x-3 group">
-          <div className="bg-brand-green text-black p-2 rounded-md shadow-[0_0_12px_rgba(57,255,20,0.4)] group-hover:scale-105 transition-transform">
-            <Ticket className="w-5 h-5 stroke-[2.5]" />
-          </div>
+        <Link to="/" className="flex items-center space-x-2.5 group touch-press">
+          <img src="/logo.png" alt="LokTik Logo" className="h-8 sm:h-10 w-auto object-contain group-hover:scale-105 transition-transform" />
           <div className="flex flex-col">
-            <span className="text-2xl font-black tracking-tighter text-white uppercase">
-              LOK<span className="text-brand-green">TIK</span>
+            <span className="text-xl sm:text-2xl font-black tracking-tighter text-white uppercase leading-none">
+              LOK<span className="text-brand-blue">TIK</span>
             </span>
-            <span className="text-[9px] font-extrabold text-neutral-400 tracking-widest uppercase">
-              EVENT TICKETING DIRECT
+            <span className="text-[8px] sm:text-[9px] font-mono font-extrabold text-neutral-400 tracking-widest uppercase mt-0.5">
+              DIRECT TICKETING
             </span>
           </div>
         </Link>
 
         {/* Navigation Links */}
-        <nav className="flex items-center space-x-3 sm:space-x-5">
+        <nav className="flex items-center space-x-2 sm:space-x-3">
           <Link
             to="/"
-            className={`text-xs font-bold uppercase tracking-wider transition-colors ${
-              location.pathname === '/' ? 'text-brand-green' : 'text-neutral-300 hover:text-white'
+            className={`text-xs font-extrabold uppercase tracking-wider transition-colors px-2.5 sm:px-3 py-1.5 rounded-lg touch-press ${
+              location.pathname === '/' ? 'text-brand-blue bg-brand-blue/10 border border-brand-blue/30' : 'text-neutral-300 hover:text-white'
             }`}
           >
-            Jelajah Event
-          </Link>
-          
-          <Link
-            to="/for-eo"
-            className={`hidden sm:inline-flex items-center space-x-1 text-xs font-bold uppercase tracking-wider transition-colors ${
-              isEoPage ? 'text-brand-purple' : 'text-neutral-300 hover:text-brand-purple'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-brand-purple" />
-            <span>Untuk Panitia / EO</span>
+            EVENT
           </Link>
 
-          <Link to="/for-eo">
-            <Button variant="green" size="sm">
-              Buat Event
+          <Link
+            to="/for-eo"
+            className={`text-xs font-extrabold uppercase tracking-wider transition-colors px-2.5 sm:px-3 py-1.5 rounded-lg touch-press ${
+              isEoPage ? 'text-brand-blue bg-brand-blue/10 border border-brand-blue/30' : 'text-neutral-300 hover:text-white'
+            }`}
+          >
+            RENT
+          </Link>
+
+          <Link to="/eo/login" className="touch-press">
+            <Button variant="blue" size="sm" className="text-xs px-3.5 sm:px-4 py-1.5 min-h-[36px] font-black tracking-wider uppercase">
+              LOGIN
             </Button>
           </Link>
         </nav>

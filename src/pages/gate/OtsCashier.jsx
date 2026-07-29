@@ -6,6 +6,7 @@ import { formatRupiah } from '../../utils/formatters';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { CustomSelect } from '../../components/ui/CustomSelect';
 
 export const OtsCashier = ({ eventId }) => {
   const [categories, setCategories] = useState([]);
@@ -33,6 +34,11 @@ export const OtsCashier = ({ eventId }) => {
   const selectedCat = categories.find((c) => c.id === selectedCatId) || categories[0];
   const unitPrice = selectedCat ? parseFloat(selectedCat.price) : 0;
   const totalPrice = unitPrice * qty;
+
+  const categoryOptions = categories.map((cat) => ({
+    value: cat.id,
+    label: `${cat.name.toUpperCase()} — ${formatRupiah(cat.price)} ${cat.quota !== null ? `(SISA: ${cat.quota})` : '(UNLIMITED)'}`,
+  }));
 
   const handleSubmitOts = async (e) => {
     e.preventDefault();
@@ -79,13 +85,13 @@ export const OtsCashier = ({ eventId }) => {
       <Card variant="dark" className="p-5 border-neutral-800 space-y-4">
         <div className="border-b border-neutral-800 pb-3 flex items-center justify-between">
           <span className="text-base font-black uppercase text-white flex items-center gap-2">
-            <Zap className="w-5 h-5 text-brand-yellow fill-brand-yellow" /> KASIR CEPAT OTS VENUE
+            <Zap className="w-5 h-5 text-brand-purple fill-brand-purple" /> KASIR CEPAT OTS VENUE
           </span>
-          <Badge variant="yellow" className="text-[9px] px-2 py-0.5">FAST ISSUE</Badge>
+          <Badge variant="purple" className="text-[9px] px-2 py-0.5">FAST ISSUE</Badge>
         </div>
 
         {successMsg && (
-          <div className="p-4 bg-brand-green/10 text-brand-green font-bold text-xs border border-brand-green/40 rounded flex items-center justify-between">
+          <div className="p-4 bg-brand-purple/10 text-brand-purple font-bold text-xs border border-brand-purple/40 rounded flex items-center justify-between">
             <span>{successMsg}</span>
             <button onClick={() => setSuccessMsg(null)} className="underline cursor-pointer">OK</button>
           </div>
@@ -95,17 +101,12 @@ export const OtsCashier = ({ eventId }) => {
           {/* Ticket Category Dropdown */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 block">PILIH KATEGORI TIKET:</label>
-            <select
+            <CustomSelect
+              options={categoryOptions}
               value={selectedCatId}
-              onChange={(e) => setSelectedCatId(e.target.value)}
-              className="w-full p-3 bg-[#181818] text-white font-bold text-sm border border-neutral-800 rounded uppercase focus:outline-none focus:border-brand-yellow"
-            >
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name.toUpperCase()} — {formatRupiah(cat.price)} {cat.quota !== null ? `(SISA: ${cat.quota})` : '(UNLIMITED)'}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedCatId(val)}
+              accentColor="purple"
+            />
           </div>
 
           {/* Quantity Selector */}
@@ -119,7 +120,7 @@ export const OtsCashier = ({ eventId }) => {
               >
                 -
               </button>
-              <span className="flex-1 py-2.5 bg-[#181818] text-brand-yellow font-mono font-black text-2xl border border-neutral-800 rounded text-center">
+              <span className="flex-1 py-2.5 bg-[#181818] text-brand-purple font-mono font-black text-2xl border border-neutral-800 rounded text-center">
                 {qty}
               </span>
               <button
@@ -141,7 +142,7 @@ export const OtsCashier = ({ eventId }) => {
                 onClick={() => setPaymentMethod('CASH')}
                 className={`py-3 rounded font-black text-xs uppercase border transition-colors flex items-center justify-center space-x-2 cursor-pointer ${
                   paymentMethod === 'CASH'
-                    ? 'bg-brand-green text-black border-brand-green font-black'
+                    ? 'bg-brand-purple text-white border-brand-purple font-black'
                     : 'bg-[#181818] text-neutral-400 border-neutral-800 hover:text-white'
                 }`}
               >
@@ -165,16 +166,16 @@ export const OtsCashier = ({ eventId }) => {
           <div className="p-4 bg-[#181818] rounded border border-neutral-800 space-y-3">
             <div className="flex justify-between items-center text-xs font-black uppercase text-neutral-400">
               <span>TOTAL BAYAR:</span>
-              <span className="text-xl font-mono font-black text-brand-green">{formatRupiah(totalPrice)}</span>
+              <span className="text-xl font-mono font-black text-brand-purple">{formatRupiah(totalPrice)}</span>
             </div>
             <Button
               type="submit"
-              variant="yellow"
+              variant="purple"
               fullWidth
               disabled={submitting}
-              className="py-3 text-sm font-black justify-center text-black"
+              className="py-3 text-sm font-black justify-center"
             >
-              {submitting ? 'MEMPROSES...' : 'LUNAS & CETAK GELANG (OTS)'}
+              {submitting ? 'MEMPROSES...' : 'KONFIRMASI BAYAR'}
             </Button>
           </div>
         </form>

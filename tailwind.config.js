@@ -17,7 +17,8 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
+        sans: ['Montserrat', 'Poppins', 'sans-serif'],
+        display: ['Bebas Neue', 'Montserrat', 'sans-serif'],
       },
       boxShadow: {
         'brutal': '4px 4px 0px 0px #000000',

@@ -91,7 +91,7 @@ export const getLiveOrdersForEo = async (eoUsername = null) => {
 
   let query = supabase
     .from('orders')
-    .select('id, event_id, category_id, guest_name, guest_wa, guest_ig, total_price, payment_proof_url, status, created_at, events(name), ticket_categories(name), tickets(id, is_scanned)')
+    .select('id, event_id, guest_name, guest_wa, guest_ig, total_price, payment_proof_url, status, created_at, events(name), tickets(id, is_scanned, ticket_categories(name))')
     .order('created_at', { ascending: false });
 
   if (targetEventIds && targetEventIds.length > 0) {

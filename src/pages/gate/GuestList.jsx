@@ -53,18 +53,34 @@ export const GuestList = ({ eventId }) => {
 
   const filteredGuests = guests.filter((order) => {
     const q = searchQuery.toLowerCase();
+    const guestTickets = order.tickets || [];
+    const matchesTicketCode = guestTickets.some((t) =>
+      (t.barcode_uuid || '').toLowerCase().includes(q) ||
+      (t.id || '').toLowerCase().includes(q)
+    );
     return (
       (order.guest_name || '').toLowerCase().includes(q) ||
-      (order.guest_wa || '').includes(q)
+      (order.guest_wa || '').includes(q) ||
+      matchesTicketCode
     );
   });
+
+  const formatScanTime = (isoString) => {
+    if (!isoString) return '';
+    try {
+      const d = new Date(isoString);
+      return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+    } catch (e) {
+      return '';
+    }
+  };
 
   return (
     <div className="space-y-4 text-left font-sans">
       {/* Search Header Card */}
       <Card variant="dark" className="p-4 border-neutral-800 space-y-3">
         <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
-          <span className="text-xs font-black uppercase text-neutral-300">PENCARIAN DATA PEMBELI (DARURAT)</span>
+          <span className="text-xs font-black uppercase text-neutral-300">PENCARIAN DATA PEMBELI &amp; KODE TIKET</span>
           <Button variant="outline" size="sm" onClick={fetchGuests}>
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
@@ -75,7 +91,7 @@ export const GuestList = ({ eventId }) => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari Nama Pembeli / Nomor WA..."
+            placeholder="Cari Nama Pembeli / Kode Tiket / WA..."
             className="w-full pl-10 pr-4 py-2.5 bg-[#181818] text-white font-bold text-sm border border-neutral-800 rounded uppercase placeholder:text-neutral-600 focus:outline-none focus:border-brand-blue"
           />
           <Search className="absolute left-3 top-3 w-4 h-4 text-neutral-500 pointer-events-none" />
@@ -101,9 +117,9 @@ export const GuestList = ({ eventId }) => {
             <thead>
               <tr className="bg-neutral-900 text-neutral-400 border-b border-neutral-800 text-[10px] font-black uppercase tracking-wider">
                 <th className="p-3 border-r border-neutral-800">NAMA PEMBELI</th>
-                <th className="p-3 border-r border-neutral-800">WHATSAPP</th>
+                <th className="p-3 border-r border-neutral-800">KODE TIKET</th>
                 <th className="p-3 border-r border-neutral-800">KATEGORI TIKET</th>
-                <th className="p-3 border-r border-neutral-800">STATUS SCAN</th>
+                <th className="p-3 border-r border-neutral-800">STATUS &amp; WAKTU SCAN</th>
                 <th className="p-3 text-center">AKSI CHECK-IN</th>
               </tr>
             </thead>
@@ -116,47 +132,61 @@ export const GuestList = ({ eventId }) => {
                 </tr>
               ) : (
                 filteredGuests.map((order) =>
-                  (order.tickets || []).map((t, idx) => (
-                    <tr key={`${order.id}-${t.id}-${idx}`} className="hover:bg-neutral-900/60">
-                      <td className="p-3 font-bold uppercase text-sm border-r border-neutral-800 text-white">{order.guest_name}</td>
-                      <td className="p-3 border-r border-neutral-800 text-neutral-400">
-                        <span className="flex items-center space-x-1">
-                          <Phone className="w-3 h-3 text-brand-blue" />
-                          <span>{order.guest_wa || '-'}</span>
-                        </span>
-                      </td>
-                      <td className="p-3 border-r border-neutral-800">
-                        <Badge variant="purple" className="text-[9px] px-1.5 py-0">
-                          {t.ticket_categories?.name || 'Tiket Regular'}
-                        </Badge>
-                      </td>
-                      <td className="p-3 border-r border-neutral-800">
-                        {t.is_scanned ? (
-                          <Badge variant="green" className="text-[9px] px-1.5 py-0">
-                            <CheckCircle2 className="w-3 h-3 mr-1 inline" /> SUDAH DI-SCAN
+                  (order.tickets || []).map((t, idx) => {
+                    const ticketCode = t.barcode_uuid
+                      ? t.barcode_uuid.replace(/-/g, '').substring(0, 7).toUpperCase()
+                      : `TK-${(t.id || '1029').toString().slice(-4).toUpperCase()}`;
+
+                    const scanTimeStr = formatScanTime(t.scanned_at);
+
+                    return (
+                      <tr key={`${order.id}-${t.id}-${idx}`} className="hover:bg-neutral-900/60">
+                        <td className="p-3 font-bold uppercase text-sm border-r border-neutral-800 text-white">{order.guest_name}</td>
+                        <td className="p-3 border-r border-neutral-800 text-brand-yellow font-black font-mono tracking-wider">
+                          <span className="bg-neutral-950 px-2 py-0.5 rounded border border-brand-yellow/40">
+                            {ticketCode}
+                          </span>
+                        </td>
+                        <td className="p-3 border-r border-neutral-800">
+                          <Badge variant="purple" className="text-[9px] px-1.5 py-0">
+                            {t.ticket_categories?.name || 'Tiket Regular'}
                           </Badge>
-                        ) : (
-                          <Badge variant="yellow" className="text-[9px] px-1.5 py-0">
-                            <XCircle className="w-3 h-3 mr-1 inline" /> BELUM DI-SCAN
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        {t.is_scanned ? (
-                          <span className="text-neutral-600 font-bold uppercase text-[10px]">TERPAKAI</span>
-                        ) : (
-                          <Button
-                            variant="green"
-                            size="sm"
-                            onClick={() => handleManualCheckIn(t.id, order.guest_name)}
-                            className="px-2.5 py-1 text-xs"
-                          >
-                            <UserCheck className="w-3.5 h-3.5 mr-1" /> CHECK-IN
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="p-3 border-r border-neutral-800">
+                          {t.is_scanned ? (
+                            <div className="space-y-0.5">
+                              <Badge variant="green" className="text-[9px] px-1.5 py-0">
+                                <CheckCircle2 className="w-3 h-3 mr-1 inline" /> SUDAH DI-SCAN
+                              </Badge>
+                              {scanTimeStr && (
+                                <p className="text-[10px] text-brand-green font-mono font-bold">
+                                  {scanTimeStr}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <Badge variant="yellow" className="text-[9px] px-1.5 py-0">
+                              <XCircle className="w-3 h-3 mr-1 inline" /> BELUM DI-SCAN
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
+                          {t.is_scanned ? (
+                            <span className="text-neutral-600 font-bold uppercase text-[10px]">TERPAKAI</span>
+                          ) : (
+                            <Button
+                              variant="green"
+                              size="sm"
+                              onClick={() => handleManualCheckIn(t.id, order.guest_name)}
+                              className="px-2.5 py-1 text-xs"
+                            >
+                              <UserCheck className="w-3.5 h-3.5 mr-1" /> CHECK-IN
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )
               )}
             </tbody>

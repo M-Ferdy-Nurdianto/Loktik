@@ -33,7 +33,7 @@ export const getActiveEvents = async () => {
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from('events')
-    .select('id, slug, name, description, poster_url, event_date, open_gate, status, payment_details')
+    .select('id, slug, name, description, poster_url, event_date, open_gate, status, payment_details, ticket_categories(price)')
     .eq('status', 'active')
     .gte('event_date', fourteenDaysAgo)
     .order('event_date', { ascending: true });
@@ -172,5 +172,39 @@ export const updateEventStatus = async (eventId, newStatus) => {
     .eq('id', eventId);
 
   if (error) throw new Error('Gagal mengupdate status event.');
+  return true;
+};
+
+/**
+ * Update event details & categories in Supabase DB.
+ */
+export const updateEventData = async (eventId, eventPayload, categoryRows) => {
+  const { error: eventError } = await supabase
+    .from('events')
+    .update(eventPayload)
+    .eq('id', eventId);
+
+  if (eventError) throw new Error(`Gagal memperbarui event: ${eventError.message}`);
+
+  if (categoryRows && categoryRows.length > 0) {
+    await supabase.from('ticket_categories').delete().eq('event_id', eventId);
+
+    const formattedCategories = categoryRows.map((cat) => ({
+      event_id: eventId,
+      name: cat.name,
+      price: parseFloat(cat.price) || 0,
+      quota: cat.quota === '' || cat.quota === null ? null : parseInt(cat.quota),
+      description: cat.description || '',
+      start_po: cat.start_po || null,
+      end_po: cat.end_po || null,
+    }));
+
+    const { error: tiersError } = await supabase
+      .from('ticket_categories')
+      .insert(formattedCategories);
+
+    if (tiersError) throw new Error(`Gagal memperbarui kategori tiket: ${tiersError.message}`);
+  }
+
   return true;
 };

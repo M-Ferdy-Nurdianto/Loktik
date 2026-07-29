@@ -87,14 +87,14 @@ export const OrderManagerTab = () => {
 
     const messageText = `Halo Kak *${order.guest_name}*,
 
-Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!* 🎉
+Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!*
 
-📋 *DETAIL TIKET:*
+*DETAIL TIKET:*
 - Kode Tiket / Barcode: *${prettyCode}*
 - Total Bayar: ${formatRupiah(order.total_price)}
 - Status: LUNAS (Verified)
 
-🔗 *LINK QR CODE BARCODE TIKET ANDA:*
+*LINK QR CODE BARCODE TIKET ANDA:*
 ${qrImageUrl}
 
 Silakan sebutkan Kode *${prettyCode}* atau tunjukkan gambar QR Code di atas pada pintu masuk venue saat penukaran gelang.
@@ -209,7 +209,10 @@ Terima Kasih!
       ];
     });
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const titleRow = `"LOKTIK TICKETING DIRECT — LAPORAN REKAPITULASI PENJUALAN"`;
+    const metaRow = `"EVENT: ${eventTitle.replace(/"/g, '""')}"` + `,"TANGGAL CETAK: ${new Date().toLocaleDateString('id-ID')}"`;
+
+    const csvContent = '\uFEFF' + [titleRow, metaRow, '', headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -330,9 +333,12 @@ Terima Kasih!
       </head>
       <body>
         <div class="header">
-          <div>
-            <h1>LOKTIK — LAPORAN REKAPITULASI PENJUALAN</h1>
-            <p><strong>EVENT:</strong> ${eventTitle} | <strong>PANITIA EO:</strong> ${eoUsername}</p>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <img src="/logo.png" style="height:40px;width:auto;object-contain:contain;" alt="LokTik Logo" />
+            <div>
+              <h1>LOKTIK — LAPORAN REKAPITULASI PENJUALAN</h1>
+              <p><strong>EVENT:</strong> ${eventTitle} | <strong>PANITIA EO:</strong> ${eoUsername}</p>
+            </div>
           </div>
           <div style="text-align:right;">
             <p><strong>TANGGAL CETAK:</strong> ${new Date().toLocaleDateString('id-ID')}</p>
@@ -446,12 +452,12 @@ Terima Kasih!
                 {selectedEventId === 'ALL' ? (
                   <>
                     <Layers className="w-4 h-4 text-brand-green shrink-0" />
-                    <span className="truncate">🌐 SEMUA EVENT ({orders.length} PESANAN)</span>
+                    <span className="truncate">SEMUA EVENT ({orders.length} PESANAN)</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 text-brand-yellow shrink-0" />
-                    <span className="truncate">🎯 {selectedEventObj?.name || 'EVENT DILAYANI'}</span>
+                    <span className="truncate">{selectedEventObj?.name || 'EVENT DILAYANI'}</span>
                   </>
                 )}
               </div>
@@ -474,7 +480,7 @@ Terima Kasih!
                 >
                   <span className="flex items-center space-x-2">
                     <Layers className="w-4 h-4" />
-                    <span>🌐 SEMUA EVENT ({orders.length} PESANAN)</span>
+                    <span>SEMUA EVENT ({orders.length} PESANAN)</span>
                   </span>
                   {selectedEventId === 'ALL' && <Check className="w-4 h-4" />}
                 </button>
@@ -497,7 +503,7 @@ Terima Kasih!
                       }`}
                     >
                       <span className="flex items-center space-x-2 truncate">
-                        <span>🎯 {evt.name}</span>
+                        <span>{evt.name}</span>
                       </span>
                       <span className="flex items-center space-x-2">
                         <Badge variant={isSelected ? 'white' : 'yellow'} className="text-[9px]">
@@ -542,7 +548,7 @@ Terima Kasih!
 
         {errorMsg && (
           <p className="text-xs text-brand-red font-bold uppercase bg-red-950/40 p-3 rounded-md border border-brand-red/40">
-            ⚠️ {errorMsg}
+            [!] {errorMsg}
           </p>
         )}
 
@@ -618,11 +624,11 @@ Terima Kasih!
                       <td className="p-3">
                         {hasScannedTicket ? (
                           <Badge variant="red" className="text-[10px]">
-                            🔒 SUDAH SCAN (GELANG)
+                            SUDAH SCAN (GELANG)
                           </Badge>
                         ) : o.status === 'paid' ? (
                           <Badge variant="green" className="text-[10px]">
-                            🎫 BELUM SCAN (AKTIF)
+                            BELUM SCAN (AKTIF)
                           </Badge>
                         ) : (
                           <span className="text-neutral-500 font-mono text-[11px]">-</span>
@@ -720,7 +726,7 @@ Terima Kasih!
                       </td>
                       <td className="p-3">
                         <Badge variant="green" className="text-[10px]">
-                          🎟️ GELANG DISERAHKAN (KASIR)
+                          GELANG DISERAHKAN (KASIR)
                         </Badge>
                       </td>
                     </tr>

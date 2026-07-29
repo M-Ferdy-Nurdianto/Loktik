@@ -31,7 +31,7 @@ export const FaqSection = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {faqs.map((faq, idx) => (
           <Card key={idx} variant="dark" className="p-5 space-y-2 border-neutral-800">
-            <h3 className="text-sm font-extrabold text-brand-green uppercase tracking-wide">Q: {faq.q}</h3>
+            <h3 className="text-sm font-extrabold text-brand-blue uppercase tracking-wide">Q: {faq.q}</h3>
             <p className="text-xs text-neutral-300 font-medium leading-relaxed">A: {faq.a}</p>
           </Card>
         ))}
