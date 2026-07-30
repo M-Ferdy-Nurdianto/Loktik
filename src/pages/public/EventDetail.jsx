@@ -80,12 +80,6 @@ export const EventDetail = () => {
         </div>
 
         <div className="md:col-span-2 space-y-3 sm:space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="blue" className="text-xs py-1 px-2.5 font-bold">TIKET RESMI PANITIA</Badge>
-            <Badge variant="blue" className="text-xs py-1 px-2.5 font-bold">WRISTBAND SCANNER</Badge>
-            <Badge variant="blue" className="text-xs py-1 px-2.5 font-bold">0% KOMISI</Badge>
-          </div>
-
           <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-white leading-tight">
             {event.name}
           </h1>
