@@ -8,9 +8,11 @@ import { Badge } from '../ui/Badge';
 import { EditEventModal } from './EditEventModal';
 import { getAllEventsForEo, updateEventStatus } from '../../services/apiEvents';
 import { formatRupiah, formatDate } from '../../utils/formatters';
+import { useToast } from '../../context/ToastContext';
 
 export const MyEventsTab = ({ onNavigateToCreate }) => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -43,7 +45,7 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
         prev.map((e) => (e.id === eventId ? { ...e, status: nextStatus } : e))
       );
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'eo');
     }
   };
 

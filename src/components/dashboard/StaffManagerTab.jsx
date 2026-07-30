@@ -6,9 +6,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { getAllEventsForEo } from '../../services/apiEvents';
 import { getAllStaffForEo, createStaffAccount, deleteStaffAccount, updateStaffAccount } from '../../services/apiStaff';
 import { StaffFormModal } from './StaffFormModal';
+import { useToast } from '../../context/ToastContext';
 
 export const StaffManagerTab = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const eoUsername = user?.username || user?.name || 'eo_lokal';
 
   const [staffList, setStaffList] = useState([]);
@@ -51,7 +53,7 @@ export const StaffManagerTab = () => {
       loadData();
       setTimeout(() => setToastMsg(''), 4000);
     } catch (err) {
-      alert(err.message || 'Gagal membuat akun staf.');
+      showToast(err.message || 'Gagal membuat akun staf.', 'eo');
     }
   };
 
@@ -63,7 +65,7 @@ export const StaffManagerTab = () => {
         setToastMsg('AKUN STAF BERHASIL DIHAPUS!');
         setTimeout(() => setToastMsg(''), 3000);
       } catch (err) {
-        alert(err.message || 'Gagal menghapus staf');
+        showToast(err.message || 'Gagal menghapus staf', 'eo');
       }
     }
   };
@@ -73,7 +75,7 @@ export const StaffManagerTab = () => {
       await updateStaffAccount(id, { status: currentStatus === 'active' ? 'suspended' : 'active' });
       loadData();
     } catch (err) {
-      alert(err.message || 'Gagal mengubah status staf');
+      showToast(err.message || 'Gagal mengubah status staf', 'eo');
     }
   };
 

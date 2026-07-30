@@ -139,3 +139,35 @@
   animation-play-state: paused;
 }
 
+/* Toast Animations */
+@keyframes slideIn {
+  from {
+    transform: translate(-50%, 1rem);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+@media (min-width: 640px) {
+  @keyframes slideInDesktop {
+    from {
+      transform: translateY(-1rem);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  .animate-slide-in {
+    animation: slideInDesktop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+@media (max-width: 639px) {
+  .animate-slide-in {
+    animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+

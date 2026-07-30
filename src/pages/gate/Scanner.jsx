@@ -6,8 +6,10 @@ import { supabase } from '../../services/supabase';
 import { checkTicketValidity, redeemTicket } from '../../services/apiTickets';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { useToast } from '../../context/ToastContext';
 
 export const Scanner = ({ eventId }) => {
+  const { showToast } = useToast();
   const [scanMode, setScanMode] = useState('camera'); // 'camera' | 'upload' | 'manual'
   const [manualCode, setManualCode] = useState('');
   const [totalScanned, setTotalScanned] = useState(0);
@@ -235,7 +237,7 @@ export const Scanner = ({ eventId }) => {
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const qr = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });
       if (qr?.data) processCode(qr.data);
-      else alert('QR Code tidak terbaca!');
+      else showToast('QR Code tidak terbaca!', 'staff');
     };
     img.src = URL.createObjectURL(e.target.files[0]);
   };

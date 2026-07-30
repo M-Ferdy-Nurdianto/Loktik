@@ -10,9 +10,11 @@ import { formatRupiah, formatDateTime, generatePrettyRedeemCode } from '../../ut
 import html2canvas from 'html2canvas';
 import { TicketGraphic } from './TicketGraphic';
 import { supabase } from '../../services/supabase';
+import { useToast } from '../../context/ToastContext';
 
 export const OrderManagerTab = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const eoUsername = user?.username || user?.name || 'eo_lokal';
 
   const [orders, setOrders] = useState([]);
@@ -27,6 +29,7 @@ export const OrderManagerTab = () => {
 
   const dropdownRef = useRef(null);
   const ticketRef = useRef(null);
+  const lastWaSendTimeRef = useRef(0);
   const botServerUrl = import.meta.env.VITE_WA_BOT_URL || 'http://localhost:5000';
 
   const fetchData = async () => {
@@ -199,7 +202,7 @@ Terima Kasih!
 
       const result = await response.json();
       if (result.success) {
-        alert(`Tiket Kode ${prettyCode} & QR Code otomatis terkirim via WA ke ${order.guest_name}!`);
+        showToast(`Tiket Kode ${prettyCode} & QR Code otomatis terkirim via WA ke ${order.guest_name}!`, 'eo');
         return true;
       }
     } catch (e) {
@@ -210,6 +213,15 @@ Terima Kasih!
   };
 
   const handleApprove = async (order, mode = 'bot') => {
+    const now = Date.now();
+    const cooldown = 5000;
+    if (now - lastWaSendTimeRef.current < cooldown) {
+      const waitSec = Math.ceil((cooldown - (now - lastWaSendTimeRef.current)) / 1000);
+      showToast(`Harap tunggu ${waitSec} detik sebelum mengirim WhatsApp lagi.`, 'eo');
+      return;
+    }
+    lastWaSendTimeRef.current = now;
+
     try {
       setLoading(true);
       await updateOrderStatus(order.id, 'paid');
@@ -224,7 +236,7 @@ Terima Kasih!
         ticketUrl = await generateTicketImage(updatedOrder);
       } catch (genErr) {
         console.error('Gagal generate e-ticket premium:', genErr);
-        alert('Gagal menghasilkan e-ticket premium. Mengalihkan ke QR code standar...');
+        showToast('Gagal menghasilkan e-ticket premium. Mengalihkan ke QR code standar...', 'eo');
       }
 
       if (mode === 'bot') {
@@ -233,13 +245,22 @@ Terima Kasih!
         sendManualWhatsAppMessage(updatedOrder, ticketUrl);
       }
     } catch (err) {
-      alert(err.message || 'Gagal memproses persetujuan.');
+      showToast(err.message || 'Gagal memproses persetujuan.', 'eo');
     } finally {
       setLoading(false);
     }
   };
 
   const handleResend = async (order, mode = 'bot') => {
+    const now = Date.now();
+    const cooldown = 5000;
+    if (now - lastWaSendTimeRef.current < cooldown) {
+      const waitSec = Math.ceil((cooldown - (now - lastWaSendTimeRef.current)) / 1000);
+      showToast(`Harap tunggu ${waitSec} detik sebelum mengirim WhatsApp lagi.`, 'eo');
+      return;
+    }
+    lastWaSendTimeRef.current = now;
+
     try {
       setLoading(true);
       let ticketUrl = '';
@@ -247,7 +268,7 @@ Terima Kasih!
         ticketUrl = await generateTicketImage(order);
       } catch (genErr) {
         console.error('Gagal generate e-ticket premium:', genErr);
-        alert('Gagal menghasilkan e-ticket premium. Mengalihkan ke QR code standar...');
+        showToast('Gagal menghasilkan e-ticket premium. Mengalihkan ke QR code standar...', 'eo');
       }
 
       if (mode === 'bot') {
@@ -256,7 +277,7 @@ Terima Kasih!
         sendManualWhatsAppMessage(order, ticketUrl);
       }
     } catch (err) {
-      alert(err.message || 'Gagal mengirim ulang e-ticket.');
+      showToast(err.message || 'Gagal mengirim ulang e-ticket.', 'eo');
     } finally {
       setLoading(false);
     }
@@ -269,13 +290,13 @@ Terima Kasih!
         prev.map((o) => (o.id === orderId ? { ...o, status: 'need_reupload' } : o))
       );
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'eo');
     }
   };
 
   const exportToExcel = () => {
     if (filteredOrders.length === 0) {
-      alert('Tidak ada data pesanan untuk di-export ke Excel/CSV.');
+      showToast('Tidak ada data pesanan untuk di-export ke Excel/CSV.', 'eo');
       return;
     }
 
@@ -332,7 +353,7 @@ Terima Kasih!
 
   const exportToPDF = () => {
     if (filteredOrders.length === 0) {
-      alert('Tidak ada data pesanan untuk di-export ke PDF.');
+      showToast('Tidak ada data pesanan untuk di-export ke PDF.', 'eo');
       return;
     }
 
@@ -355,7 +376,7 @@ Terima Kasih!
 
     const reportWindow = window.open('', '_blank');
     if (!reportWindow) {
-      alert('Pop-up terblokir oleh browser. Izinkan pop-up untuk mencetak PDF.');
+      showToast('Pop-up terblokir oleh browser. Izinkan pop-up untuk mencetak PDF.', 'eo');
       return;
     }
 

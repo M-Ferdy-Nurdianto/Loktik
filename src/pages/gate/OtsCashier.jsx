@@ -7,8 +7,10 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { CustomSelect } from '../../components/ui/CustomSelect';
+import { useToast } from '../../context/ToastContext';
 
 export const OtsCashier = ({ eventId }) => {
+  const { showToast } = useToast();
   const [categories, setCategories] = useState([]);
   const [selectedCatId, setSelectedCatId] = useState('');
   const [qty, setQty] = useState(1);
@@ -42,7 +44,7 @@ export const OtsCashier = ({ eventId }) => {
 
   const handleSubmitOts = async (e) => {
     e.preventDefault();
-    if (!selectedCat) return alert('Silakan pilih kategori tiket!');
+    if (!selectedCat) return showToast('Silakan pilih kategori tiket!', 'staff');
 
     try {
       setSubmitting(true);
@@ -74,7 +76,7 @@ export const OtsCashier = ({ eventId }) => {
       setSuccessMsg(`BERHASIL! ${qty} TIKET '${selectedCat.name.toUpperCase()}' LUNAS (${paymentMethod}). GELANG DISERAHKAN.`);
       setQty(1);
     } catch (err) {
-      alert(err.message || 'Gagal memproses transaksi OTS.');
+      showToast(err.message || 'Gagal memproses transaksi OTS.', 'staff');
     } finally {
       setSubmitting(false);
     }
