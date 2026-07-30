@@ -84,9 +84,9 @@ app.post('/api/send-ticket-wa', async (req, res) => {
 
     const captionText = `Halo Kak *${guestName}*,
 
-Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!* 🎉
+Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!*
 
-📋 *DETAIL TIKET:*
+*DETAIL TIKET:*
 - ID Pesanan: \`${orderId ? orderId.substring(0, 8) : 'LOKTIK'}\`
 - Total Bayar: Rp ${totalPrice ? Number(totalPrice).toLocaleString('id-ID') : 0}
 - Status: LUNAS (Verified)

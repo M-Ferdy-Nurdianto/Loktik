@@ -7,6 +7,9 @@ import { Badge } from '../ui/Badge';
 import { getLiveOrdersForEo, updateOrderStatus } from '../../services/apiOrders';
 import { getAllEventsForEo } from '../../services/apiEvents';
 import { formatRupiah, formatDateTime, generatePrettyRedeemCode } from '../../utils/formatters';
+import html2canvas from 'html2canvas';
+import { TicketGraphic } from './TicketGraphic';
+import { supabase } from '../../services/supabase';
 
 export const OrderManagerTab = () => {
   const { user } = useAuth();
@@ -20,8 +23,10 @@ export const OrderManagerTab = () => {
   const [errorMsg, setErrorMsg] = useState(null);
   const [previewProofUrl, setPreviewProofUrl] = useState(null);
   const [botStatus, setBotStatus] = useState('checking');
+  const [generatingTicket, setGeneratingTicket] = useState(null);
 
   const dropdownRef = useRef(null);
+  const ticketRef = useRef(null);
   const botServerUrl = import.meta.env.VITE_WA_BOT_URL || 'http://localhost:5000';
 
   const fetchData = async () => {
@@ -77,13 +82,79 @@ export const OrderManagerTab = () => {
 
   const selectedEventObj = events.find((e) => e.id === selectedEventId);
 
-  const sendManualWhatsAppMessage = (order) => {
+  const generateTicketImage = (order) => {
+    return new Promise((resolve, reject) => {
+      const eventName = order.events?.name || 'Event LokTik';
+      const seed = parseInt(order.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
+      const prettyCode = generatePrettyRedeemCode(eventName, seed);
+
+      setGeneratingTicket({
+        eventName,
+        guestName: order.guest_name,
+        ticketCode: prettyCode,
+        isPaid: order.status === 'paid' || true,
+      });
+
+      setTimeout(async () => {
+        try {
+          const element = ticketRef.current;
+          if (!element) {
+            throw new Error('Elemen e-ticket tidak ditemukan di DOM.');
+          }
+
+          const canvas = await html2canvas(element, {
+            useCORS: true,
+            scale: 2,
+            backgroundColor: '#0a0a0a',
+            logging: false,
+          });
+
+          canvas.toBlob(async (blob) => {
+            if (!blob) {
+              reject(new Error('Gagal mengonversi e-ticket ke gambar.'));
+              return;
+            }
+
+            try {
+              const fileName = `${prettyCode}-${Date.now()}.png`;
+              const { error: uploadError } = await supabase.storage
+                .from('tickets')
+                .upload(fileName, blob, {
+                  contentType: 'image/png',
+                  cacheControl: '3600',
+                  upsert: false,
+                });
+
+              if (uploadError) {
+                throw new Error(`Gagal mengunggah tiket ke storage: ${uploadError.message}`);
+              }
+
+              const { data } = supabase.storage
+                .from('tickets')
+                .getPublicUrl(fileName);
+
+              setGeneratingTicket(null);
+              resolve(data.publicUrl);
+            } catch (err) {
+              setGeneratingTicket(null);
+              reject(err);
+            }
+          }, 'image/png');
+        } catch (err) {
+          setGeneratingTicket(null);
+          reject(err);
+        }
+      }, 300);
+    });
+  };
+
+  const sendManualWhatsAppMessage = (order, ticketUrl) => {
     const waNumber = order.guest_wa.replace(/[^0-9]/g, '');
     const cleanNumber = waNumber.startsWith('0') ? `62${waNumber.substring(1)}` : waNumber;
     const eventName = order.events?.name || 'Event LokTik';
     const seed = parseInt(order.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
     const prettyCode = generatePrettyRedeemCode(eventName, seed);
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${prettyCode}`;
+    const qrImageUrl = ticketUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${prettyCode}`;
 
     const messageText = `Halo Kak *${order.guest_name}*,
 
@@ -94,7 +165,7 @@ Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!*
 - Total Bayar: ${formatRupiah(order.total_price)}
 - Status: LUNAS (Verified)
 
-*LINK QR CODE BARCODE TIKET ANDA:*
+*LINK E-TIKET RESMI ANDA:*
 ${qrImageUrl}
 
 Silakan sebutkan Kode *${prettyCode}* atau tunjukkan gambar QR Code di atas pada pintu masuk venue saat penukaran gelang.
@@ -105,12 +176,12 @@ Terima Kasih!
     window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(messageText)}`, '_blank');
   };
 
-  const sendAutoTicketViaBot = async (order) => {
+  const sendAutoTicketViaBot = async (order, ticketUrl) => {
     const waNumber = order.guest_wa.replace(/[^0-9]/g, '');
     const eventName = order.events?.name || 'Event LokTik';
     const seed = parseInt(order.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
     const prettyCode = generatePrettyRedeemCode(eventName, seed);
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${prettyCode}`;
+    const qrImageUrl = ticketUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${prettyCode}`;
 
     try {
       const response = await fetch(`${botServerUrl}/api/send-ticket-wa`, {
@@ -135,23 +206,59 @@ Terima Kasih!
       console.warn('Bot WA offline, mengalihkan ke WA Manual...');
     }
 
-    sendManualWhatsAppMessage(order);
+    sendManualWhatsAppMessage(order, ticketUrl);
   };
 
   const handleApprove = async (order, mode = 'bot') => {
     try {
+      setLoading(true);
       await updateOrderStatus(order.id, 'paid');
+      
+      const updatedOrder = { ...order, status: 'paid' };
       setOrders((prev) =>
-        prev.map((o) => (o.id === order.id ? { ...o, status: 'paid' } : o))
+        prev.map((o) => (o.id === order.id ? updatedOrder : o))
       );
 
+      let ticketUrl = '';
+      try {
+        ticketUrl = await generateTicketImage(updatedOrder);
+      } catch (genErr) {
+        console.error('Gagal generate e-ticket premium:', genErr);
+        alert('Gagal menghasilkan e-ticket premium. Mengalihkan ke QR code standar...');
+      }
+
       if (mode === 'bot') {
-        sendAutoTicketViaBot(order);
+        await sendAutoTicketViaBot(updatedOrder, ticketUrl);
       } else {
-        sendManualWhatsAppMessage(order);
+        sendManualWhatsAppMessage(updatedOrder, ticketUrl);
       }
     } catch (err) {
-      alert(err.message);
+      alert(err.message || 'Gagal memproses persetujuan.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async (order, mode = 'bot') => {
+    try {
+      setLoading(true);
+      let ticketUrl = '';
+      try {
+        ticketUrl = await generateTicketImage(order);
+      } catch (genErr) {
+        console.error('Gagal generate e-ticket premium:', genErr);
+        alert('Gagal menghasilkan e-ticket premium. Mengalihkan ke QR code standar...');
+      }
+
+      if (mode === 'bot') {
+        await sendAutoTicketViaBot(order, ticketUrl);
+      } else {
+        sendManualWhatsAppMessage(order, ticketUrl);
+      }
+    } catch (err) {
+      alert(err.message || 'Gagal mengirim ulang e-ticket.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -422,6 +529,14 @@ Terima Kasih!
 
   return (
     <div className="space-y-6 text-left">
+      <TicketGraphic
+        ref={ticketRef}
+        eventName={generatingTicket?.eventName || 'Event LokTik'}
+        guestName={generatingTicket?.guestName || 'Nama Tamu'}
+        ticketCode={generatingTicket?.ticketCode || 'LT1029'}
+        isPaid={generatingTicket?.isPaid !== false}
+      />
+
       {previewProofUrl && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className="bg-neutral-900 border border-neutral-800 p-4 rounded-lg max-w-lg w-full space-y-3 text-center">
@@ -651,10 +766,10 @@ Terima Kasih!
                         )}
                         {o.status === 'paid' && (
                           <div className="flex items-center justify-end space-x-1.5">
-                            <Button variant="outline" size="sm" onClick={() => sendAutoTicketViaBot(o)}>
+                            <Button variant="outline" size="sm" onClick={() => handleResend(o, 'bot')}>
                               <Bot className="w-3.5 h-3.5 mr-1 text-brand-green" /> BOT RE-SEND
                             </Button>
-                            <Button variant="purple" size="sm" onClick={() => sendManualWhatsAppMessage(o)}>
+                            <Button variant="purple" size="sm" onClick={() => handleResend(o, 'manual')}>
                               <Send className="w-3.5 h-3.5 mr-1" /> WA MANUAL
                             </Button>
                           </div>
