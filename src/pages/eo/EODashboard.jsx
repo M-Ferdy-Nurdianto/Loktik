@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List, Users } from 'lucide-react';
+import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List, Users, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -209,6 +209,17 @@ export const EODashboard = () => {
           </div>
           <Badge variant="green" className="text-[10px] py-0.5 px-2">● LIVE ONLINE</Badge>
         </div>
+
+        {/* Data Retention Warning Card */}
+        <Card variant="dark" className="p-4 border border-brand-yellow/60 bg-brand-yellow/10 space-y-2 text-left">
+          <div className="flex items-center space-x-2 text-brand-yellow">
+            <Clock className="w-5 h-5 shrink-0" />
+            <h3 className="text-xs font-black uppercase tracking-wide">PENTING: ATURAN RETENSI DATA EVENT (OTOMATIS HAPUS 2 MINGGU)</h3>
+          </div>
+          <p className="text-[11px] sm:text-xs text-neutral-300 font-medium leading-relaxed sm:pl-7">
+            Setiap data event, daftar transaksi pesanan, tiket QR Code, dan bukti bayar yang sudah selesai akan <strong className="text-brand-yellow underline">otomatis dibersihkan &amp; dihapus oleh sistem 14 hari (2 minggu) setelah tanggal event berakhir</strong>. Harap lakukan ekspor/rekapan data penjualan sebelum batas waktu tersebut (tombol <strong className="text-brand-green">EXPORT EXCEL</strong> &amp; <strong className="text-brand-green">EXPORT PDF</strong> tersedia di Manajemen Pesanan).
+          </p>
+        </Card>
 
         {/* Overview Stats: Render ONLY on 'my-events' and 'orders' tabs */}
         {(activeTab === 'my-events' || activeTab === 'orders') && (

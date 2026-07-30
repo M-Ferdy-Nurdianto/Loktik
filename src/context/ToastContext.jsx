@@ -64,7 +64,7 @@ export const ToastProvider = ({ children }) => {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       {/* Toast container: centered bottom on mobile, top right on desktop */}
-      <div className="fixed z-[9999] flex flex-col gap-3 w-full max-w-sm px-4 bottom-4 left-1/2 -translate-x-1/2 sm:bottom-auto sm:top-4 sm:right-4 sm:left-auto sm:translate-x-0 pointer-events-none">
+      <div className="fixed z-[9999] flex flex-col gap-3 w-full max-w-[320px] px-4 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 sm:top-4 sm:right-4 sm:left-auto sm:bottom-auto sm:translate-x-0 sm:translate-y-0 pointer-events-none items-center justify-center">
         {toasts.map((toast) => {
           const theme = getThemeClasses(toast.role);
           return (

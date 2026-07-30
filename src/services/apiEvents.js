@@ -1,5 +1,20 @@
 import { supabase } from './supabase';
 
+// Simple in-memory cache to boost mobile loading speed and prevent DB spam (15s TTL)
+const cacheStore = {
+  activeEvents: null,
+  activeEventsExpiry: 0,
+  eventDetails: new Map(), // slug -> { data, expiry }
+};
+
+const CACHE_TTL = 15000; // 15 seconds
+
+const clearPublicEventsCache = () => {
+  cacheStore.activeEvents = null;
+  cacheStore.activeEventsExpiry = 0;
+  cacheStore.eventDetails.clear();
+};
+
 /**
  * Automatically purge events & related orders/tickets older than 14 days (2 weeks).
  */
@@ -30,16 +45,25 @@ export const getActiveEvents = async () => {
   // Fire background cleanup for expired events > 14 days
   purgeExpiredEvents();
 
+  const now = Date.now();
+  if (cacheStore.activeEvents && now < cacheStore.activeEventsExpiry) {
+    return cacheStore.activeEvents;
+  }
+
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from('events')
-    .select('id, slug, name, description, poster_url, event_date, open_gate, status, payment_details, ticket_categories(price)')
+    .select('id, slug, name, description, location, poster_url, event_date, open_gate, status, payment_details, ticket_categories(price)')
     .eq('status', 'active')
     .gte('event_date', fourteenDaysAgo)
     .order('event_date', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data || [];
+
+  cacheStore.activeEvents = data || [];
+  cacheStore.activeEventsExpiry = now + CACHE_TTL;
+
+  return cacheStore.activeEvents;
 };
 
 /**
@@ -48,7 +72,7 @@ export const getActiveEvents = async () => {
 export const getAllEventsForEo = async (eoUsername = null) => {
   let query = supabase
     .from('events')
-    .select('id, eo_id, created_by, slug, name, description, poster_url, event_date, open_gate, payment_details, status, created_at')
+    .select('id, eo_id, created_by, slug, name, description, location, poster_url, event_date, open_gate, payment_details, status, created_at')
     .order('created_at', { ascending: false });
 
   if (eoUsername && eoUsername.toLowerCase() !== 'broferadm') {
@@ -66,9 +90,15 @@ export const getAllEventsForEo = async (eoUsername = null) => {
  * Fetch event detail & custom ticket tiers by slug (public for buyers).
  */
 export const getEventBySlug = async (slug) => {
+  const now = Date.now();
+  const cached = cacheStore.eventDetails.get(slug);
+  if (cached && now < cached.expiry) {
+    return cached.data;
+  }
+
   const { data: event, error: eventError } = await supabase
     .from('events')
-    .select('id, eo_id, created_by, slug, name, description, poster_url, event_date, open_gate, payment_details, status')
+    .select('id, eo_id, created_by, slug, name, description, location, poster_url, event_date, open_gate, payment_details, status')
     .eq('slug', slug)
     .single();
 
@@ -82,7 +112,13 @@ export const getEventBySlug = async (slug) => {
 
   if (tiersError) throw new Error(tiersError.message);
 
-  return { ...event, ticket_categories: tiers };
+  const fullEvent = { ...event, ticket_categories: tiers };
+  cacheStore.eventDetails.set(slug, {
+    data: fullEvent,
+    expiry: now + CACHE_TTL,
+  });
+
+  return fullEvent;
 };
 
 /**
@@ -133,6 +169,7 @@ export const uploadQrisCode = async (compressedWebPFile) => {
  * Create event & insert ticket categories in Supabase DB with created_by.
  */
 export const createEventWithTiers = async (eventPayload, categoryRows) => {
+  clearPublicEventsCache();
   const { data: newEvent, error: eventError } = await supabase
     .from('events')
     .insert([eventPayload])
@@ -166,6 +203,7 @@ export const createEventWithTiers = async (eventPayload, categoryRows) => {
  * Update event details or status in Supabase DB.
  */
 export const updateEventStatus = async (eventId, newStatus) => {
+  clearPublicEventsCache();
   const { error } = await supabase
     .from('events')
     .update({ status: newStatus })
@@ -179,6 +217,7 @@ export const updateEventStatus = async (eventId, newStatus) => {
  * Update event details & categories in Supabase DB.
  */
 export const updateEventData = async (eventId, eventPayload, categoryRows) => {
+  clearPublicEventsCache();
   const { error: eventError } = await supabase
     .from('events')
     .update(eventPayload)

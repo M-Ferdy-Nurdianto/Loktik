@@ -49,7 +49,7 @@ export const Navbar = () => {
               isEoPage ? 'text-brand-blue bg-brand-blue/10 border border-brand-blue/30' : 'text-neutral-300 hover:text-white'
             }`}
           >
-            RENT
+            ABOUT
           </Link>
 
           <Link to="/eo/login" className="touch-press">

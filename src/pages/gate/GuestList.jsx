@@ -20,6 +20,7 @@ export const GuestList = ({ eventId }) => {
         .from('orders')
         .select('id, guest_name, guest_wa, status, tickets(id, barcode_uuid, is_scanned, scanned_at, ticket_categories(name))')
         .eq('event_id', eventId)
+        .eq('status', 'paid')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

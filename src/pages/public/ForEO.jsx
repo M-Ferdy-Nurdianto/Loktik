@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Ticket, QrCode, Smartphone, Zap, ArrowRight, DollarSign, FileText, CheckCircle2, Clock } from 'lucide-react';
+import { ShieldCheck, Ticket, QrCode, Smartphone, Zap, ArrowRight, DollarSign, FileText, CheckCircle2, Clock, X } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -11,38 +11,55 @@ export const ForEO = () => {
 
   const pricingTiers = [
     {
-      name: 'PAKET 3 BULAN',
-      price: 'Rp250.000',
-      period: '/ 3 Bulan',
-      badge: 'BISA SEMUA EVENT',
-      subtitle: 'Akses Bebas Jualan Tiket 0% Komisi Selama 3 Bulan',
-      waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20Berlangganan%20LokTik%203%20Bulan%20(Rp250.000).',
+      name: 'PAKET 1 BULAN',
+      price: 'Rp200.000',
+      period: '/ 1 Bulan',
+      badge: 'MANUAL WHATSAPP',
+      subtitle: 'Bebas Jualan Tiket 0% Komisi (Tanpa Layanan Bot WA)',
+      waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20LokTik%201%20Bulan%20(Rp200.000).',
       features: [
-        '0% Potongan Komisi Per Tiket',
-        'Direct Transfer ke Rekening / QRIS Panitia',
-        'Unlimited Bikin Event & Kategori Tiket',
-        'Gate Venue & Realtime Scanner HP Staf',
-        'Kasir OTS Venue Fast-Issue Direct',
-        'Emergency Guest List & Multi-Device Staf',
+        { text: '0% Potongan Komisi Per Tiket', included: true },
+        { text: 'Dana Direct Masuk Rekening EO', included: true },
+        { text: 'Gate Venue & Realtime HP Scanner Staf', included: true },
+        { text: 'Kasir OTS Venue Fast-Issue Direct', included: true },
+        { text: 'Layanan Bot WA Otomatis Kirim Tiket', included: false },
+        { text: 'Approve & Verifikasi Massal (Bot)', included: false },
       ],
       highlight: false,
+    },
+    {
+      name: 'PAKET 3 BULAN',
+      price: 'Rp300.000',
+      period: '/ 3 Bulan',
+      badge: 'REKOMENDASI EO',
+      subtitle: 'Akses Bebas Jualan Tiket 0% Komisi + Bot WA Otomatis',
+      waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20LokTik%203%20Bulan%20(Rp300.000).',
+      features: [
+        { text: '0% Potongan Komisi Per Tiket', included: true },
+        { text: 'Dana Direct Masuk Rekening EO', included: true },
+        { text: 'Gate Venue & Realtime HP Scanner Staf', included: true },
+        { text: 'Kasir OTS Venue Fast-Issue Direct', included: true },
+        { text: 'Layanan Bot WA Otomatis Kirim Tiket', included: true },
+        { text: 'Approve & Verifikasi Massal (Bot)', included: true },
+      ],
+      highlight: true,
     },
     {
       name: 'PAKET 1 TAHUN (PROMO)',
       price: 'Rp500.000',
       period: '/ 1 Tahun',
-      badge: 'PROMO HEMAT 50%',
-      subtitle: 'Paket Hemat Bebas Jualan Tiket Selama 1 Tahun Penuh',
-      waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20Promo%20LokTik%201%20Tahun%20(Rp500.000).',
+      badge: 'PROMO BOT WA',
+      subtitle: 'Paket Hemat Bebas Jualan Tiket 1 Tahun + Bot WA Otomatis',
+      waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20LokTik%201%20Tahun%20(Rp500.000).',
       features: [
-        '0% Potongan Komisi Per Tiket',
-        'Direct Transfer ke Rekening / QRIS Panitia',
-        'Unlimited Bikin Event & Kategori Tiket',
-        'Gate Venue & Realtime Scanner HP Staf',
-        'Kasir OTS Venue Fast-Issue Direct',
-        'Emergency Guest List & Multi-Device Staf',
+        { text: '0% Potongan Komisi Per Tiket', included: true },
+        { text: 'Dana Direct Masuk Rekening EO', included: true },
+        { text: 'Gate Venue & Realtime HP Scanner Staf', included: true },
+        { text: 'Kasir OTS Venue Fast-Issue Direct', included: true },
+        { text: 'Layanan Bot WA Otomatis Kirim Tiket', included: true },
+        { text: 'Approve & Verifikasi Massal (Bot)', included: true },
       ],
-      highlight: true,
+      highlight: false,
     },
   ];
 
@@ -77,29 +94,107 @@ export const ForEO = () => {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-8 py-10 space-y-10 text-left font-sans bg-[#0a0a0a] text-white">
-      {/* Header Banner */}
-      <div className="border-b border-neutral-800 pb-6 space-y-3">
-        <Badge variant="purple" className="text-[10px] px-2.5 py-0.5">
-          PANITIA &amp; EVENT ORGANIZER GUIDE
-        </Badge>
-        <h1 className="text-3xl sm:text-5xl font-black uppercase tracking-tight text-white leading-none">
-          INFO LENGKAP, PRICING, &amp; S&amp;K BIKIN EVENT
-        </h1>
-        <p className="text-xs sm:text-sm text-neutral-400 max-w-3xl leading-relaxed">
-          Semua info transparan soal skema zero komisi, alur kerja simpel, dan S&amp;K resmi buat kamu yang mau bikin event di LokTik.
-        </p>
+    <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 sm:py-10 space-y-12 sm:space-y-16 text-left font-sans bg-[#0a0a0a] text-white">
+      
+      {/* 1. HERO SECTION */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 py-4 sm:py-8 items-center border-b border-neutral-900">
+        <div className="lg:col-span-7 space-y-5">
+          <Badge variant="blue" className="text-[10px] px-3 py-1 font-mono uppercase tracking-widest">
+            0% KOMISI • PLATFORM DIRECT TRANSFER
+          </Badge>
+          <h1 className="text-3xl sm:text-6xl font-black uppercase tracking-tighter text-white leading-none">
+            ABOUT LOK<span className="text-brand-blue">TIK</span>
+          </h1>
+          <p className="text-base sm:text-lg text-neutral-300 font-semibold leading-relaxed uppercase">
+            Platform e-ticketing mandiri zine-style untuk konser, festival, bazar, dan acara komunitas Anda.
+          </p>
+          <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed max-w-xl">
+            Dana tiket langsung dikirim pembeli ke rekening bank atau QRIS panitia secara real-time. LokTik tidak memotong, mengendapkan, atau menahan dana Anda sepeser pun.
+          </p>
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Button variant="blue" size="lg" onClick={() => document.getElementById('pricing-plans')?.scrollIntoView({ behavior: 'smooth' })} className="px-6 font-black uppercase text-xs">
+              LIHAT PAKET PRICING
+            </Button>
+            <Button variant="outline" size="lg" onClick={() => navigate('/eo/login')} className="px-6 font-black uppercase text-xs">
+              MASUK DASBOR EO
+            </Button>
+          </div>
+        </div>
+
+        <div className="lg:col-span-5 flex justify-center">
+          <Card variant="dark" className="w-full max-w-sm p-5 border-brand-blue/30 space-y-4 shadow-[0_0_40px_rgba(6,182,212,0.1)] bg-[#0d0d0d] border-2">
+            <div className="flex items-center space-x-3 border-b border-neutral-900 pb-3">
+              <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-white">LOKTIK OFFICIAL</h4>
+                <p className="text-[9px] font-mono text-neutral-500">DIRECT TICKETING PLATFORM</p>
+              </div>
+            </div>
+            <div className="space-y-2.5 text-left">
+              <div className="p-2.5 bg-black rounded border border-neutral-900 flex justify-between items-center">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase">PENJUALAN TIKET</span>
+                <span className="text-xs text-brand-green font-mono font-black">RP 0 (POTONGAN 0%)</span>
+              </div>
+              <div className="p-2.5 bg-black rounded border border-neutral-900 flex justify-between items-center">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase">DANA TRANSFER</span>
+                <span className="text-xs text-brand-blue font-mono font-black">LANGSUNG KE EO</span>
+              </div>
+              <div className="p-2.5 bg-black rounded border border-neutral-900 flex justify-between items-center">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase">SCANNER SYSTEM</span>
+                <span className="text-xs text-brand-purple font-mono font-black">SUPPORT MULTI-HP</span>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
 
-      {/* Pricing Section */}
-      <div className="space-y-4">
+      {/* 2. CORE FEATURES GRID */}
+      <div className="space-y-6">
+        <div className="text-center space-y-1.5">
+          <span className="text-[10px] font-black text-brand-blue tracking-widest uppercase">KENAPA BIKIN EVENT DI LOKTIK?</span>
+          <h2 className="text-2xl sm:text-3xl font-black uppercase text-white tracking-tight">PLATFORM TERDEPAN UNTUK EVENT MANDIRI</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+          <Card variant="dark" className="p-5 border-neutral-850 space-y-2.5 hover:border-brand-blue/60 transition-colors">
+            <div className="w-10 h-10 rounded bg-brand-blue/15 border border-brand-blue/30 flex items-center justify-center text-brand-blue shrink-0">
+              <DollarSign className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-black uppercase text-white">0% POTONGAN KOMISI</h3>
+            <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+              Tidak ada potongan Rp5.000 atau komisi persenan per tiket. Semua omset penjualan bersih 100% menjadi hak milik panitia penyelenggara.
+            </p>
+          </Card>
+          <Card variant="dark" className="p-5 border-neutral-850 space-y-2.5 hover:border-brand-blue/60 transition-colors">
+            <div className="w-10 h-10 rounded bg-brand-green/15 border border-brand-green/30 flex items-center justify-center text-brand-green shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-black uppercase text-white">DANA LANGSUNG KE BANK/QRIS</h3>
+            <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+              Pembeli langsung mentransfer uang tiket ke bank account atau e-wallet (QRIS) milik EO. Uang Anda tidak tertahan di rekening bersama atau platform.
+            </p>
+          </Card>
+          <Card variant="dark" className="p-5 border-neutral-850 space-y-2.5 hover:border-brand-blue/60 transition-colors">
+            <div className="w-10 h-10 rounded bg-brand-purple/15 border border-brand-purple/30 flex items-center justify-center text-brand-purple shrink-0">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-black uppercase text-white">SISTEM SCANNER HP PANITIA</h3>
+            <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+              Cukup bagikan link Gate Portal khusus dan PIN akses ke staf lapangan. Staf pintu masuk bisa memindai QR Code tiket langsung menggunakan HP mereka.
+            </p>
+          </Card>
+        </div>
+      </div>
+
+      {/* 3. PRICING PLANS */}
+      <div id="pricing-plans" className="space-y-6 pt-4">
         <div className="border-b border-neutral-800 pb-2">
-          <h2 className="text-xl font-black uppercase text-brand-blue tracking-tight flex items-center gap-2">
-            <DollarSign className="w-5 h-5" /> SKEMA BIAYA &amp; PRICING
+          <h2 className="text-lg sm:text-xl font-black uppercase text-brand-blue tracking-tight flex items-center gap-2">
+            <DollarSign className="w-5 h-5" /> SKEMA BIAYA &amp; PRICING BERLANGGANAN
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {pricingTiers.map((tier, idx) => (
             <Card
               key={idx}
@@ -112,7 +207,7 @@ export const ForEO = () => {
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-                  <Badge variant={tier.highlight ? 'blue' : 'blue'} className="text-[9px] px-2 py-0.5 font-extrabold">
+                  <Badge variant="blue" className="text-[9px] px-2 py-0.5 font-extrabold">
                     {tier.badge}
                   </Badge>
                   <span className="text-[10px] font-mono text-neutral-500 font-bold uppercase">BERLANGGANAN</span>
@@ -127,11 +222,20 @@ export const ForEO = () => {
                   <p className="text-xs text-neutral-400 font-medium mt-1 leading-relaxed">{tier.subtitle}</p>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-neutral-800">
+                <div className="space-y-2 pt-2 border-t border-neutral-800 text-left">
                   {tier.features.map((feat, fIdx) => (
-                    <div key={fIdx} className="flex items-center space-x-2 text-xs font-bold text-neutral-300">
-                      <CheckCircle2 className="w-4 h-4 text-brand-blue shrink-0" />
-                      <span>{feat}</span>
+                    <div
+                      key={fIdx}
+                      className={`flex items-center space-x-2 text-xs font-bold ${
+                        feat.included ? 'text-neutral-300' : 'text-neutral-500 line-through'
+                      }`}
+                    >
+                      {feat.included ? (
+                        <CheckCircle2 className="w-4 h-4 text-brand-blue shrink-0" />
+                      ) : (
+                        <X className="w-4 h-4 text-brand-red shrink-0" />
+                      )}
+                      <span>{feat.text}</span>
                     </div>
                   ))}
                 </div>
@@ -160,8 +264,8 @@ export const ForEO = () => {
         </div>
       </div>
 
-      {/* Step by Step Workflow */}
-      <div className="space-y-4">
+      {/* 4. WORKFLOW STEPS */}
+      <div className="space-y-6">
         <div className="border-b border-neutral-800 pb-2">
           <h2 className="text-lg sm:text-xl font-black uppercase text-brand-blue tracking-tight flex items-center gap-2">
             <Zap className="w-5 h-5 shrink-0" /> 4 LANGKAH SIMPEL BIKIN EVENT
@@ -179,8 +283,8 @@ export const ForEO = () => {
         </div>
       </div>
 
-      {/* EO Terms & Conditions Section */}
-      <div className="space-y-4">
+      {/* 5. EO TERMS & CONDITIONS */}
+      <div className="space-y-6">
         <div className="border-b border-neutral-800 pb-2">
           <h2 className="text-lg sm:text-xl font-black uppercase text-brand-blue tracking-tight flex items-center gap-2">
             <FileText className="w-5 h-5 shrink-0" /> SYARAT &amp; KETENTUAN (S&amp;K) PANITIA
@@ -197,7 +301,7 @@ export const ForEO = () => {
         </div>
       </div>
 
-      {/* HIGHLIGHT ALERT BOX: RETENSI DATA 2 MINGGU (Placed right above FAQ) */}
+      {/* 6. RETENTION WARNING ALERT */}
       <Card variant="dark" className="p-4 sm:p-5 border border-brand-yellow/60 bg-brand-yellow/10 space-y-2">
         <div className="flex items-center space-x-2 text-brand-yellow">
           <Clock className="w-5 h-5 shrink-0" />
@@ -208,12 +312,12 @@ export const ForEO = () => {
         </p>
       </Card>
 
-      {/* FAQ Section Included Directly on EO Page */}
+      {/* FAQ SECTION */}
       <div className="pt-4 border-t border-neutral-800">
         <FaqSection />
       </div>
 
-      {/* Bottom CTA Card */}
+      {/* BOTTOM CTA CARD */}
       <Card variant="dark" className="p-5 sm:p-8 space-y-4 border-brand-blue/40 bg-gradient-to-r from-neutral-950 via-neutral-900 to-black text-center">
         <h2 className="text-xl sm:text-2xl font-black uppercase text-white">MAU BERLANGGANAN &amp; BIKIN EVENT SEKARANG?</h2>
         <p className="text-xs text-neutral-400 max-w-lg mx-auto font-medium">
@@ -231,8 +335,8 @@ export const ForEO = () => {
               <ArrowRight className="w-4 h-4" />
             </Button>
           </a>
-          <Button variant="outline" size="lg" onClick={() => navigate('/eo/login')} className="w-full sm:w-auto px-6 min-h-[46px] font-black text-xs sm:text-sm touch-press border-brand-blue/30 text-brand-blue">
-            LOGIN DASHBOARD EO
+          <Button variant="outline" size="lg" onClick={() => navigate('/eo/login')} className="w-full sm:w-auto px-6 min-h-[46px] font-black text-xs sm:text-sm uppercase">
+            MASUK DASBOR EO
           </Button>
         </div>
       </Card>

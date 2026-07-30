@@ -26,6 +26,9 @@ export const OrderManagerTab = () => {
   const [previewProofUrl, setPreviewProofUrl] = useState(null);
   const [botStatus, setBotStatus] = useState('checking');
   const [generatingTicket, setGeneratingTicket] = useState(null);
+  const [selectedOrders, setSelectedOrders] = useState([]);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, activeName: '' });
 
   const dropdownRef = useRef(null);
   const ticketRef = useRef(null);
@@ -294,6 +297,54 @@ Terima Kasih!
     }
   };
 
+  const handleBulkApprove = async () => {
+    if (selectedOrders.length === 0) return;
+    if (selectedOrders.length > 10) {
+      showToast('Maksimal 10 pesanan yang dapat disetujui sekaligus.', 'eo');
+      return;
+    }
+
+    setBulkProcessing(true);
+    setLoading(true);
+
+    const ordersToApprove = selectedOrders.map(id => orders.find(o => o.id === id)).filter(Boolean);
+    const total = ordersToApprove.length;
+
+    for (let i = 0; i < total; i++) {
+      const order = ordersToApprove[i];
+      setBulkProgress({ current: i + 1, total, activeName: order.guest_name });
+
+      try {
+        await updateOrderStatus(order.id, 'paid');
+        const updatedOrder = { ...order, status: 'paid' };
+        
+        setOrders((prev) =>
+          prev.map((o) => (o.id === order.id ? updatedOrder : o))
+        );
+
+        let ticketUrl = '';
+        try {
+          ticketUrl = await generateTicketImage(updatedOrder);
+        } catch (genErr) {
+          console.error('Gagal generate e-ticket premium:', genErr);
+        }
+
+        await sendAutoTicketViaBot(updatedOrder, ticketUrl);
+      } catch (err) {
+        console.error(`Gagal memproses order ${order.id}:`, err);
+      }
+
+      if (i < total - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+    }
+
+    setSelectedOrders([]);
+    setBulkProcessing(false);
+    setLoading(false);
+    showToast(`Selesai memproses ${total} pesanan secara massal!`, 'eo');
+  };
+
   const exportToExcel = () => {
     if (filteredOrders.length === 0) {
       showToast('Tidak ada data pesanan untuk di-export ke Excel/CSV.', 'eo');
@@ -340,7 +391,7 @@ Terima Kasih!
     const titleRow = `"LOKTIK TICKETING DIRECT — LAPORAN REKAPITULASI PENJUALAN"`;
     const metaRow = `"EVENT: ${eventTitle.replace(/"/g, '""')}"` + `,"TANGGAL CETAK: ${new Date().toLocaleDateString('id-ID')}"`;
 
-    const csvContent = '\uFEFF' + [titleRow, metaRow, '', headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const csvContent = '\uFEFF' + ['sep=,', titleRow, metaRow, '', headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -462,7 +513,9 @@ Terima Kasih!
       <body>
         <div class="header">
           <div style="display:flex;align-items:center;gap:12px;">
-            <img src="/logo.png" style="height:40px;width:auto;object-contain:contain;" alt="LokTik Logo" />
+            <div style="background-color:#0a0a0a; padding:6px 12px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center;">
+              <img src="/logo.png" style="height:32px;width:auto;display:block;" alt="LokTik Logo" />
+            </div>
             <div>
               <h1>LOKTIK — LAPORAN REKAPITULASI PENJUALAN</h1>
               <p><strong>EVENT:</strong> ${eventTitle} | <strong>PANITIA EO:</strong> ${eoUsername}</p>
@@ -473,7 +526,7 @@ Terima Kasih!
           </div>
         </div>
 
-        {/* SUMMARY STATS GRID */}
+        <!-- SUMMARY STATS GRID -->
         <div class="stats-grid">
           <div class="stat-box">
             <h4>Total Omset Keseluruhan</h4>
@@ -492,7 +545,7 @@ Terima Kasih!
           </div>
         </div>
 
-        {/* TABLE 1: PRE-ORDER (PO ONLINE) */}
+        <!-- TABLE 1: PRE-ORDER (PO ONLINE) -->
         <div class="section-title">
           <span>1. DAFTAR PESANAN ONLINE (PRE-ORDER / PO)</span>
           <span class="section-badge">${poOrders.length} PESANAN</span>
@@ -514,7 +567,7 @@ Terima Kasih!
           </tbody>
         </table>
 
-        {/* TABLE 2: ON THE SPOT (OTS VENUE) */}
+        <!-- TABLE 2: ON THE SPOT (OTS VENUE) -->
         <div class="section-title" style="margin-top:30px;">
           <span>2. DAFTAR PENJUALAN VENUE (ON THE SPOT / OTS)</span>
           <span class="section-badge">${otsOrders.length} TRANSAKSI</span>
@@ -568,6 +621,29 @@ Terima Kasih!
             <Button variant="white" size="sm" onClick={() => setPreviewProofUrl(null)}>TUTUP PREVIEW</Button>
           </div>
         </div>
+      )}
+
+      {bulkProcessing && (
+        <Card variant="dark" className="p-4 border-2 border-brand-green bg-[#0d1c10] space-y-3 shadow-[0_0_30px_rgba(57,255,20,0.25)] animate-pulse mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-brand-green">
+              <RefreshCw className="w-5 h-5 animate-spin" />
+              <h3 className="text-xs font-black uppercase tracking-wider">SEDANG MEMPROSES APPROVE MASSAL...</h3>
+            </div>
+            <span className="text-xs font-mono font-black text-brand-green">
+              {bulkProgress.current} / {bulkProgress.total} PESANAN
+            </span>
+          </div>
+          <div className="w-full bg-neutral-900 rounded-full h-1.5 overflow-hidden">
+            <div
+              className="bg-brand-green h-1.5 transition-all duration-500"
+              style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-neutral-400 font-bold uppercase">
+            MENGIRIM WA BOT KE: <span className="text-white font-black">{bulkProgress.activeName}</span> (Jeda cooldown 5 detik...)
+          </p>
+        </Card>
       )}
 
       {/* CUSTOM STYLED DROPDOWN FILTER BAR */}
@@ -667,19 +743,38 @@ Terima Kasih!
             <FileText className="w-3.5 h-3.5 mr-1" /> EXPORT PDF
           </Button>
           <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
-            <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> REFRESH DB
+            <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> REFRESH
           </Button>
         </div>
       </Card>
 
       {/* TABLE 1: PRE-ORDER (PO) ONLINE BUYER ORDERS */}
       <Card variant="dark" className="p-6 space-y-6 border-neutral-800">
-        <div className="border-b border-neutral-800 pb-3">
-          <h3 className="text-lg font-black uppercase text-white flex items-center space-x-2">
-            <ShoppingBag className="w-5 h-5 text-brand-green inline mr-1" />
-            <span>1. DAFTAR PESANAN ONLINE (PRE-ORDER / PO)</span>
-          </h3>
-          <p className="text-xs text-neutral-400">Verifikasi bukti transfer &amp; kirim tiket ke pembeli online website.</p>
+        <div className="border-b border-neutral-800 pb-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <h3 className="text-lg font-black uppercase text-white flex items-center space-x-2">
+              <ShoppingBag className="w-5 h-5 text-brand-green inline mr-1" />
+              <span>1. DAFTAR PESANAN ONLINE (PRE-ORDER / PO)</span>
+            </h3>
+            <p className="text-xs text-neutral-400">Verifikasi bukti transfer &amp; kirim tiket ke pembeli online website.</p>
+          </div>
+
+          {selectedOrders.length > 0 && (
+            <div className="flex items-center space-x-3 w-full sm:w-auto bg-[#141414] p-1.5 rounded-lg border border-brand-green/30 animate-fade-in">
+              <span className="text-[10px] font-black uppercase text-brand-green font-mono pl-1">
+                {selectedOrders.length} TERPILIH (MAX 10)
+              </span>
+              <Button
+                variant="green"
+                size="sm"
+                onClick={handleBulkApprove}
+                disabled={selectedOrders.length > 10 || bulkProcessing}
+                className="font-black text-[10px] uppercase min-h-[32px] px-3.5"
+              >
+                {bulkProcessing ? `MEMPROSES...` : `APPROVE MASSAL (BOT)`}
+              </Button>
+            </div>
+          )}
         </div>
 
         {errorMsg && (
@@ -703,6 +798,21 @@ Terima Kasih!
             <table className="w-full text-xs text-left">
               <thead className="bg-neutral-900 text-neutral-400 font-bold uppercase border-b border-neutral-800">
                 <tr>
+                  <th className="p-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={poOrders.filter(o => o.status === 'pending').length > 0 && selectedOrders.length === poOrders.filter(o => o.status === 'pending').length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const pendingIds = poOrders.filter(o => o.status === 'pending').map(o => o.id);
+                          setSelectedOrders(pendingIds);
+                        } else {
+                          setSelectedOrders([]);
+                        }
+                      }}
+                      className="w-4.5 h-4.5 rounded border border-neutral-800 bg-neutral-950 checked:bg-brand-green checked:border-brand-green text-black focus:ring-0 focus:ring-offset-0 focus:outline-none appearance-none cursor-pointer flex items-center justify-center after:content-['✓'] after:text-[10px] after:font-black after:text-transparent checked:after:text-black transition-all duration-200"
+                    />
+                  </th>
                   <th className="p-3">KODE TIKET</th>
                   <th className="p-3">NAMA PEMBELI</th>
                   <th className="p-3">WHATSAPP</th>
@@ -720,6 +830,24 @@ Terima Kasih!
                   const prettyCode = generatePrettyRedeemCode(o.events?.name, seed);
                   return (
                     <tr key={o.id} className="hover:bg-neutral-900/50">
+                      <td className="p-3 w-10 text-center">
+                        {o.status === 'pending' ? (
+                          <input
+                            type="checkbox"
+                            checked={selectedOrders.includes(o.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedOrders([...selectedOrders, o.id]);
+                              } else {
+                                setSelectedOrders(selectedOrders.filter(id => id !== o.id));
+                              }
+                            }}
+                            className="w-4.5 h-4.5 rounded border border-neutral-800 bg-neutral-950 checked:bg-brand-green checked:border-brand-green text-black focus:ring-0 focus:ring-offset-0 focus:outline-none appearance-none cursor-pointer flex items-center justify-center after:content-['✓'] after:text-[10px] after:font-black after:text-transparent checked:after:text-black transition-all duration-200"
+                          />
+                        ) : (
+                          <span className="text-neutral-600 font-bold">-</span>
+                        )}
+                      </td>
                       <td className="p-3 font-mono font-black text-brand-green text-sm flex items-center space-x-1">
                         <Key className="w-3.5 h-3.5 text-brand-green shrink-0" />
                         <span>{prettyCode}</span>

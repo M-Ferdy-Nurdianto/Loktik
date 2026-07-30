@@ -14,6 +14,7 @@ export const CreateEventTab = ({ onEventCreated }) => {
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
+    location: '',
     description: '',
     eventDate: '',
     openGate: '',
@@ -70,6 +71,7 @@ export const CreateEventTab = ({ onEventCreated }) => {
         name: formData.name,
         slug: generatedSlug,
         created_by: eoUsername,
+        location: formData.location,
         description: formData.description,
         poster_url: uploadedPosterUrl,
         event_date: new Date(formData.eventDate).toISOString(),
@@ -126,6 +128,11 @@ export const CreateEventTab = ({ onEventCreated }) => {
                 <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">OPEN GATE</label>
                 <input type="datetime-local" value={formData.openGate} onChange={(e) => setFormData({ ...formData, openGate: e.target.value })} className="w-full px-3.5 py-2 bg-neutral-950 border border-neutral-800 rounded text-[11px] text-white focus:border-brand-green outline-none font-bold" />
               </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">LOKASI VENUE / GOOGLE MAPS LINK *</label>
+              <input type="text" required placeholder="Misal: JIEXPO Kemayoran, Jakarta" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-green outline-none font-bold" />
             </div>
 
             <div className="flex gap-3 items-center">
