@@ -15,7 +15,7 @@ export const Footer = () => {
   return (
     <footer className="w-full bg-[#0a0a0a] border-t border-neutral-800 py-6 sm:py-8 px-4 sm:px-8 text-neutral-400 text-xs font-mono pb-20 sm:pb-8">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
-        <div className="space-y-1 flex flex-col sm:flex-row items-center sm:items-start space-y-1 sm:space-y-0 sm:space-x-3">
+        <div className="space-y-1 flex flex-col sm:flex-row items-center sm:items-start sm:space-y-0 sm:space-x-3">
           <img src="/logo.png" alt="LokTik Logo" className="h-8 w-auto object-contain shrink-0 mb-1 sm:mb-0" />
           <div>
             <p className="font-extrabold text-white uppercase text-sm">LOKTIK.WEB.ID</p>

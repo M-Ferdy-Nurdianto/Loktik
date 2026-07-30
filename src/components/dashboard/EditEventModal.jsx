@@ -172,7 +172,7 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
             </div>
 
             <div className="p-4 bg-neutral-900 rounded border border-neutral-800 space-y-3">
-              <label className="text-[10px] font-black uppercase text-brand-purple block font-bold">METODE PEMBAYARAN (BANK &amp; REKENING):</label>
+              <label className="text-[10px] font-black uppercase text-brand-purple block">METODE PEMBAYARAN (BANK &amp; REKENING):</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
                   <span className="text-[9px] text-neutral-400 font-bold block mb-0.5">BANK</span>
