@@ -120,14 +120,25 @@ export const EODashboard = () => {
             </div>
 
             {/* Subscription Expiry Timer Card */}
-            <div className="p-2.5 bg-neutral-950 rounded border border-neutral-800 space-y-1.5">
-              <div className="text-[10px] text-neutral-400 font-bold flex items-center justify-between">
-                <span>STATUS:</span>
-                <span className="text-brand-green font-black uppercase">● SUBSCRIBED</span>
+            <div className="p-2.5 bg-neutral-950 rounded border border-neutral-800 space-y-2 text-left">
+              <div className="flex items-center justify-between gap-1 text-[10px]">
+                <span className="text-neutral-500 font-bold uppercase shrink-0">PAKET:</span>
+                <span className="text-brand-blue font-black uppercase font-mono tracking-tight text-right truncate">
+                  {(user?.subscriptionPlan === '3_months' || user?.subscriptionPlan === '1_year') ? 'PRO (BOT WA)' : 'BASIC (MANUAL WA)'}
+                </span>
               </div>
-              <div className="text-[10px] font-mono font-bold flex items-center justify-between border-t border-neutral-800/80 pt-1.5">
-                <span className="text-neutral-500 uppercase">EXPIRED:</span>
-                <span className="text-brand-yellow font-black">{subExpiryDate} ({remainingDays} HARI)</span>
+              <div className="flex items-center justify-between gap-1 text-[10px] border-t border-neutral-800/80 pt-1.5">
+                <span className="text-neutral-500 font-bold uppercase shrink-0">STATUS:</span>
+                <span className="text-brand-green font-black uppercase font-mono text-right">SUBSCRIBED</span>
+              </div>
+              <div className="border-t border-neutral-800/80 pt-1.5 space-y-0.5 text-[10px] font-mono">
+                <div className="flex items-center justify-between text-neutral-500 font-bold uppercase">
+                  <span>EXPIRED:</span>
+                  <span className="text-brand-yellow font-black">{remainingDays} HARI LAGI</span>
+                </div>
+                <div className="text-[9px] text-neutral-400 font-bold text-right">
+                  {subExpiryDate}
+                </div>
               </div>
             </div>
           </div>
@@ -138,50 +149,50 @@ export const EODashboard = () => {
 
             <button
               onClick={() => setActiveTab('my-events')}
-              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider flex items-center space-x-3 transition-colors ${
+              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-black uppercase tracking-wider flex items-center space-x-3 transition-colors ${
                 activeTab === 'my-events'
                   ? 'bg-brand-green text-black font-black'
                   : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
               }`}
             >
-              <List className="w-4 h-4" />
-              <span>Daftar Event Saya</span>
+              <List className="w-4 h-4 shrink-0" />
+              <span className="truncate">MY EVENTS</span>
             </button>
 
             <button
               onClick={() => setActiveTab('create-event')}
-              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider flex items-center space-x-3 transition-colors ${
+              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-black uppercase tracking-wider flex items-center space-x-3 transition-colors ${
                 activeTab === 'create-event'
                   ? 'bg-brand-green text-black font-black'
                   : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
               }`}
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>Buat Event Baru</span>
+              <PlusCircle className="w-4 h-4 shrink-0" />
+              <span className="truncate">CREATE EVENT</span>
             </button>
 
             <button
               onClick={() => setActiveTab('orders')}
-              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider flex items-center space-x-3 transition-colors ${
+              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-black uppercase tracking-wider flex items-center space-x-3 transition-colors ${
                 activeTab === 'orders'
                   ? 'bg-brand-green text-black font-black'
                   : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
               }`}
             >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Manajemen Pesanan</span>
+              <ShoppingBag className="w-4 h-4 shrink-0" />
+              <span className="truncate">ORDERS</span>
             </button>
 
             <button
               onClick={() => setActiveTab('staff-manager')}
-              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider flex items-center space-x-3 transition-colors ${
+              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-black uppercase tracking-wider flex items-center space-x-3 transition-colors ${
                 activeTab === 'staff-manager'
                   ? 'bg-brand-green text-black font-black'
                   : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
               }`}
             >
-              <Users className="w-4 h-4" />
-              <span>Manajemen Staf</span>
+              <Users className="w-4 h-4 shrink-0" />
+              <span className="truncate">STAFF GATE</span>
             </button>
           </nav>
         </div>

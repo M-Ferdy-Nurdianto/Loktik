@@ -38,10 +38,10 @@ export const TermsSection = () => {
         <Card variant="dark" className="p-5 space-y-3 border-neutral-800">
           <div className="flex items-center space-x-2 text-brand-blue">
             <FileText className="w-5 h-5" />
-            <h3 className="text-sm font-extrabold uppercase text-white">3. TIKET &amp; GELANG VENUE</h3>
+            <h3 className="text-sm font-extrabold uppercase text-white">3. TIKET FISIK VENUE</h3>
           </div>
           <p className="text-neutral-400 font-medium leading-relaxed">
-            Satu QR Code tiket berlaku buat 1 kali scan pas ganti gelang di venue. Begitu beres di-scan, status tiket otomatis hangus biar gak dipake ulang.
+            Satu QR Code tiket berlaku buat 1 kali scan pas ganti tiket fisik di venue. Begitu beres di-scan, status tiket otomatis hangus biar gak dipake ulang.
           </p>
         </Card>
       </div>

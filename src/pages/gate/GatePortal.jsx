@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { QrCode, Users, Ticket, ShieldCheck, LogOut, UserCheck } from 'lucide-react';
+import { QrCode, Users, Ticket, ShieldCheck, LogOut, UserCheck, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { supabase } from '../../services/supabase';
 import { getEventBySlug } from '../../services/apiEvents';
 import { useAuth } from '../../hooks/useAuth';
 import { GatePinLock } from './GatePinLock';
@@ -9,16 +10,19 @@ import { GuestList } from './GuestList';
 import { OtsCashier } from './OtsCashier';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { useToast } from '../../context/ToastContext';
 
 export const GatePortal = () => {
   const { eventSlug } = useParams();
   const { user, logout } = useAuth();
+  const { showToast } = useToast();
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
   const [isPinVerified, setIsPinVerified] = useState(false);
   const [activeTab, setActiveTab] = useState('scanner');
+  const [showGuide, setShowGuide] = useState(false);
 
   // Determine permissions based on user session
   const permissions = user?.role === 'staff' && user?.permissions
@@ -63,6 +67,32 @@ export const GatePortal = () => {
     }
   }, [user]);
 
+  // Real-time active staff suspension check
+  useEffect(() => {
+    if (!user || user.role !== 'staff') return;
+
+    const checkStaffStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('staff_accounts')
+          .select('status')
+          .eq('id', user.id)
+          .single();
+
+        if (data && data.status === 'suspended') {
+          handleGateLogout();
+          showToast('Sesi Anda berakhir: Akun staf ini dinonaktifkan oleh EO.', 'staff');
+        }
+      } catch (err) {
+        console.warn('Gagal memverifikasi status staf:', err);
+      }
+    };
+
+    checkStaffStatus();
+    const interval = setInterval(checkStaffStatus, 8000);
+    return () => clearInterval(interval);
+  }, [user, eventSlug]);
+
   const handlePinSuccess = () => {
     sessionStorage.setItem(`gate_auth_${eventSlug}`, 'VERIFIED');
     setIsPinVerified(true);
@@ -97,7 +127,7 @@ export const GatePortal = () => {
     );
   }
 
-  const gatePin = event.payment_details?.gate_pin || '1029';
+  const gatePin = event.payment_details?.gate_pin || '1312';
 
   if (!isPinVerified) {
     return <GatePinLock eventName={event.name} correctPin={gatePin} onSuccess={handlePinSuccess} />;
@@ -130,12 +160,51 @@ export const GatePortal = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={handleGateLogout} className="text-brand-red hover:bg-brand-red/10 border-brand-red/30">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowGuide(!showGuide)}
+            className="text-brand-purple hover:bg-brand-purple/10 border-brand-purple/40 text-xs font-black uppercase"
+          >
+            <HelpCircle className="w-3.5 h-3.5 mr-1" />
+            <span>PANDUAN STAF</span>
+            {showGuide ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />}
+          </Button>
+
+          <Button variant="outline" size="sm" onClick={handleGateLogout} className="text-brand-red hover:bg-brand-red/10 border-brand-red/30 text-xs font-bold uppercase">
             <LogOut className="w-4 h-4 mr-1.5" />
             <span>KELUAR GATE</span>
           </Button>
         </div>
       </div>
+
+      {/* EXPANDABLE 1-TAP QUICK OPERATIONAL GUIDE FOR STAFF */}
+      {showGuide && (
+        <div className="bg-[#121212] p-4 rounded-xl border border-brand-purple/40 space-y-2 text-xs text-neutral-300 shadow-[0_0_30px_rgba(139,92,246,0.15)]">
+          <div className="flex items-center space-x-2 border-b border-neutral-800 pb-2">
+            <HelpCircle className="w-4 h-4 text-brand-purple shrink-0" />
+            <h3 className="font-black text-white uppercase tracking-wider">PANDUAN CEPAT OPERASIONAL STAF GATE VENUE</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-medium pt-1">
+            <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
+              <p className="font-black text-brand-purple uppercase">1. INPUT MANUALLY (PALING CEPAT):</p>
+              <p className="text-neutral-400">Ketik Kode Tiket (misal <span className="font-mono text-white">GM1972</span>) di kolom paling atas lalu tekan Enter/Verifikasi.</p>
+            </div>
+            <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
+              <p className="font-black text-brand-purple uppercase">2. PROGRES PENUKARAN (1/3, 2/3):</p>
+              <p className="text-neutral-400">Perhatikan teks progres. Serahkan 1 Tiket Fisik tiap kali konfirmasi penukaran berhasil.</p>
+            </div>
+            <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
+              <p className="font-black text-brand-purple uppercase">3. LUPA KODE / HP MATI (GUEST LIST):</p>
+              <p className="text-neutral-400">Buka tab <span className="font-bold text-white">GUEST LIST</span> ➔ Ketik Nama Pembeli ➔ Klik tombol <span className="font-bold text-brand-green">CHECK-IN</span>.</p>
+            </div>
+            <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
+              <p className="font-black text-brand-purple uppercase">4. PEMBELIAN VENUE (KASIR OTS):</p>
+              <p className="text-neutral-400">Buka tab <span className="font-bold text-white">KASIR OTS</span> untuk melayani pengunjung yang beli langsung di venue.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* DYNAMIC TAB NAVIGATION BASED ON STAFF PERMISSIONS */}
       <div className={`grid ${gridColsClass} gap-2 sm:gap-3`}>

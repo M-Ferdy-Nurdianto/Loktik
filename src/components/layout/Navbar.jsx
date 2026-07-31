@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Ticket, Sparkles } from 'lucide-react';
+import { Ticket, Sparkles, Search } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { TicketLookupModal } from '../public/TicketLookupModal';
 
 export const Navbar = () => {
   const location = useLocation();
+  const [isLookupOpen, setIsLookupOpen] = useState(false);
+
   const isDashboard =
     location.pathname.startsWith('/eo/dashboard') ||
     location.pathname.startsWith('/admin/dashboard');
@@ -27,13 +30,22 @@ export const Navbar = () => {
               LOK<span className="text-brand-blue">TIK</span>
             </span>
             <span className="text-[8px] sm:text-[9px] font-mono font-extrabold text-neutral-400 tracking-widest uppercase mt-0.5">
-              DIRECT TICKETING
+              DIRECT DIGITAL TICKETING
             </span>
           </div>
         </Link>
 
         {/* Navigation Links */}
         <nav className="flex items-center space-x-2 sm:space-x-3">
+          <button
+            type="button"
+            onClick={() => setIsLookupOpen(true)}
+            className="text-xs font-black uppercase tracking-wider transition-colors px-2.5 sm:px-3 py-1.5 rounded-lg touch-press text-brand-blue bg-brand-blue/10 border border-brand-blue/30 flex items-center space-x-1 hover:bg-brand-blue/20"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>CEK TIKET</span>
+          </button>
+
           <Link
             to="/"
             className={`text-xs font-extrabold uppercase tracking-wider transition-colors px-2.5 sm:px-3 py-1.5 rounded-lg touch-press ${
@@ -59,6 +71,9 @@ export const Navbar = () => {
           </Link>
         </nav>
       </div>
+
+      {/* Ticket Self-Service Lookup Modal */}
+      <TicketLookupModal isOpen={isLookupOpen} onClose={() => setIsLookupOpen(false)} />
     </header>
   );
 };

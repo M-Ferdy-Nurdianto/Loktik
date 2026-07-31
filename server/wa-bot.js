@@ -47,7 +47,7 @@ client.on('auth_failure', (msg) => {
 // API Endpoint untuk Kirim Tiket + Gambar QR Code Otomatis
 app.post('/api/send-ticket-wa', async (req, res) => {
   try {
-    const { waNumber, guestName, eventName, orderId, totalPrice, ticketQrUrl } = req.body;
+    const { waNumber, guestName, eventName, orderId, totalPrice, ticketQrUrl, ticketCount, ticketDetails } = req.body;
 
     if (!waNumber) {
       return res.status(400).json({ success: false, message: 'Nomor WhatsApp wajib diisi.' });
@@ -56,12 +56,17 @@ app.post('/api/send-ticket-wa', async (req, res) => {
     const cleanNum = waNumber.replace(/[^0-9]/g, '');
     const chatId = cleanNum.startsWith('62') ? `${cleanNum}@c.us` : `62${cleanNum.substring(1)}@c.us`;
 
+    const qtyText = ticketCount && Number(ticketCount) > 1 
+      ? `- Jumlah Tiket: *${ticketCount} Tiket* (${ticketDetails || 'Tiket'})\n⚠️ *PENTING:* Kode / QR Code ini dapat di-scan sebanyak *${ticketCount}x* di gate venue (bisa sekaligus atau bertahap).`
+      : `- Kategori Tiket: *${ticketDetails || 'Tiket Standard'}*`;
+
     const captionText = `Halo Kak *${guestName}*,
 
-Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!* 🎉
+Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!*
 
 📋 *DETAIL TIKET:*
-- ID Pesanan: \`${orderId ? orderId.substring(0, 8) : 'LOKTIK'}\`
+- Kode Tiket / Barcode: \`${orderId || 'LOKTIK'}\`
+${qtyText}
 - Total Bayar: Rp ${totalPrice ? Number(totalPrice).toLocaleString('id-ID') : 0}
 - Status: LUNAS (Verified)
 

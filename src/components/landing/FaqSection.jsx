@@ -13,7 +13,7 @@ export const FaqSection = () => {
     },
     {
       q: 'Cara scan tiket di pintu masuk venue gimana?',
-      a: 'Tim pintu masuk tinggal buka link Gate Portal + masukin PIN 1029 di HP, terus scan QR pembeli. Beres!',
+      a: 'Tim pintu masuk tinggal buka link Gate Portal + masukin PIN 1312 di HP, terus scan QR pembeli. Beres!',
     },
     {
       q: 'Bisa jualan tiket OTS langsung di tempat?',

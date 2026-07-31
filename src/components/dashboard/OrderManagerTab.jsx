@@ -16,6 +16,20 @@ export const OrderManagerTab = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
   const eoUsername = user?.username || user?.name || 'eo_lokal';
+  const userPlan = user?.subscriptionPlan || '1_month';
+  const hasBotAccess = user?.role === 'admin' || userPlan === '3_months' || userPlan === '1_year';
+
+  const formatOrderTicketCategories = (order) => {
+    if (!order.tickets || order.tickets.length === 0) return 'Standard Ticket';
+    const counts = {};
+    for (const t of order.tickets) {
+      const catName = t.ticket_categories?.name || 'Tiket';
+      counts[catName] = (counts[catName] || 0) + 1;
+    }
+    return Object.entries(counts)
+      .map(([catName, qty]) => `${qty}x ${catName}`)
+      .join(', ');
+  };
 
   const [orders, setOrders] = useState([]);
   const [events, setEvents] = useState([]);
@@ -158,9 +172,15 @@ export const OrderManagerTab = () => {
     const waNumber = order.guest_wa.replace(/[^0-9]/g, '');
     const cleanNumber = waNumber.startsWith('0') ? `62${waNumber.substring(1)}` : waNumber;
     const eventName = order.events?.name || 'Event LokTik';
-    const seed = parseInt(order.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
+    const seed = parseInt(order.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
     const prettyCode = generatePrettyRedeemCode(eventName, seed);
     const qrImageUrl = ticketUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${prettyCode}`;
+
+    const ticketQty = order.tickets && order.tickets.length > 0 ? order.tickets.length : (order.quantity || 1);
+    const categoryDetails = formatOrderTicketCategories(order);
+    const qtyText = ticketQty > 1
+      ? `- Jumlah Tiket: *${ticketQty} Tiket* (${categoryDetails})\n⚠️ *PENTING:* Kode / QR Code ini dapat di-scan sebanyak *${ticketQty}x* di gate venue (bisa bersamaan atau bertahap).`
+      : `- Kategori Tiket: *${categoryDetails}*`;
 
     const messageText = `Halo Kak *${order.guest_name}*,
 
@@ -168,6 +188,7 @@ Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!*
 
 *DETAIL TIKET:*
 - Kode Tiket / Barcode: *${prettyCode}*
+${qtyText}
 - Total Bayar: ${formatRupiah(order.total_price)}
 - Status: LUNAS (Verified)
 
@@ -185,9 +206,12 @@ Terima Kasih!
   const sendAutoTicketViaBot = async (order, ticketUrl) => {
     const waNumber = order.guest_wa.replace(/[^0-9]/g, '');
     const eventName = order.events?.name || 'Event LokTik';
-    const seed = parseInt(order.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
+    const seed = parseInt(order.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
     const prettyCode = generatePrettyRedeemCode(eventName, seed);
     const qrImageUrl = ticketUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${prettyCode}`;
+
+    const ticketQty = order.tickets ? order.tickets.length : (order.quantity || 1);
+    const categoryDetails = formatOrderTicketCategories(order);
 
     try {
       const response = await fetch(`${botServerUrl}/api/send-ticket-wa`, {
@@ -198,6 +222,8 @@ Terima Kasih!
           guestName: order.guest_name,
           eventName,
           orderId: prettyCode,
+          ticketCount: ticketQty,
+          ticketDetails: categoryDetails,
           totalPrice: order.total_price,
           ticketQrUrl: qrImageUrl,
         }),
@@ -369,7 +395,7 @@ Terima Kasih!
     ];
 
     const rows = filteredOrders.map((o, idx) => {
-      const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
+      const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
       const prettyCode = generatePrettyRedeemCode(o.events?.name || 'Event', seed);
       const isOts = o.guest_name.startsWith('Pembeli OTS');
       const orderType = isOts ? 'OTS VENUE' : 'PO ONLINE';
@@ -436,7 +462,7 @@ Terima Kasih!
         return `<tr><td colspan="7" style="padding:12px;text-align:center;color:#6b7280;font-style:italic;">Tidak ada transaksi Online Pre-Order (PO).</td></tr>`;
       }
       return orderList.map((o, idx) => {
-        const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
+        const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
         const prettyCode = generatePrettyRedeemCode(o.events?.name || 'Event', seed);
         const categoryName = o.ticket_categories?.name || 'Tiket Standard';
         return `
@@ -462,7 +488,7 @@ Terima Kasih!
         return `<tr><td colspan="6" style="padding:12px;text-align:center;color:#6b7280;font-style:italic;">Tidak ada transaksi Kasir Venue (OTS).</td></tr>`;
       }
       return orderList.map((o, idx) => {
-        const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
+        const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
         const prettyCode = generatePrettyRedeemCode(o.events?.name || 'Event', seed);
         const categoryName = o.ticket_categories?.name || 'Tiket Standard';
         const methodLabel = o.guest_name.includes('QRIS') ? 'QRIS VENUE' : 'TUNAI / CASH';
@@ -732,10 +758,17 @@ Terima Kasih!
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={botStatus === 'online' ? 'green' : 'yellow'}>
-            <Bot className="w-3 h-3 mr-1 inline" />
-            {botStatus === 'online' ? 'BOT WA ONLINE' : 'BOT WA STANDBY'}
-          </Badge>
+          {hasBotAccess ? (
+            <Badge variant={botStatus === 'online' ? 'green' : 'yellow'}>
+              <Bot className="w-3 h-3 mr-1 inline" />
+              {botStatus === 'online' ? 'BOT WA ONLINE' : 'BOT WA STANDBY'}
+            </Badge>
+          ) : (
+            <Badge variant="blue">
+              <MessageSquare className="w-3 h-3 mr-1 inline" />
+              MANUAL WA (PAKET 1 BULAN)
+            </Badge>
+          )}
           <Button variant="green" size="sm" onClick={exportToExcel} className="font-bold">
             <FileSpreadsheet className="w-3.5 h-3.5 mr-1" /> EXPORT EXCEL
           </Button>
@@ -759,7 +792,7 @@ Terima Kasih!
             <p className="text-xs text-neutral-400">Verifikasi bukti transfer &amp; kirim tiket ke pembeli online website.</p>
           </div>
 
-          {selectedOrders.length > 0 && (
+          {selectedOrders.length > 0 && hasBotAccess && (
             <div className="flex items-center space-x-3 w-full sm:w-auto bg-[#141414] p-1.5 rounded-lg border border-brand-green/30 animate-fade-in">
               <span className="text-[10px] font-black uppercase text-brand-green font-mono pl-1">
                 {selectedOrders.length} TERPILIH (MAX 10)
@@ -799,21 +832,31 @@ Terima Kasih!
               <thead className="bg-neutral-900 text-neutral-400 font-bold uppercase border-b border-neutral-800">
                 <tr>
                   <th className="p-3 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      checked={poOrders.filter(o => o.status === 'pending').length > 0 && selectedOrders.length === poOrders.filter(o => o.status === 'pending').length}
-                      onChange={(e) => {
-                        if (e.target.checked) {
+                    {hasBotAccess && (
+                      <button
+                        type="button"
+                        onClick={() => {
                           const pendingIds = poOrders.filter(o => o.status === 'pending').map(o => o.id);
-                          setSelectedOrders(pendingIds);
-                        } else {
-                          setSelectedOrders([]);
-                        }
-                      }}
-                      className="w-4.5 h-4.5 rounded border border-neutral-800 bg-neutral-950 checked:bg-brand-green checked:border-brand-green text-black focus:ring-0 focus:ring-offset-0 focus:outline-none appearance-none cursor-pointer flex items-center justify-center after:content-['✓'] after:text-[10px] after:font-black after:text-transparent checked:after:text-black transition-all duration-200"
-                    />
+                          const allSelected = pendingIds.length > 0 && selectedOrders.length === pendingIds.length;
+                          if (allSelected) {
+                            setSelectedOrders([]);
+                          } else {
+                            setSelectedOrders(pendingIds);
+                          }
+                        }}
+                        className={`w-5 h-5 rounded border mx-auto flex items-center justify-center transition-all duration-150 cursor-pointer ${
+                          poOrders.filter(o => o.status === 'pending').length > 0 &&
+                          selectedOrders.length === poOrders.filter(o => o.status === 'pending').length
+                            ? 'bg-brand-green border-brand-green text-black shadow-[0_0_10px_rgba(57,255,20,0.4)]'
+                            : 'bg-neutral-950 border-neutral-700 text-transparent hover:border-neutral-500'
+                        }`}
+                      >
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      </button>
+                    )}
                   </th>
                   <th className="p-3">KODE TIKET</th>
+                  <th className="p-3">TIER TIKET</th>
                   <th className="p-3">NAMA PEMBELI</th>
                   <th className="p-3">WHATSAPP</th>
                   <th className="p-3">TOTAL</th>
@@ -831,26 +874,38 @@ Terima Kasih!
                   return (
                     <tr key={o.id} className="hover:bg-neutral-900/50">
                       <td className="p-3 w-10 text-center">
-                        {o.status === 'pending' ? (
-                          <input
-                            type="checkbox"
-                            checked={selectedOrders.includes(o.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedOrders([...selectedOrders, o.id]);
-                              } else {
+                        {o.status === 'pending' && hasBotAccess ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedOrders.includes(o.id)) {
                                 setSelectedOrders(selectedOrders.filter(id => id !== o.id));
+                              } else {
+                                setSelectedOrders([...selectedOrders, o.id]);
                               }
                             }}
-                            className="w-4.5 h-4.5 rounded border border-neutral-800 bg-neutral-950 checked:bg-brand-green checked:border-brand-green text-black focus:ring-0 focus:ring-offset-0 focus:outline-none appearance-none cursor-pointer flex items-center justify-center after:content-['✓'] after:text-[10px] after:font-black after:text-transparent checked:after:text-black transition-all duration-200"
-                          />
+                            className={`w-5 h-5 rounded border mx-auto flex items-center justify-center transition-all duration-150 cursor-pointer ${
+                              selectedOrders.includes(o.id)
+                                ? 'bg-brand-green border-brand-green text-black shadow-[0_0_10px_rgba(57,255,20,0.4)]'
+                                : 'bg-neutral-950 border-neutral-700 text-transparent hover:border-brand-green/60'
+                            }`}
+                          >
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          </button>
                         ) : (
                           <span className="text-neutral-600 font-bold">-</span>
                         )}
                       </td>
-                      <td className="p-3 font-mono font-black text-brand-green text-sm flex items-center space-x-1">
-                        <Key className="w-3.5 h-3.5 text-brand-green shrink-0" />
-                        <span>{prettyCode}</span>
+                      <td className="p-3 font-mono font-black text-brand-green text-sm">
+                        <div className="flex items-center space-x-1">
+                          <Key className="w-3.5 h-3.5 text-brand-green shrink-0" />
+                          <span>{prettyCode}</span>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <span className="inline-block px-2 py-0.5 bg-neutral-900 border border-brand-yellow/30 rounded text-[11px] font-extrabold text-brand-yellow font-mono">
+                          {formatOrderTicketCategories(o)}
+                        </span>
                       </td>
                       <td className="p-3 font-bold text-white">{o.guest_name}</td>
                       <td className="p-3">
@@ -888,11 +943,11 @@ Terima Kasih!
                       <td className="p-3">
                         {hasScannedTicket ? (
                           <Badge variant="red" className="text-[10px]">
-                            SUDAH SCAN (GELANG)
+                            SUDAH SCAN
                           </Badge>
                         ) : o.status === 'paid' ? (
                           <Badge variant="green" className="text-[10px]">
-                            BELUM SCAN (AKTIF)
+                            AKTIF
                           </Badge>
                         ) : (
                           <span className="text-neutral-500 font-mono text-[11px]">-</span>
@@ -902,11 +957,13 @@ Terima Kasih!
                       <td className="p-3 text-right">
                         {o.status === 'pending' && (
                           <div className="flex items-center justify-end space-x-1.5">
-                            <Button variant="green" size="sm" onClick={() => handleApprove(o, 'bot')}>
-                              <Bot className="w-3.5 h-3.5 mr-1" /> APPROVE (BOT)
-                            </Button>
-                            <Button variant="purple" size="sm" onClick={() => handleApprove(o, 'manual')}>
-                              <Send className="w-3.5 h-3.5 mr-1" /> WA MANUAL
+                            {hasBotAccess && (
+                              <Button variant="green" size="sm" onClick={() => handleApprove(o, 'bot')}>
+                                <Bot className="w-3.5 h-3.5 mr-1" /> APPROVE (BOT)
+                              </Button>
+                            )}
+                            <Button variant={hasBotAccess ? "purple" : "green"} size="sm" onClick={() => handleApprove(o, 'manual')}>
+                              <Send className="w-3.5 h-3.5 mr-1" /> {hasBotAccess ? 'WA MANUAL' : 'APPROVE (WA MANUAL)'}
                             </Button>
                             <Button variant="red" size="sm" onClick={() => handleReject(o.id)}>
                               <X className="w-3.5 h-3.5" />
@@ -915,11 +972,13 @@ Terima Kasih!
                         )}
                         {o.status === 'paid' && (
                           <div className="flex items-center justify-end space-x-1.5">
-                            <Button variant="outline" size="sm" onClick={() => handleResend(o, 'bot')}>
-                              <Bot className="w-3.5 h-3.5 mr-1 text-brand-green" /> BOT RE-SEND
-                            </Button>
+                            {hasBotAccess && (
+                              <Button variant="outline" size="sm" onClick={() => handleResend(o, 'bot')}>
+                                <Bot className="w-3.5 h-3.5 mr-1 text-brand-green" /> BOT RE-SEND
+                              </Button>
+                            )}
                             <Button variant="purple" size="sm" onClick={() => handleResend(o, 'manual')}>
-                              <Send className="w-3.5 h-3.5 mr-1" /> WA MANUAL
+                              <Send className="w-3.5 h-3.5 mr-1" /> {hasBotAccess ? 'WA MANUAL' : 'KIRIM ULANG WA'}
                             </Button>
                           </div>
                         )}
@@ -941,7 +1000,7 @@ Terima Kasih!
               <Banknote className="w-5 h-5 text-brand-yellow inline mr-1" />
               <span>2. DAFTAR TRANSAKSI KASIR OTS (VENUE)</span>
             </h3>
-            <p className="text-xs text-neutral-400">Pembayaran di kasir &amp; penyerahan gelang fisik langsung di konter venue.</p>
+            <p className="text-xs text-neutral-400">Pembayaran di kasir &amp; penyerahan tiket fisik langsung di konter venue.</p>
           </div>
           <Badge variant="yellow">DIRECT WRISTBAND</Badge>
         </div>
@@ -958,39 +1017,50 @@ Terima Kasih!
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-neutral-900 text-neutral-400 font-bold uppercase border-b border-neutral-800">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead className="bg-neutral-900 text-neutral-400 font-bold uppercase border-b border-neutral-800 text-[11px]">
                 <tr>
-                  <th className="p-3">KODE OTS</th>
-                  <th className="p-3">WAKTU TRANSAKSI</th>
-                  <th className="p-3">KETERANGAN TRANSAKSI</th>
+                  <th className="p-3 w-32">KODE OTS</th>
+                  <th className="p-3">METODE &amp; WAKTU TRANSAKSI</th>
+                  <th className="p-3">TIER TIKET</th>
                   <th className="p-3">TOTAL BAYAR</th>
                   <th className="p-3">STATUS BAYAR</th>
-                  <th className="p-3">STATUS PENYERAHAN GELANG</th>
+                  <th className="p-3">TIKET FISIK</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800 font-medium text-neutral-200">
                 {otsOrders.map((o) => {
-                  const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
+                  const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
                   const prettyCode = generatePrettyRedeemCode(o.events?.name, seed);
+                  const cleanName = (o.guest_name || 'Pembeli OTS').replace(/\s*\d{2}\.\d{2}\s*/g, '').trim();
+
                   return (
                     <tr key={o.id} className="hover:bg-neutral-900/50">
-                      <td className="p-3 font-mono font-black text-brand-yellow text-sm flex items-center space-x-1">
-                        <Key className="w-3.5 h-3.5 text-brand-yellow shrink-0" />
-                        <span>{prettyCode}</span>
+                      <td className="p-3">
+                        <div className="flex items-center space-x-1 text-brand-yellow font-mono font-black text-sm">
+                          <Key className="w-3.5 h-3.5 text-brand-yellow shrink-0" />
+                          <span>{prettyCode}</span>
+                        </div>
                       </td>
-                      <td className="p-3 font-mono text-[11px] text-brand-yellow font-bold flex items-center space-x-1">
-                        <Clock className="w-3 h-3 text-brand-yellow shrink-0" />
-                        <span>{formatDateTime(o.created_at)}</span>
+                      <td className="p-3 space-y-1">
+                        <div className="font-bold text-white text-xs">{cleanName}</div>
+                        <div className="flex items-center space-x-1 text-neutral-400 font-mono text-[10px]">
+                          <Clock className="w-3 h-3 text-amber-400 shrink-0" />
+                          <span>{formatDateTime(o.created_at)}</span>
+                        </div>
                       </td>
-                      <td className="p-3 font-bold text-white">{o.guest_name}</td>
-                      <td className="p-3 font-bold text-brand-green">{formatRupiah(o.total_price)}</td>
+                      <td className="p-3">
+                        <span className="inline-block px-2 py-0.5 bg-neutral-900 border border-brand-yellow/30 rounded text-[11px] font-extrabold text-brand-yellow font-mono">
+                          {formatOrderTicketCategories(o)}
+                        </span>
+                      </td>
+                      <td className="p-3 font-bold text-brand-green font-mono text-sm">{formatRupiah(o.total_price)}</td>
                       <td className="p-3">
                         <Badge variant="green">LUNAS (OTS)</Badge>
                       </td>
                       <td className="p-3">
                         <Badge variant="green" className="text-[10px]">
-                          GELANG DISERAHKAN (KASIR)
+                          DISERAHKAN (KASIR)
                         </Badge>
                       </td>
                     </tr>

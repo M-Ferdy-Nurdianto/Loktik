@@ -38,7 +38,7 @@ export const Button = ({
       className={`
         inline-flex items-center justify-center font-sans uppercase transition-all duration-200
         active:scale-[0.98] hover:-translate-y-0.5
-        disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none
+        disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none disabled:transform-none disabled:shadow-none
         ${variantStyles[variant] || variantStyles.green}
         ${sizeStyles[size] || sizeStyles.md}
         ${fullWidth ? 'w-full' : ''}

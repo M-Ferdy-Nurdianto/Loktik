@@ -42,6 +42,7 @@ export const StaffManagerTab = () => {
         name: formData.name,
         username: formData.username,
         password: formData.password,
+        pinCode: formData.pinCode,
         eo_username: eoUsername,
         event_id: formData.assignedEvent ? formData.assignedEvent.id : 'all',
         event_slug: formData.assignedEvent ? formData.assignedEvent.slug : 'indie-music-fest-2026',
@@ -82,9 +83,9 @@ export const StaffManagerTab = () => {
   const handleCopyCredentials = (staf) => {
     const targetSlug = staf.event_slug || 'indie-music-fest-2026';
     const loginLink = `${window.location.origin}/gate/${targetSlug}`;
-    const text = `INFORMASI AKUN STAF LOKTIK\nStaf: ${staf.name}\nUsername: ${staf.username}\nPassword: ${staf.password}\nLink Gate: ${loginLink}`;
+    const text = `INFORMASI AKUN STAF LOKTIK\nStaf: ${staf.name}\nUsername: ${staf.username}\nPassword: ${staf.password}\nKode PIN 4-Digit: ${staf.pin_code || '1312'}\nLink Gate: ${loginLink}`;
     navigator.clipboard.writeText(text);
-    setToastMsg('INFO AKUN DISALIN KE CLIPBOARD!');
+    setToastMsg('INFO AKUN & PIN DISALIN KE CLIPBOARD!');
     setTimeout(() => setToastMsg(''), 3000);
   };
 
@@ -153,6 +154,7 @@ export const StaffManagerTab = () => {
                 <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-neutral-400">
                   <span>USER: <strong className="text-white">{staf.username}</strong></span>
                   <span>PASS: <strong className="text-white">{staf.password}</strong></span>
+                  <span>PIN 4-DIGIT: <strong className="text-brand-yellow font-black">{staf.pin_code || '1312'}</strong></span>
                   <span>EVENT: <strong className="text-brand-green uppercase">{staf.event_slug || 'ALL'}</strong></span>
                 </div>
 

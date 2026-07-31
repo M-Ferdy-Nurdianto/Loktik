@@ -18,7 +18,7 @@ export const HowItWorksSection = () => {
     {
       step: '03',
       title: 'Scan Tiket QR Saat Hari-H',
-      description: 'Staf gate cukup scan QR Code pembeli dari kamera HP untuk penukaran tiket / gelang.',
+      description: 'Staf gate cukup scan QR Code pembeli dari kamera HP untuk penukaran tiket fisik.',
       accent: 'text-brand-blue border-brand-blue',
     },
   ];

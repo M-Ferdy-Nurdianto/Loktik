@@ -40,9 +40,11 @@ export const EventDetail = () => {
 
   const handleProceedCheckout = () => {
     if (totalItems === 0) return;
-    navigate(`/event/${slug}/checkout`, {
-      state: { event, selectedItems, totalAmount, totalItems },
-    });
+    const checkoutData = { event, selectedItems, items: selectedItems, totalAmount, totalItems };
+    try {
+      sessionStorage.setItem('loktik_active_checkout', JSON.stringify(checkoutData));
+    } catch (e) {}
+    navigate(`/event/${slug}/checkout`, { state: checkoutData });
   };
 
   const mapsQueryUrl = event.location

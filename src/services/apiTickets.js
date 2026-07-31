@@ -11,7 +11,7 @@ export const checkTicketValidity = async (barcodeUuid) => {
   if (error) throw new Error('Terjadi kesalahan pada koneksi server gate.');
 
   if (data && data.length > 0) {
-    return data[0]; // Returns { success, message, ticket_id, guest_name, category_name, is_scanned }
+    return data[0]; // Returns { success, message, ticket_id, guest_name, category_name, is_scanned, ticket_progress }
   }
 
   return { success: false, message: 'Respon server gate tidak valid.' };

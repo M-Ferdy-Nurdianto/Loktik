@@ -69,16 +69,18 @@ export const useAuth = () => {
       };
     }
 
-    // 3. Check Fixed EO Credentials (eo_lokal / password123 & abin / 1234)
+    // 3. Check Fixed EO Credentials (pace / a, eo_lokal / password123 & abin / 1234)
     if (
+      (cleanUsername === 'pace' && (cleanPassword === 'a' || cleanPasswordLower === 'a')) ||
       (cleanUsername === 'eo_lokal' && (cleanPassword === 'password123' || cleanPasswordLower === 'password123')) ||
       (cleanUsername === 'abin' && (cleanPassword === '1234' || cleanPasswordLower === '1234'))
     ) {
       const eoUserData = {
-        id: cleanUsername === 'abin' ? 'eo-abin' : 'eo-demo',
-        username: cleanUsername === 'abin' ? 'abin' : 'eo_lokal',
+        id: cleanUsername === 'pace' ? 'eo-pace' : cleanUsername === 'abin' ? 'eo-abin' : 'eo-demo',
+        username: cleanUsername === 'pace' ? 'pace' : cleanUsername === 'abin' ? 'abin' : 'eo_lokal',
         role: 'eo',
-        name: cleanUsername === 'abin' ? 'Abin Event Panitia' : 'EO Komunitas Lokal',
+        name: cleanUsername === 'pace' ? 'Pace Event Panitia' : cleanUsername === 'abin' ? 'Abin Event Panitia' : 'EO Komunitas Lokal',
+        subscriptionPlan: cleanUsername === 'pace' ? '3_months' : '1_month',
         subscriptionStatus: 'active',
         loggedInAt: new Date().toISOString(),
       };
@@ -109,8 +111,9 @@ export const useAuth = () => {
         role: 'eo',
         name: matchedEo.name,
         wa: matchedEo.wa,
+        subscriptionPlan: matchedEo.subscriptionPlan || '1_month',
         subscriptionStatus: matchedEo.status,
-        expiresAt: matchedEo.expiresAt || null,
+        expiresAt: matchedEo.expiresAt || matchedEo.subscriptionExpiresAt || null,
         loggedInAt: new Date().toISOString(),
       };
       localStorage.setItem('loktik_user_session', JSON.stringify(eoUserData));

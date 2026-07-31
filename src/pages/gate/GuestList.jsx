@@ -156,8 +156,8 @@ export const GuestList = ({ eventId }) => {
                         <td className="p-3 border-r border-neutral-800">
                           {t.is_scanned ? (
                             <div className="space-y-0.5">
-                              <Badge variant="green" className="text-[9px] px-1.5 py-0">
-                                <CheckCircle2 className="w-3 h-3 mr-1 inline" /> SUDAH DI-SCAN
+                              <Badge variant="red" className="text-[9px] px-1.5 py-0">
+                                <CheckCircle2 className="w-3 h-3 mr-1 inline" /> SUDAH SCAN
                               </Badge>
                               {scanTimeStr && (
                                 <p className="text-[10px] text-brand-green font-mono font-bold">
@@ -166,8 +166,8 @@ export const GuestList = ({ eventId }) => {
                               )}
                             </div>
                           ) : (
-                            <Badge variant="yellow" className="text-[9px] px-1.5 py-0">
-                              <XCircle className="w-3 h-3 mr-1 inline" /> BELUM DI-SCAN
+                            <Badge variant="green" className="text-[9px] px-1.5 py-0">
+                              <XCircle className="w-3 h-3 mr-1 inline" /> AKTIF
                             </Badge>
                           )}
                         </td>

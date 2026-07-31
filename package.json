@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npx vite --host 0.0.0.0",
+    "dev:https": "set VITE_HTTPS=true&& npx vite --host 0.0.0.0",
     "build": "npx vite build",
     "bot": "node server/wa-bot.cjs",
     "tunnel": "npx cloudflared tunnel --url http://localhost:3000",
@@ -29,6 +30,7 @@
     "whatsapp-web.js": "^1.34.7"
   },
   "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.1",

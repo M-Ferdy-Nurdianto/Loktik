@@ -194,9 +194,11 @@ export const AdminDashboard = () => {
               <Input
                 label="NO. WHATSAPP EO *"
                 required
+                type="tel"
+                inputMode="numeric"
                 placeholder="Masukkan Nomor WhatsApp..."
                 value={newEo.wa}
-                onChange={(e) => setNewEo({ ...newEo, wa: e.target.value })}
+                onChange={(e) => setNewEo({ ...newEo, wa: e.target.value.replace(/[^0-9]/g, '') })}
               />
               <Input
                 label="PASSWORD UNTUK EO *"

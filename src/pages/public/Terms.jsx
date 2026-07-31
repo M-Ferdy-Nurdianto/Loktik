@@ -45,7 +45,7 @@ export const Terms = () => {
         <Card variant="dark" className="p-4 sm:p-6 space-y-2.5 border-neutral-800">
           <div className="flex items-center space-x-2 text-brand-blue">
             <FileText className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-            <h2 className="text-sm sm:text-base font-extrabold uppercase text-white">3. KETENTUAN TIKET &amp; GELANG VENUE</h2>
+            <h2 className="text-sm sm:text-base font-extrabold uppercase text-white">3. KETENTUAN TIKET &amp; TIKET FISIK VENUE</h2>
           </div>
           <ul className="text-xs text-neutral-400 font-medium space-y-2 list-disc pl-4 leading-relaxed">
             <li>Tiket yang telah berhasil diverifikasi oleh panitia akan menghasilkan kode verifikasi QR Code unik.</li>

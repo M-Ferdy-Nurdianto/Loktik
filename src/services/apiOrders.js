@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { generatePrettyRedeemCode } from '../utils/formatters';
 
 /**
  * Upload compressed WebP payment proof to Supabase Storage.
@@ -64,7 +65,122 @@ export const createGuestOrder = async (orderPayload, items) => {
   const { error: ticketsError } = await supabase.from('tickets').insert(ticketRows);
   if (ticketsError) throw new Error(`Gagal membuat unit tiket: ${ticketsError.message}`);
 
+  clearEoOrdersCache();
   return order;
+};
+
+/**
+ * Search buyer orders by Name, WA, or Order ID (public self-service lookup).
+ */
+export const searchOrdersByBuyer = async (queryTerm) => {
+  if (!queryTerm || queryTerm.trim().length < 2) return [];
+  const rawTerm = queryTerm.trim();
+  const termLower = rawTerm.toLowerCase();
+  const cleanDigits = rawTerm.replace(/[^0-9]/g, '');
+
+  try {
+    // 1. Fetch recent orders from Supabase DB
+    const { data: rawOrders, error } = await supabase
+      .from('orders')
+      .select('id, event_id, guest_name, guest_wa, total_price, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(300);
+
+    if (error || !rawOrders || rawOrders.length === 0) return [];
+
+    // 2. Fetch associated event names to compute exact pretty codes
+    const eventIds = [...new Set(rawOrders.map((o) => o.event_id).filter(Boolean))];
+    let eventsMap = {};
+
+    if (eventIds.length > 0) {
+      const { data: eventsData } = await supabase
+        .from('events')
+        .select('id, name')
+        .in('id', eventIds);
+
+      if (eventsData) {
+        eventsData.forEach((ev) => {
+          eventsMap[ev.id] = ev;
+        });
+      }
+    }
+
+    // 3. Filter orders matching: Name, WA, Order UUID, or exact Pretty Code (e.g. GM1727)
+    const matchedOrders = rawOrders.filter((o) => {
+      const idStr = String(o.id || '').toLowerCase();
+      const nameStr = String(o.guest_name || '').toLowerCase();
+      const waStr = String(o.guest_wa || '').replace(/[^0-9]/g, '');
+
+      // Compute pretty code for this order
+      const eventObj = eventsMap[o.event_id];
+      const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
+      const prettyCode = generatePrettyRedeemCode(eventObj?.name, seed).toLowerCase();
+
+      // Check match conditions
+      const matchesName = nameStr.includes(termLower);
+      const matchesId = idStr.includes(termLower);
+      const matchesPrettyCode = prettyCode.includes(termLower);
+      const matchesWa = cleanDigits.length >= 3 && waStr.includes(cleanDigits);
+
+      return matchesName || matchesId || matchesPrettyCode || matchesWa;
+    });
+
+    // 4. Check if any order tickets have been scanned at the gate
+    const matchedOrderIds = matchedOrders.map((o) => o.id);
+    let scannedOrderIdsSet = new Set();
+
+    if (matchedOrderIds.length > 0) {
+      const { data: ticketsData } = await supabase
+        .from('tickets')
+        .select('order_id, is_scanned')
+        .in('order_id', matchedOrderIds)
+        .eq('is_scanned', true);
+
+      if (ticketsData) {
+        ticketsData.forEach((t) => scannedOrderIdsSet.add(t.order_id));
+      }
+    }
+
+    return matchedOrders.slice(0, 15).map((o) => ({
+      ...o,
+      is_scanned: scannedOrderIdsSet.has(o.id),
+      events: eventsMap[o.event_id] || { name: 'Event LokTik' },
+    }));
+  } catch (err) {
+    console.warn('Gagal mencari e-tiket:', err);
+    return [];
+  }
+};
+
+/**
+ * Fix/Update WA number on an order (buyer self-service).
+ */
+export const updateOrderWaNumber = async (orderId, newWa) => {
+  const cleanWa = newWa.replace(/[^0-9]/g, '');
+  if (cleanWa.length < 10) throw new Error('Nomor WhatsApp minimal 10 digit.');
+
+  const { error } = await supabase
+    .from('orders')
+    .update({ guest_wa: cleanWa })
+    .eq('id', orderId);
+
+  if (error) throw new Error('Gagal memperbarui nomor WhatsApp.');
+  return true;
+};
+
+// Simple in-memory cache to boost mobile loading speed and prevent DB spam (15s TTL)
+const ordersCache = {
+  eoOrders: new Map(), // username -> { data, expiry }
+};
+
+const CACHE_TTL = 15000;
+
+export const clearEoOrdersCache = (username = null) => {
+  if (username) {
+    ordersCache.eoOrders.delete(username.toLowerCase());
+  } else {
+    ordersCache.eoOrders.clear();
+  }
 };
 
 /**
@@ -72,14 +188,21 @@ export const createGuestOrder = async (orderPayload, items) => {
  */
 export const getLiveOrdersForEo = async (eoUsername = null) => {
   if (!eoUsername) return [];
+  const cacheKey = eoUsername.trim().toLowerCase();
+  const now = Date.now();
+  const cached = ordersCache.eoOrders.get(cacheKey);
+  if (cached && now < cached.expiry) {
+    return cached.data;
+  }
 
   let targetEventIds = null;
 
-  if (eoUsername.toLowerCase() !== 'broferadm') {
+  if (cacheKey !== 'broferadm') {
+    const firstWord = cacheKey.split(' ')[0];
     const { data: myEvents, error: evErr } = await supabase
       .from('events')
       .select('id')
-      .eq('created_by', eoUsername);
+      .ilike('created_by', `${firstWord}%`);
 
     if (evErr) throw new Error(evErr.message);
     targetEventIds = (myEvents || []).map((e) => e.id);
@@ -100,13 +223,17 @@ export const getLiveOrdersForEo = async (eoUsername = null) => {
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data || [];
+  
+  const res = data || [];
+  ordersCache.eoOrders.set(cacheKey, { data: res, expiry: now + CACHE_TTL });
+  return res;
 };
 
 /**
  * EO Dashboard: Approve / Reject order & update status ('paid' or 'need_reupload')
  */
 export const updateOrderStatus = async (orderId, newStatus) => {
+  clearEoOrdersCache();
   const { error } = await supabase
     .from('orders')
     .update({ status: newStatus })

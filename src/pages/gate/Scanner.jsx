@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { QrCode, CheckCircle2, XCircle, Upload, RefreshCw, Users, Camera, ShieldCheck } from 'lucide-react';
+import { QrCode, CheckCircle2, XCircle, Upload, RefreshCw, Users, Camera, ShieldCheck, Zap } from 'lucide-react';
 import jsQR from 'jsqr';
 import { supabase } from '../../services/supabase';
 import { checkTicketValidity, redeemTicket } from '../../services/apiTickets';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../hooks/useAuth';
 
 export const Scanner = ({ eventId }) => {
   const { showToast } = useToast();
+  const { user } = useAuth();
   const [scanMode, setScanMode] = useState('camera'); // 'camera' | 'upload' | 'manual'
   const [manualCode, setManualCode] = useState('');
   const [totalScanned, setTotalScanned] = useState(0);
@@ -52,6 +54,19 @@ export const Scanner = ({ eventId }) => {
     fetchAttendance();
   }, [eventId]);
 
+  const verifyStaffActive = async () => {
+    if (user && user.role === 'staff') {
+      const { data } = await supabase
+        .from('staff_accounts')
+        .select('status')
+        .eq('id', user.id)
+        .single();
+      if (data && data.status === 'suspended') {
+        throw new Error('Akun staf Anda ditangguhkan/nonaktif. Silakan hubungi EO.');
+      }
+    }
+  };
+
   const processCode = async (rawCode) => {
     if (!rawCode || scanning || redeeming) return;
     const cleanCode = rawCode.trim();
@@ -59,6 +74,7 @@ export const Scanner = ({ eventId }) => {
 
     try {
       setScanning(true);
+      await verifyStaffActive();
 
       const check = await checkTicketValidity(cleanCode);
       if (!check.success) {
@@ -118,10 +134,11 @@ export const Scanner = ({ eventId }) => {
       // Tiket valid & belum di-scan -> Pop-up minta Konfirmasi Pakai dari Staf Gate
       setScanResult({
         status: 'PENDING_CONFIRM',
-        msg: 'TIKET VALID (BELUM DI-SCAN) — KONFIRMASI PENUKARAN GELANG',
+        msg: check.message || 'TIKET VALID (BELUM DI-SCAN) — KONFIRMASI PENUKARAN TIKET FISIK',
         ticketId: check.ticket_id,
         guest: check.guest_name,
         category: check.category_name,
+        progress: check.ticket_progress || '1/1',
       });
     } catch (err) {
       setScanResult({ status: 'FAILED', msg: err.message || 'Gagal memproses tiket.' });
@@ -134,23 +151,31 @@ export const Scanner = ({ eventId }) => {
     if (!scanResult || !scanResult.ticketId || redeeming) return;
     try {
       setRedeeming(true);
+      await verifyStaffActive();
       const redeem = await redeemTicket(scanResult.ticketId, 'Gate Staff Scanner');
       if (redeem.success) {
+        const msgText = `TIKET KE-${scanResult.progress || '1/1'} BERHASIL DI-REDEEM & TIKET FISIK DISERAHKAN!`;
         setScanResult({
           status: 'SUCCESS',
-          msg: 'TIKET BERHASIL DI-REDEEM & GELANG VENUE DISERAHKAN!',
+          msg: msgText,
           guest: scanResult.guest,
           category: scanResult.category,
+          progress: scanResult.progress,
         });
+        showToast(msgText, 'staff');
         fetchAttendance();
       } else {
+        const errText = redeem.message || 'Gagal meredem tiket.';
         setScanResult({
           status: 'FAILED',
-          msg: redeem.message || 'Gagal meredem tiket.',
+          msg: errText,
         });
+        showToast(errText, 'staff');
       }
     } catch (err) {
-      setScanResult({ status: 'FAILED', msg: err.message || 'Gagal meredem tiket.' });
+      const errText = err.message || 'Gagal meredem tiket.';
+      setScanResult({ status: 'FAILED', msg: errText });
+      showToast(errText, 'staff');
     } finally {
       setRedeeming(false);
     }
@@ -283,7 +308,7 @@ export const Scanner = ({ eventId }) => {
                 {scanResult.status === 'PENDING_CONFIRM' && <ShieldCheck className="w-6 h-6 shrink-0" />}
                 {scanResult.status !== 'SUCCESS' && scanResult.status !== 'PENDING_CONFIRM' && <XCircle className="w-6 h-6 shrink-0" />}
                 
-                {scanResult.status === 'SUCCESS' && 'TIKET VALID — GELANG DISERAHKAN'}
+                {scanResult.status === 'SUCCESS' && 'TIKET VALID — TIKET FISIK DISERAHKAN'}
                 {scanResult.status === 'PENDING_CONFIRM' && 'KONFIRMASI PAKAI TIKET STAF'}
                 {scanResult.status === 'ALREADY_SCANNED' && 'TIKET SUDAH TER-SCAN (DITOLAK)'}
                 {scanResult.status === 'FAILED' && 'TIKET INVALID (DITOLAK)'}
@@ -301,10 +326,18 @@ export const Scanner = ({ eventId }) => {
                   <span className="text-neutral-400 font-bold">NAMA PEMBELI:</span>
                   <strong className="text-brand-yellow text-sm font-black uppercase">{scanResult.guest}</strong>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center border-b border-neutral-800/80 pb-2">
                   <span className="text-neutral-400 font-bold">KATEGORI TIKET:</span>
                   <strong className="text-brand-purple text-xs font-black uppercase">{scanResult.category}</strong>
                 </div>
+                {scanResult.progress && (
+                  <div className="flex justify-between items-center bg-brand-purple/15 border border-brand-purple/40 p-2 rounded text-xs">
+                    <span className="text-neutral-300 font-bold">STATUS PROGRES PENUKARAN:</span>
+                    <span className="font-black font-mono text-brand-purple bg-brand-purple/30 px-2 py-0.5 rounded border border-brand-purple/60">
+                      TIKET KE-{scanResult.progress}
+                    </span>
+                  </div>
+                )}
                 {scanResult.scannedAt && (
                   <div className="flex justify-between items-center border-t border-neutral-800/80 pt-2">
                     <span className="text-neutral-400 font-bold">WAKTU DI-SCAN:</span>
@@ -323,7 +356,14 @@ export const Scanner = ({ eventId }) => {
                   fullWidth
                   className="py-4 text-xs font-black uppercase justify-center tracking-wider shadow-[0_0_20px_rgba(139,92,246,0.6)]"
                 >
-                  {redeeming ? 'MEMPROSES...' : 'KONFIRMASI PAKAI TIKET & SERAHKAN GELANG'}
+                  {redeeming ? (
+                    <span className="flex items-center justify-center">
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin text-white" />
+                      MEMPROSES REDEEM...
+                    </span>
+                  ) : (
+                    'KONFIRMASI PAKAI TIKET & SERAHKAN TIKET FISIK'
+                  )}
                 </Button>
               ) : (
                 <Button
@@ -341,66 +381,70 @@ export const Scanner = ({ eventId }) => {
         document.body
       )}
 
-      <Card variant="dark" className="p-4 border-neutral-800 space-y-3">
-        <div className="grid grid-cols-3 gap-2">
-          {['camera', 'upload', 'manual'].map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setScanMode(mode)}
-              className={`py-2 px-2 text-xs font-black uppercase rounded transition-colors ${
-                scanMode === mode
-                  ? 'bg-brand-purple text-white font-black'
-                  : 'bg-[#181818] text-neutral-400 border border-neutral-800 hover:text-white'
-              }`}
-            >
-              {mode === 'camera' ? 'KAMERA' : mode === 'upload' ? 'UPLOAD' : 'MANUAL'}
-            </button>
-          ))}
-        </div>
+      <Card variant="dark" className="p-4 sm:p-5 border-neutral-800 space-y-4 text-left">
+        {/* Top: Fast Manual Code Input Form */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (manualCode) processCode(manualCode);
+          }}
+          className="space-y-2 p-3.5 bg-neutral-950 rounded-xl border border-neutral-800 shadow-inner"
+        >
+          <div className="flex justify-between items-center">
+            <label className="text-[10px] font-black uppercase text-brand-purple tracking-wider flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-brand-purple fill-brand-purple" />
+              <span>INPUT KODE TIKET MANUAL (TANPA SCAN):</span>
+            </label>
+            <span className="text-[9px] font-mono text-neutral-500 font-bold">FASTER GATE</span>
+          </div>
 
-        {scanMode === 'camera' && (
-          <div className="relative bg-black border border-neutral-800 rounded aspect-[4/5] md:aspect-video overflow-hidden flex items-center justify-center">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={manualCode}
+              onChange={(e) => setManualCode(e.target.value)}
+              placeholder="Ketik Kode Tiket (misal: GM1972)"
+              className="flex-1 p-2.5 sm:p-3 bg-[#121212] border border-neutral-800 rounded-lg font-mono font-black text-sm text-white uppercase focus:outline-none focus:border-brand-purple"
+            />
+            <Button type="submit" variant="purple" className="text-xs font-black uppercase px-4 sm:px-6 shrink-0 py-2.5">
+              VERIFIKASI
+            </Button>
+          </div>
+        </form>
+
+        {/* Below: Live Camera Scanner Viewport */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider flex items-center gap-1.5">
+              <Camera className="w-3.5 h-3.5 text-neutral-400" />
+              <span>SCANNER QR CODE KAMERA LIVE:</span>
+            </label>
+            <label className="cursor-pointer text-[10px] font-extrabold text-brand-purple hover:underline flex items-center gap-1">
+              <Upload className="w-3 h-3" />
+              <span>UPLOAD FOTO QR</span>
+              <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+            </label>
+          </div>
+
+          <div className="relative bg-black border border-neutral-800 rounded-xl aspect-[4/5] sm:aspect-video overflow-hidden flex items-center justify-center shadow-lg">
             {cameraError ? (
               <div className="p-4 text-center space-y-2 text-neutral-400">
                 <Camera className="w-8 h-8 text-brand-red mx-auto" />
                 <p className="text-xs font-bold text-brand-red uppercase max-w-xs mx-auto leading-relaxed">
                   {cameraError}
                 </p>
-                <p className="text-[11px] text-neutral-500">Gunakan tab UPLOAD foto QR atau tab MANUAL di atas.</p>
+                <p className="text-[11px] text-neutral-500">Gunakan kolom Input Kode Manual di atas atau opsi Upload Foto QR.</p>
               </div>
             ) : (
               <>
                 <video ref={videoRef} playsInline autoPlay muted className="w-full h-full object-cover" />
-                <div className="absolute bottom-4 inset-x-0 mx-auto w-max bg-black/60 backdrop-blur text-white px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest border border-white/10 uppercase">
+                <div className="absolute bottom-4 inset-x-0 mx-auto w-max bg-black/70 backdrop-blur text-white px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest border border-white/10 uppercase shadow-md">
                   Posisikan QR di mana saja
                 </div>
               </>
             )}
           </div>
-        )}
-
-        {scanMode === 'upload' && (
-          <label className="block p-8 border border-dashed border-neutral-700 bg-[#181818] rounded text-center cursor-pointer hover:bg-neutral-800">
-            <Upload className="w-8 h-8 mx-auto mb-2 text-brand-purple" />
-            <span className="text-xs font-black uppercase text-neutral-300">PILIH FOTO QR CODE TIKET</span>
-            <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-          </label>
-        )}
-
-        {scanMode === 'manual' && (
-          <form onSubmit={(e) => { e.preventDefault(); processCode(manualCode); }} className="space-y-2">
-            <input
-              type="text"
-              value={manualCode}
-              onChange={(e) => setManualCode(e.target.value)}
-              placeholder="Ketik Kode Tiket (misal: RB1029)"
-              className="w-full p-3 bg-[#181818] border border-neutral-800 rounded font-mono font-black text-base text-white uppercase focus:outline-none focus:border-brand-purple"
-            />
-            <Button type="submit" variant="purple" fullWidth className="py-3 text-xs font-black justify-center">
-              VERIFIKASI KODE TIKET
-            </Button>
-          </form>
-        )}
+        </div>
       </Card>
     </div>
   );

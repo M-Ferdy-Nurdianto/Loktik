@@ -1,67 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Ticket, QrCode, Smartphone, Zap, ArrowRight, DollarSign, FileText, CheckCircle2, Clock, X } from 'lucide-react';
+import { ShieldCheck, Smartphone, Zap, ArrowRight, DollarSign, FileText, Clock } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { FaqSection } from '../../components/landing/FaqSection';
+import { ForEoPricing } from '../../components/eo/ForEoPricing';
 
 export const ForEO = () => {
   const navigate = useNavigate();
-
-  const pricingTiers = [
-    {
-      name: 'PAKET 1 BULAN',
-      price: 'Rp200.000',
-      period: '/ 1 Bulan',
-      badge: 'MANUAL WHATSAPP',
-      subtitle: 'Bebas Jualan Tiket 0% Komisi (Tanpa Layanan Bot WA)',
-      waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20LokTik%201%20Bulan%20(Rp200.000).',
-      features: [
-        { text: '0% Potongan Komisi Per Tiket', included: true },
-        { text: 'Dana Direct Masuk Rekening EO', included: true },
-        { text: 'Gate Venue & Realtime HP Scanner Staf', included: true },
-        { text: 'Kasir OTS Venue Fast-Issue Direct', included: true },
-        { text: 'Layanan Bot WA Otomatis Kirim Tiket', included: false },
-        { text: 'Approve & Verifikasi Massal (Bot)', included: false },
-      ],
-      highlight: false,
-    },
-    {
-      name: 'PAKET 3 BULAN',
-      price: 'Rp300.000',
-      period: '/ 3 Bulan',
-      badge: 'REKOMENDASI EO',
-      subtitle: 'Akses Bebas Jualan Tiket 0% Komisi + Bot WA Otomatis',
-      waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20LokTik%203%20Bulan%20(Rp300.000).',
-      features: [
-        { text: '0% Potongan Komisi Per Tiket', included: true },
-        { text: 'Dana Direct Masuk Rekening EO', included: true },
-        { text: 'Gate Venue & Realtime HP Scanner Staf', included: true },
-        { text: 'Kasir OTS Venue Fast-Issue Direct', included: true },
-        { text: 'Layanan Bot WA Otomatis Kirim Tiket', included: true },
-        { text: 'Approve & Verifikasi Massal (Bot)', included: true },
-      ],
-      highlight: true,
-    },
-    {
-      name: 'PAKET 1 TAHUN (PROMO)',
-      price: 'Rp500.000',
-      period: '/ 1 Tahun',
-      badge: 'PROMO BOT WA',
-      subtitle: 'Paket Hemat Bebas Jualan Tiket 1 Tahun + Bot WA Otomatis',
-      waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20LokTik%201%20Tahun%20(Rp500.000).',
-      features: [
-        { text: '0% Potongan Komisi Per Tiket', included: true },
-        { text: 'Dana Direct Masuk Rekening EO', included: true },
-        { text: 'Gate Venue & Realtime HP Scanner Staf', included: true },
-        { text: 'Kasir OTS Venue Fast-Issue Direct', included: true },
-        { text: 'Layanan Bot WA Otomatis Kirim Tiket', included: true },
-        { text: 'Approve & Verifikasi Massal (Bot)', included: true },
-      ],
-      highlight: false,
-    },
-  ];
 
   const eoTerms = [
     {
@@ -74,28 +21,27 @@ export const ForEO = () => {
     },
     {
       title: '3. AMAN BUAT STAF VENUE (GATE PIN)',
-      desc: 'Kamu bisa share link Gate Venue (/gate/slug-event) dan PIN 1029 ke panitia pintu masuk atau kasir OTS tanpa takut password akun utama EO kamu ketahuan.',
+      desc: 'Kamu bisa share link Gate Venue (/gate/slug-event) dan PIN 1312 ke panitia pintu masuk atau kasir OTS tanpa takut password akun utama EO kamu ketahuan.',
     },
     {
-      title: '4. PENUKARAN GELANG & PROTEKSI SCAN',
-      desc: 'Satu QR Code tiket cuma bisa di-scan 1 kali pas penukaran gelang di venue. Setelah di-scan, status tiket otomatis terkunci biar nggak bisa dipake ganda.',
+      title: '4. PENUKARAN TIKET FISIK & PROTEKSI SCAN',
+      desc: 'Satu QR Code tiket cuma bisa di-scan 1 kali pas penukaran tiket fisik di venue. Setelah di-scan, status tiket otomatis terkunci biar nggak bisa dipake ganda.',
     },
     {
       title: '5. RETENSI DATA EVENT & TIKET (OTOMATIS HAPUS 2 MINGGU)',
-      desc: 'Data event, transaksi pesanan, dan unit tiket yang sudah selesai akan dibersihkan/dihapus otomatis oleh sistem 2 minggu (14 hari) setelah tanggal acara berakhir.',
+      desc: 'Demi menjaga server tetep ringan & kenceng, data transaksi & tiket event bakal otomatis terhapus bersih dari database 2 minggu setelah tanggal acara kelar.',
     },
   ];
 
-  const steps = [
-    { num: '01', title: 'LOGIN AKUN EO', desc: 'Masuk ke dashboard panitia pake akun EO kamu.' },
-    { num: '02', title: 'INPUT DETAIL EVENT', desc: 'Upload poster, set QRIS / No Rekening, terus bikin tier tiket.' },
-    { num: '03', title: 'SHARE LINK TIKET', desc: 'Sebar link event-mu, pembeli langsung transfer direct ke panitia.' },
-    { num: '04', title: 'SCAN AT VENUE', desc: 'Kasih link Gate Venue & PIN 1029 ke tim pintu masuk & kasir OTS.' },
+  const workflowSteps = [
+    { num: '01', title: 'BUAT EVENT', desc: 'Isi detail acara & upload poster.' },
+    { num: '02', title: 'SHARE LINK', desc: 'Sebar link ke pembeli tiket.' },
+    { num: '03', title: 'TERIMA DANA', desc: 'Transfer direct ke rekening / QRIS EO.' },
+    { num: '04', title: 'SCAN AT VENUE', desc: 'Kasih link Gate Venue & PIN 1312 ke tim pintu masuk & kasir OTS.' },
   ];
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 sm:py-10 space-y-12 sm:space-y-16 text-left font-sans bg-[#0a0a0a] text-white">
-      
       {/* 1. HERO SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 py-4 sm:py-8 items-center border-b border-neutral-900">
         <div className="lg:col-span-7 space-y-5">
@@ -187,82 +133,7 @@ export const ForEO = () => {
       </div>
 
       {/* 3. PRICING PLANS */}
-      <div id="pricing-plans" className="space-y-6 pt-4">
-        <div className="border-b border-neutral-800 pb-2">
-          <h2 className="text-lg sm:text-xl font-black uppercase text-brand-blue tracking-tight flex items-center gap-2">
-            <DollarSign className="w-5 h-5" /> SKEMA BIAYA &amp; PRICING BERLANGGANAN
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-          {pricingTiers.map((tier, idx) => (
-            <Card
-              key={idx}
-              variant="dark"
-              className={`p-4 sm:p-6 border flex flex-col justify-between space-y-4 touch-press ${
-                tier.highlight
-                  ? 'border-brand-blue/60 bg-gradient-to-b from-[#0c1920] to-[#121212] shadow-[0_0_20px_rgba(6,182,212,0.15)]'
-                  : 'border-neutral-800 bg-[#121212]'
-              }`}
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-                  <Badge variant="blue" className="text-[9px] px-2 py-0.5 font-extrabold">
-                    {tier.badge}
-                  </Badge>
-                  <span className="text-[10px] font-mono text-neutral-500 font-bold uppercase">BERLANGGANAN</span>
-                </div>
-
-                <div>
-                  <h3 className="text-base sm:text-lg font-black uppercase text-white">{tier.name}</h3>
-                  <div className="flex items-baseline space-x-1.5 mt-1">
-                    <span className="text-2xl sm:text-3xl font-black font-mono text-brand-blue">{tier.price}</span>
-                    <span className="text-xs font-mono text-neutral-400">{tier.period}</span>
-                  </div>
-                  <p className="text-xs text-neutral-400 font-medium mt-1 leading-relaxed">{tier.subtitle}</p>
-                </div>
-
-                <div className="space-y-2 pt-2 border-t border-neutral-800 text-left">
-                  {tier.features.map((feat, fIdx) => (
-                    <div
-                      key={fIdx}
-                      className={`flex items-center space-x-2 text-xs font-bold ${
-                        feat.included ? 'text-neutral-300' : 'text-neutral-500 line-through'
-                      }`}
-                    >
-                      {feat.included ? (
-                        <CheckCircle2 className="w-4 h-4 text-brand-blue shrink-0" />
-                      ) : (
-                        <X className="w-4 h-4 text-brand-red shrink-0" />
-                      )}
-                      <span>{feat.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-3 sm:pt-4">
-                <a
-                  href={`https://wa.me/6285765907580?text=${tier.waText}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block touch-press"
-                >
-                  <Button
-                    variant="blue"
-                    fullWidth
-                    size="md"
-                    className="min-h-[46px] font-black justify-center flex items-center space-x-2 text-xs sm:text-sm uppercase tracking-wider"
-                  >
-                    <span>PESAN {tier.name} VIA WA</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </a>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
+      <ForEoPricing />
 
       {/* 4. WORKFLOW STEPS */}
       <div className="space-y-6">

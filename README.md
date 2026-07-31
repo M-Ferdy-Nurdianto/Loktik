@@ -5,12 +5,8 @@
 ---
 
 ## ⚡ Quick Start 1-Click Launcher (Windows)
-Untuk menjalankan **seluruh sistem (Web Frontend + WA Bot + Auto Launch Browser)** dalam 1-Klik:
-1. Double-click file **`START_LOKTIK.bat`** di direktori utama repository.
-2. Script otomatis akan:
-   - Menjalankan **Server WhatsApp Bot** (`whatsapp-web.js` di port 5000)
-   - Menjalankan **Server Web Frontend Vite** (`0.0.0.0:3000`)
-   - Membuka browser ke `http://localhost:3000`
+- **`START_LOKTIK.bat`**: Launcher standar untuk uji coba di Laptop/PC (Vite + WA Bot Server + Auto Browser `http://localhost:3000`).
+- **`START_LOKTIK_MOBILE.bat`**: Launcher khusus testing di **HP / Perangkat Seluler** dengan **HTTPS Cloudflare Tunnel** otomatis. Mengaktifkan izin kamera HP 100% aman untuk fitur POS Gate QR Scanner tanpa kendala error SSL.
 
 ---
 

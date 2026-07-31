@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../hooks/useAuth';
 
-export const GatePinLock = ({ eventName, correctPin = '1029', onSuccess }) => {
+export const GatePinLock = ({ eventName, correctPin = '1312', onSuccess }) => {
   const { login } = useAuth();
   const [loginMode, setLoginMode] = useState('pin'); // 'pin' | 'staff'
   const [pin, setPin] = useState('');
@@ -15,7 +15,7 @@ export const GatePinLock = ({ eventName, correctPin = '1029', onSuccess }) => {
 
   const handleSubmitPin = (e) => {
     e.preventDefault();
-    if (pin.trim() === correctPin || pin.trim() === '1029') {
+    if (pin.trim() === correctPin || pin.trim() === '1312') {
       onSuccess();
     } else {
       setErrorMsg('PIN GATE SALAH! MINTA PIN PADA EO PANITIA.');
@@ -95,7 +95,7 @@ export const GatePinLock = ({ eventName, correctPin = '1029', onSuccess }) => {
                   maxLength={6}
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
-                  placeholder="1029"
+                  placeholder="1312"
                   className="w-full px-4 py-3 bg-[#181818] text-brand-purple font-mono font-black text-2xl tracking-[0.5em] text-center border border-neutral-800 rounded focus:outline-none focus:border-brand-purple placeholder:text-neutral-600 placeholder:tracking-normal placeholder:text-sm"
                   autoFocus
                 />

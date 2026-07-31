@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Eye, Power, RefreshCw, Plus, ExternalLink, Inbox, ShieldCheck, Edit3 } from 'lucide-react';
+import { Calendar, Eye, Power, RefreshCw, Plus, ExternalLink, Inbox, ShieldCheck, Edit3, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { EditEventModal } from './EditEventModal';
-import { getAllEventsForEo, updateEventStatus } from '../../services/apiEvents';
+import { getAllEventsForEo, updateEventStatus, deleteEventAndFiles } from '../../services/apiEvents';
 import { formatRupiah, formatDate } from '../../utils/formatters';
 import { useToast } from '../../context/ToastContext';
 
@@ -46,6 +46,19 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
       );
     } catch (err) {
       showToast(err.message, 'eo');
+    }
+  };
+
+  const handleDeleteEvent = async (eventId, eventName) => {
+    if (!window.confirm(`Hapus event "${eventName}" beserta seluruh tiket dan gambar di storage?`)) return;
+    try {
+      setLoading(true);
+      await deleteEventAndFiles(eventId);
+      showToast(`Event "${eventName}" dan gambar berhasil dihapus.`, 'eo');
+      await fetchEvents();
+    } catch (err) {
+      showToast(err.message || 'Gagal menghapus event.', 'eo');
+      setLoading(false);
     }
   };
 
@@ -155,6 +168,15 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
                 >
                   <Power className="w-3.5 h-3.5 mr-1" />
                   {evt.status === 'active' ? 'NONAKTIFKAN' : 'AKTIFKAN'}
+                </Button>
+
+                <Button
+                  variant="red"
+                  size="sm"
+                  onClick={() => handleDeleteEvent(evt.id, evt.name)}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />
+                  HAPUS
                 </Button>
               </div>
             </div>

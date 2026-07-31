@@ -19,7 +19,7 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
     bankName: payDetails.bank_name || payDetails.bank || 'BCA',
     accountNumber: payDetails.account_no || payDetails.number || '',
     accountHolder: payDetails.account_name || payDetails.holder || '',
-    gatePin: payDetails.gate_pin || '1029',
+    gatePin: payDetails.gate_pin || '1312',
   });
 
   const [posterFile, setPosterFile] = useState(null);
@@ -71,6 +71,31 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const eventTime = new Date(formData.eventDate).getTime();
+    if (formData.openGate) {
+      const openTime = new Date(formData.openGate).getTime();
+      if (openTime > eventTime) {
+        return setErrorMsg('Waktu Open Gate tidak boleh setelah Tanggal Acara.');
+      }
+    }
+
+    for (let idx = 0; idx < tiers.length; idx++) {
+      const t = tiers[idx];
+      if (t.startPo && t.endPo) {
+        const startTime = new Date(t.startPo).getTime();
+        const endTime = new Date(t.endPo).getTime();
+        if (startTime > endTime) {
+          return setErrorMsg(`Tier #${idx + 1}: Waktu Mulai PO tidak boleh setelah Waktu Berakhir PO.`);
+        }
+      }
+      if (t.endPo) {
+        const endTime = new Date(t.endPo).getTime();
+        if (endTime > eventTime) {
+          return setErrorMsg(`Tier #${idx + 1}: Penjualan PO tidak boleh berakhir setelah acara dimulai.`);
+        }
+      }
+    }
+
     try {
       setSubmitting(true);
       setErrorMsg(null);
@@ -102,7 +127,7 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
           number: formData.accountNumber,
           holder: formData.accountHolder,
           qris_url: qrisUrl,
-          gate_pin: formData.gatePin || '1029',
+          gate_pin: formData.gatePin || '1312',
         },
       };
 
@@ -122,33 +147,37 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] w-screen h-screen bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      <Card variant="dark" className="w-full max-w-4xl p-5 sm:p-6 border border-brand-green/50 bg-[#121212] space-y-4 my-auto text-left shadow-[0_0_50px_rgba(0,0,0,0.9)]">
-        <div className="flex justify-between items-center border-b border-neutral-800 pb-3">
-          <h3 className="text-base font-black uppercase text-brand-green flex items-center gap-2">
-            <Edit3 className="w-5 h-5" /> EDIT DATA EVENT: {event.name.toUpperCase()}
+    <div className="fixed inset-0 z-[99999] w-screen h-screen bg-black/90 backdrop-blur-md flex items-center justify-center p-0 lg:p-4 overflow-hidden">
+      <Card variant="dark" className="w-full h-full lg:h-auto lg:max-h-[92vh] lg:max-w-5xl p-4 sm:p-6 border-0 lg:border border-brand-green/50 bg-[#121212] rounded-none lg:rounded-2xl flex flex-col justify-between text-left shadow-[0_0_50px_rgba(0,0,0,0.9)] overflow-hidden">
+        {/* Modal Header (Fixed) */}
+        <div className="flex justify-between items-center border-b border-neutral-800 pb-3 shrink-0 mb-3">
+          <h3 className="text-sm sm:text-base font-black uppercase text-brand-green flex items-center gap-2 truncate">
+            <Edit3 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" /> EDIT DATA EVENT: {event.name.toUpperCase()}
           </h3>
-          <Button variant="outline" size="sm" onClick={onCancel} className="text-xs">TUTUP</Button>
+          <Button variant="outline" size="sm" onClick={onCancel} className="text-xs shrink-0 py-1.5 px-3">
+            ← KEMBALI
+          </Button>
         </div>
 
-        {errorMsg && <p className="text-xs text-brand-red font-bold uppercase bg-red-950/40 p-2.5 rounded border border-brand-red/40">{errorMsg}</p>}
+        {errorMsg && <p className="text-xs text-brand-red font-bold uppercase bg-red-950/40 p-2.5 rounded border border-brand-red/40 shrink-0 mb-3">{errorMsg}</p>}
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Scrollable Form Content Body */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto no-scrollbar pr-1 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start pb-2">
           <div className="space-y-3">
-            <div className="p-4 bg-neutral-900 rounded border border-neutral-800 space-y-3">
+            <div className="p-3.5 bg-neutral-900 rounded-lg border border-neutral-800 space-y-3">
               <div>
                 <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">NAMA EVENT:</label>
                 <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded text-xs text-white font-bold" />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">TANGGAL ACARA:</label>
-                  <input type="datetime-local" required value={formData.eventDate} onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })} className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded text-xs text-white" />
+                  <input type="datetime-local" required value={formData.eventDate} onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })} className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-[11px] text-white" />
                 </div>
                 <div>
                   <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">OPEN GATE:</label>
-                  <input type="datetime-local" value={formData.openGate} onChange={(e) => setFormData({ ...formData, openGate: e.target.value })} className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded text-xs text-white" />
+                  <input type="datetime-local" value={formData.openGate} onChange={(e) => setFormData({ ...formData, openGate: e.target.value })} className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-[11px] text-white" />
                 </div>
               </div>
 
@@ -160,18 +189,18 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
               <div className="flex gap-3 items-center pt-1">
                 <div className="flex-1">
                   <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">GANTI POSTER (OPSIONAL):</label>
-                  <input type="file" accept="image/*" onChange={(e) => { if (e.target.files[0]) { setPosterFile(e.target.files[0]); setPosterPreview(URL.createObjectURL(e.target.files[0])); } }} className="w-full text-xs text-neutral-300 bg-neutral-950 p-1.5 rounded border border-neutral-800 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:bg-brand-green file:text-black file:font-bold cursor-pointer" />
+                  <input type="file" accept="image/*" onChange={(e) => { if (e.target.files[0]) { setPosterFile(e.target.files[0]); setPosterPreview(URL.createObjectURL(e.target.files[0])); } }} className="w-full text-[11px] text-neutral-300 bg-neutral-950 p-1.5 rounded border border-neutral-800 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:bg-brand-green file:text-black file:font-bold cursor-pointer" />
                 </div>
-                {posterPreview && <img src={posterPreview} alt="Poster" className="w-12 h-16 object-cover rounded border border-neutral-700 shrink-0" />}
+                {posterPreview && <img src={posterPreview} alt="Poster" className="w-10 h-14 object-cover rounded border border-neutral-700 shrink-0" />}
               </div>
 
-              <div className="pt-2.5 border-t border-neutral-800/80">
+              <div className="pt-2 border-t border-neutral-800/80">
                 <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">DESKRIPSI / LOKASI VENUE:</label>
-                <textarea rows={2.5} placeholder="Lokasi venue, lineup, info penting..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-green outline-none font-bold" />
+                <textarea rows={2} placeholder="Lokasi venue, lineup, info penting..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-green outline-none font-bold" />
               </div>
             </div>
 
-            <div className="p-4 bg-neutral-900 rounded border border-neutral-800 space-y-3">
+            <div className="p-3.5 bg-neutral-900 rounded-lg border border-neutral-800 space-y-2.5">
               <label className="text-[10px] font-black uppercase text-brand-purple block">METODE PEMBAYARAN (BANK &amp; REKENING):</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
@@ -180,52 +209,52 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
                 </div>
                 <div>
                   <span className="text-[9px] text-neutral-400 font-bold block mb-0.5">NO REKENING</span>
-                  <input type="text" required placeholder="123456789" value={formData.accountNumber} onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })} className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white font-mono font-bold" />
+                  <input type="text" required inputMode="numeric" placeholder="123456789" value={formData.accountNumber} onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value.replace(/[^0-9]/g, '') })} className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white font-mono font-bold" />
                 </div>
                 <div>
                   <span className="text-[9px] text-neutral-400 font-bold block mb-0.5">ATAS NAMA</span>
                   <input type="text" required placeholder="Holder" value={formData.accountHolder} onChange={(e) => setFormData({ ...formData, accountHolder: e.target.value })} className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white font-bold" />
                 </div>
               </div>
-              <div className="flex gap-3 items-center pt-2.5 border-t border-neutral-800/80">
+              <div className="flex gap-3 items-center pt-2 border-t border-neutral-800/80">
                 <div className="flex-1">
                   <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">GANTI QRIS (OPSIONAL):</label>
-                  <input type="file" accept="image/*" onChange={(e) => { if (e.target.files[0]) { setQrisFile(e.target.files[0]); setQrisPreview(URL.createObjectURL(e.target.files[0])); } }} className="w-full text-xs text-neutral-300 bg-neutral-950 p-1.5 rounded border border-neutral-800 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:bg-brand-purple file:text-white file:font-bold cursor-pointer" />
+                  <input type="file" accept="image/*" onChange={(e) => { if (e.target.files[0]) { setQrisFile(e.target.files[0]); setQrisPreview(URL.createObjectURL(e.target.files[0])); } }} className="w-full text-[11px] text-neutral-300 bg-neutral-950 p-1 rounded border border-neutral-800 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:bg-brand-purple file:text-white file:font-bold cursor-pointer" />
                 </div>
-                {qrisPreview && <img src={qrisPreview} alt="QRIS" className="w-12 h-12 object-contain bg-white p-0.5 rounded border border-neutral-700 shrink-0" />}
+                {qrisPreview && <img src={qrisPreview} alt="QRIS" className="w-10 h-10 object-contain bg-white p-0.5 rounded border border-neutral-700 shrink-0" />}
               </div>
               <div className="pt-2 border-t border-neutral-800/60">
-                <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">PIN GATE VENUE (4 DIGIT):</label>
-                <input type="text" maxLength={4} required placeholder="1029" value={formData.gatePin} onChange={(e) => setFormData({ ...formData, gatePin: e.target.value.replace(/[^0-9]/g, '') })} className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-green outline-none font-bold font-mono" />
+                <label className="text-[10px] font-black uppercase text-brand-purple block mb-1">PIN GATE VENUE (4 DIGIT):</label>
+                <input type="text" inputMode="numeric" maxLength={4} required placeholder="1312" value={formData.gatePin} onChange={(e) => setFormData({ ...formData, gatePin: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) })} className="w-full px-3 py-1.5 bg-neutral-950 border border-brand-purple/40 rounded text-xs text-brand-purple focus:border-brand-purple outline-none font-bold font-mono" />
               </div>
             </div>
           </div>
 
-          <div className="space-y-3 flex flex-col justify-between">
-            <div className="p-4 bg-neutral-900 rounded border border-neutral-800 space-y-3">
+          <div className="space-y-3">
+            <div className="p-3.5 bg-neutral-900 rounded-lg border border-neutral-800 space-y-2.5">
               <div className="flex justify-between items-center">
                 <label className="text-[10px] font-black uppercase text-brand-blue block">KATEGORI &amp; TIER TIKET:</label>
                 <button type="button" onClick={() => handleAddTier()} className="px-2.5 py-1 bg-neutral-950 text-brand-green border border-brand-green/40 text-[10px] font-black rounded hover:bg-brand-green/20 transition-colors">+ TAMBAH TIER</button>
               </div>
-              <div className="space-y-2.5 max-h-64 overflow-y-auto no-scrollbar pr-1">
+              <div className="space-y-2.5 max-h-[300px] lg:max-h-[320px] overflow-y-auto no-scrollbar pr-1">
                 {tiers.map((t, idx) => (
-                  <div key={idx} className="p-2.5 bg-neutral-950 rounded border border-neutral-800 space-y-1.5">
+                  <div key={idx} className="p-2.5 bg-neutral-950 rounded border border-neutral-800 space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-black text-neutral-400 uppercase">TIER TIKET #{idx + 1}</span>
+                      <span className="text-[10px] font-black text-brand-green uppercase">TIER TIKET #{idx + 1}</span>
                       {tiers.length > 1 && <button type="button" onClick={() => handleRemoveTier(idx)} className="text-brand-red text-xs p-1 hover:bg-brand-red/10 rounded"><Trash2 className="w-3.5 h-3.5" /></button>}
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <span className="text-[8px] text-neutral-500 font-bold block mb-0.5">NAMA TIER</span>
+                        <span className="text-[9px] text-neutral-400 font-bold block mb-1">NAMA TIER</span>
                         <input type="text" required placeholder="Regular" value={t.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-bold" />
                       </div>
                       <div>
-                        <span className="text-[8px] text-neutral-500 font-bold block mb-0.5">HARGA (RP)</span>
-                        <input type="number" required placeholder="50000" value={t.price} onChange={(e) => handleTierChange(idx, 'price', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono font-bold" />
+                        <span className="text-[9px] text-neutral-400 font-bold block mb-1">HARGA (RP)</span>
+                        <input type="text" inputMode="numeric" required placeholder="50000" value={t.price} onChange={(e) => handleTierChange(idx, 'price', e.target.value.replace(/[^0-9]/g, ''))} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono font-bold" />
                       </div>
                       <div>
-                        <span className="text-[8px] text-neutral-500 font-bold block mb-0.5">KUOTA</span>
-                        <input type="number" placeholder="100" value={t.quota} onChange={(e) => handleTierChange(idx, 'quota', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
+                        <span className="text-[9px] text-neutral-400 font-bold block mb-1">KUOTA</span>
+                        <input type="text" inputMode="numeric" placeholder="100" value={t.quota} onChange={(e) => handleTierChange(idx, 'quota', e.target.value.replace(/[^0-9]/g, ''))} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
                       </div>
                     </div>
                   </div>
@@ -233,8 +262,9 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
               </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" onClick={onCancel} className="w-1/3 text-xs uppercase">BATAL</Button>
+            {/* Footer Action Buttons (Fixed Bottom) */}
+            <div className="flex gap-3 pt-2 shrink-0 border-t border-neutral-800/80">
+              <Button type="button" variant="outline" onClick={onCancel} className="w-1/3 text-xs uppercase py-3 justify-center">BATAL</Button>
               <Button type="submit" variant="green" disabled={submitting} className="w-2/3 text-xs uppercase justify-center font-black py-3">
                 {submitting ? 'MEMPROSES...' : 'SIMPAN PERUBAHAN EVENT'}
               </Button>

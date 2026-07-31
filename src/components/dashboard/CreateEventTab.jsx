@@ -54,6 +54,32 @@ export const CreateEventTab = ({ onEventCreated }) => {
     if (!formData.name || !formData.eventDate || !posterFile) {
       return setErrorMsg('Nama Event, Tanggal Acara & File Poster wajib diisi.');
     }
+
+    const eventTime = new Date(formData.eventDate).getTime();
+    if (formData.openGate) {
+      const openTime = new Date(formData.openGate).getTime();
+      if (openTime > eventTime) {
+        return setErrorMsg('Waktu Open Gate tidak boleh setelah Tanggal Acara.');
+      }
+    }
+
+    for (let idx = 0; idx < tiers.length; idx++) {
+      const t = tiers[idx];
+      if (t.startPo && t.endPo) {
+        const startTime = new Date(t.startPo).getTime();
+        const endTime = new Date(t.endPo).getTime();
+        if (startTime > endTime) {
+          return setErrorMsg(`Tier #${idx + 1}: Waktu Mulai PO tidak boleh setelah Waktu Berakhir PO.`);
+        }
+      }
+      if (t.endPo) {
+        const endTime = new Date(t.endPo).getTime();
+        if (endTime > eventTime) {
+          return setErrorMsg(`Tier #${idx + 1}: Penjualan PO tidak boleh berakhir setelah acara dimulai.`);
+        }
+      }
+    }
+
     try {
       setSubmitting(true);
       setErrorMsg(null);
@@ -153,7 +179,7 @@ export const CreateEventTab = ({ onEventCreated }) => {
             <h4 className="text-xs font-black uppercase text-brand-purple tracking-wider flex items-center gap-1"><Landmark className="w-3.5 h-3.5" /> 2. REKENING &amp; QRIS PANITIA</h4>
             <div className="grid grid-cols-3 gap-2">
               <input type="text" required placeholder="BANK (BCA)" value={formData.bankName} onChange={(e) => setFormData({ ...formData, bankName: e.target.value })} className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-purple font-bold" />
-              <input type="text" required placeholder="NO REK" value={formData.accountNumber} onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })} className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-purple font-mono font-bold" />
+              <input type="text" required inputMode="numeric" placeholder="NO REK" value={formData.accountNumber} onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value.replace(/[^0-9]/g, '') })} className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-purple font-mono font-bold" />
               <input type="text" required placeholder="ATAS NAMA" value={formData.accountHolder} onChange={(e) => setFormData({ ...formData, accountHolder: e.target.value })} className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-purple font-bold" />
             </div>
             <div className="flex gap-3 items-center pt-1 border-t border-neutral-800">
@@ -167,7 +193,7 @@ export const CreateEventTab = ({ onEventCreated }) => {
         </div>
 
         {/* RIGHT COLUMN: KATEGORI TIKET & SUBMIT */}
-        <div className="space-y-4 flex flex-col justify-between">
+        <div className="space-y-4">
           <div className="p-3.5 bg-neutral-900 rounded border border-neutral-800 space-y-3">
             <div className="flex justify-between items-center">
               <h4 className="text-xs font-black uppercase text-brand-blue tracking-wider">3. TIER KATEGORI TIKET</h4>
@@ -186,8 +212,8 @@ export const CreateEventTab = ({ onEventCreated }) => {
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <input type="text" required placeholder="Nama Tiket" value={t.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-bold" />
-                    <input type="number" required placeholder="Harga (Rp)" value={t.price} onChange={(e) => handleTierChange(idx, 'price', e.target.value)} className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono font-bold" />
-                    <input type="number" placeholder="Kuota (Unlimited)" value={t.quota} onChange={(e) => handleTierChange(idx, 'quota', e.target.value)} className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
+                    <input type="text" inputMode="numeric" required placeholder="Harga (Rp)" value={t.price} onChange={(e) => handleTierChange(idx, 'price', e.target.value.replace(/[^0-9]/g, ''))} className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono font-bold" />
+                    <input type="text" inputMode="numeric" placeholder="Kuota (Unlimited)" value={t.quota} onChange={(e) => handleTierChange(idx, 'quota', e.target.value.replace(/[^0-9]/g, ''))} className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[10px]">
                     <div>
