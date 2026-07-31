@@ -144,7 +144,7 @@ export const ForEO = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          {steps.map((st, idx) => (
+          {workflowSteps.map((st, idx) => (
             <Card key={idx} variant="dark" className="p-3.5 sm:p-5 border-neutral-800 space-y-1.5 sm:space-y-2">
               <span className="text-xl sm:text-2xl font-black font-mono text-brand-blue">{st.num}</span>
               <h3 className="text-xs sm:text-sm font-black uppercase text-white leading-tight">{st.title}</h3>
