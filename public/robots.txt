@@ -1,0 +1,16 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Allow: /for-eo
+Allow: /terms
+Allow: /event/
+
+# Disallow internal dashboards & scanner portals from search indexing
+Disallow: /eo/
+Disallow: /gate/
+Disallow: /admin/
+Disallow: /checkout/status/
+
+# Host & Sitemap Location
+Host: https://loktik.web.id
+Sitemap: https://loktik.web.id/sitemap.xml
