@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, supabaseArchive } from './supabase';
 
 // Simple in-memory cache to boost mobile loading speed and prevent DB spam (15s TTL)
 export const cacheStore = {
@@ -49,16 +49,65 @@ export const deleteStorageFileByUrl = async (url, bucketName) => {
  */
 export const purgeExpiredEvents = async () => {
   try {
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    const nowMs = Date.now();
+    const threeDaysAgoIso = new Date(nowMs - 3 * 24 * 60 * 60 * 1000).toISOString();
+    const sevenDaysAgoIso = new Date(nowMs - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const sixtyDaysAgoIso = new Date(nowMs - 60 * 24 * 60 * 60 * 1000).toISOString();
+
+    // 1. H+3 REPORT ARCHIVING: Move event summary & metadata to DB 2 (Anti-ndadak)
+    const { data: h3Events } = await supabase
+      .from('events')
+      .select('id, name, created_by, event_date')
+      .lt('event_date', threeDaysAgoIso);
+
+    if (h3Events && h3Events.length > 0) {
+      for (const evt of h3Events) {
+        try {
+          const { data: existingReport } = await supabaseArchive
+            .from('event_reports')
+            .select('id')
+            .eq('event_id', evt.id)
+            .maybeSingle();
+
+          if (!existingReport) {
+            const { data: eventOrders } = await supabase
+              .from('orders')
+              .select('id, guest_name, guest_wa, total_price, status, created_at, tickets(id, ticket_categories(name))')
+              .eq('event_id', evt.id);
+
+            const ordersList = eventOrders || [];
+            const paidOrders = ordersList.filter((o) => o.status === 'paid');
+            const totalOmset = paidOrders.reduce((sum, o) => sum + (o.total_price || 0), 0);
+            const totalTickets = paidOrders.reduce((sum, o) => sum + (o.tickets?.length || 1), 0);
+
+            await supabaseArchive.from('event_reports').insert([
+              {
+                event_id: evt.id,
+                event_name: evt.name,
+                created_by: evt.created_by,
+                event_date: evt.event_date,
+                total_omset: totalOmset,
+                total_tickets_sold: totalTickets,
+                total_orders: ordersList.length,
+                archived_at: new Date().toISOString(),
+              },
+            ]);
+          }
+        } catch (archErr) {
+          console.warn(`Report archival notice for event ${evt.id}:`, archErr?.message);
+        }
+      }
+    }
+
+    // 2. H+7 HARD PURGE DB 1: Purge raw data & images from DB 1 after 7 days
     const { data: expiredEvents } = await supabase
       .from('events')
       .select('id, poster_url, payment_details')
-      .lt('event_date', fourteenDaysAgo);
+      .lt('event_date', sevenDaysAgoIso);
 
     if (expiredEvents && expiredEvents.length > 0) {
       const expiredIds = expiredEvents.map((e) => e.id);
 
-      // Clean storage files for expired events & orders
       for (const evt of expiredEvents) {
         if (evt.poster_url) await deleteStorageFileByUrl(evt.poster_url, 'event-posters');
         const qrisUrl = evt.payment_details?.qris_url || evt.payment_details?.qris_image;
@@ -81,8 +130,18 @@ export const purgeExpiredEvents = async () => {
       await supabase.from('ticket_categories').delete().in('event_id', expiredIds);
       await supabase.from('events').delete().in('id', expiredIds);
     }
+
+    // 3. HARD FORMAT DB 2 (60 DAYS): Purge archived reports in DB 2 older than 60 days
+    try {
+      await supabaseArchive
+        .from('event_reports')
+        .delete()
+        .lt('archived_at', sixtyDaysAgoIso);
+    } catch (fmtErr) {
+      console.warn('DB 2 60-day hard format notice:', fmtErr?.message);
+    }
   } catch (err) {
-    console.warn('Auto purge expired events notice:', err?.message);
+    console.warn('Auto retention lifecycle notice:', err?.message);
   }
 };
 

@@ -33,7 +33,7 @@ export const OrderManagerTab = () => {
 
   const [orders, setOrders] = useState([]);
   const [events, setEvents] = useState([]);
-  const [selectedEventId, setSelectedEventId] = useState('ALL');
+  const [selectedEventId, setSelectedEventId] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -59,6 +59,9 @@ export const OrderManagerTab = () => {
       ]);
       setOrders(ordersData);
       setEvents(eventsData);
+      if (eventsData && eventsData.length > 0) {
+        setSelectedEventId((prev) => (prev && prev !== 'ALL' ? prev : eventsData[0].id));
+      }
     } catch (err) {
       setErrorMsg(err.message || 'Gagal memuat data dari DB.');
     } finally {
@@ -97,8 +100,10 @@ export const OrderManagerTab = () => {
     ? orders
     : orders.filter((o) => o.event_id === selectedEventId);
 
-  const poOrders = filteredOrders.filter((o) => !o.guest_name.startsWith('Pembeli OTS'));
-  const otsOrders = filteredOrders.filter((o) => o.guest_name.startsWith('Pembeli OTS'));
+  const isOtsOrder = (o) => Boolean(o.guest_name && (o.guest_name.startsWith('OTS') || o.guest_name.startsWith('Pembeli OTS')));
+
+  const poOrders = filteredOrders.filter((o) => !isOtsOrder(o));
+  const otsOrders = filteredOrders.filter((o) => isOtsOrder(o));
 
   const selectedEventObj = events.find((e) => e.id === selectedEventId);
 
@@ -371,54 +376,209 @@ Terima Kasih!
     showToast(`Selesai memproses ${total} pesanan secara massal!`, 'eo');
   };
 
+  const getOrderQty = (o) => o.tickets?.length || o.quantity || 1;
+
+  const getOrderCategory = (o) => {
+    if (o.tickets && o.tickets.length > 0) {
+      const catNames = [...new Set(o.tickets.map((t) => t.ticket_categories?.name).filter(Boolean))];
+      if (catNames.length > 0) return catNames.join(', ');
+    }
+    if (o.ticket_categories?.name) return o.ticket_categories.name;
+    return 'Tiket Standard';
+  };
+
+  const formatGuestName = (name) => {
+    if (!name) return 'OTS';
+    let clean = String(name).replace(/^Pembeli\s+/i, '').trim();
+    clean = clean.replace(/CASH\s*\/\s*TUNAI/i, 'CASH');
+    return clean;
+  };
+
+  const sortOrdersByCategory = (orderList) => {
+    return [...orderList].sort((a, b) => {
+      const catA = getOrderCategory(a).toLowerCase();
+      const catB = getOrderCategory(b).toLowerCase();
+      return catA.localeCompare(catB);
+    });
+  };
+
   const exportToExcel = () => {
     if (filteredOrders.length === 0) {
-      showToast('Tidak ada data pesanan untuk di-export ke Excel/CSV.', 'eo');
+      showToast('Tidak ada data pesanan untuk di-export ke Excel.', 'eo');
       return;
     }
 
     const eventTitle = selectedEventObj ? selectedEventObj.name : 'Semua Event';
-    const filename = `Rekap_Penjualan_LokTik_${eventTitle.replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
+    const filename = `Rekap_Penjualan_LokTik_${eventTitle.replace(/[^a-zA-Z0-9]/g, '_')}.xls`;
 
-    const headers = [
-      'No',
-      'Tipe Pesanan',
-      'Kode Tiket / Barcode',
-      'Nama Pembeli',
-      'No WhatsApp',
-      'Nama Event',
-      'Kategori Tiket',
-      'Jumlah Tiket',
-      'Total Bayar (Rp)',
-      'Status Pesanan',
-      'Tanggal Pesan',
-    ];
+    const poOrders = sortOrdersByCategory(filteredOrders.filter((o) => !isOtsOrder(o)));
+    const otsOrders = sortOrdersByCategory(filteredOrders.filter((o) => isOtsOrder(o)));
 
-    const rows = filteredOrders.map((o, idx) => {
-      const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
-      const prettyCode = generatePrettyRedeemCode(o.events?.name || 'Event', seed);
-      const isOts = o.guest_name.startsWith('Pembeli OTS');
-      const orderType = isOts ? 'OTS VENUE' : 'PO ONLINE';
-      return [
-        idx + 1,
-        `"${orderType}"`,
-        `"${prettyCode}"`,
-        `"${o.guest_name.replace(/"/g, '""')}"`,
-        `"${o.guest_wa}"`,
-        `"${(o.events?.name || '').replace(/"/g, '""')}"`,
-        `"${(o.ticket_categories?.name || 'Tiket Standard').replace(/"/g, '""')}"`,
-        o.quantity || 1,
-        o.total_price || 0,
-        `"${o.status === 'paid' ? 'LUNAS' : o.status === 'need_reupload' ? 'REUPLOAD' : 'PENDING'}"`,
-        `"${formatDateTime(o.created_at)}"`,
-      ];
-    });
+    const poPaid = poOrders.filter((o) => o.status === 'paid');
+    const otsPaid = otsOrders.filter((o) => o.status === 'paid');
 
-    const titleRow = `"LOKTIK TICKETING DIRECT — LAPORAN REKAPITULASI PENJUALAN"`;
-    const metaRow = `"EVENT: ${eventTitle.replace(/"/g, '""')}"` + `,"TANGGAL CETAK: ${new Date().toLocaleDateString('id-ID')}"`;
+    const poOmset = poPaid.reduce((sum, o) => sum + (o.total_price || 0), 0);
+    const otsOmset = otsPaid.reduce((sum, o) => sum + (o.total_price || 0), 0);
+    const totalOmset = poOmset + otsOmset;
 
-    const csvContent = '\uFEFF' + ['sep=,', titleRow, metaRow, '', headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const poTickets = poPaid.reduce((sum, o) => sum + getOrderQty(o), 0);
+    const otsTickets = otsPaid.reduce((sum, o) => sum + getOrderQty(o), 0);
+    const totalTicketsSold = poTickets + otsTickets;
+
+    const generateRows = (orderList, isOtsList = false) => {
+      if (orderList.length === 0) {
+        return `
+          <tr style="background-color: #ffffff;">
+            <td colspan="10" style="padding: 12px; border: 1px solid #cbd5e1; text-align: center; color: #64748b; font-style: italic; white-space: nowrap;">
+              Tidak ada data transaksi ${isOtsList ? 'Kasir Venue (OTS)' : 'Online Pre-Order (PO)'}.
+            </td>
+          </tr>
+        `;
+      }
+      return orderList.map((o, idx) => {
+        const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
+        const prettyCode = generatePrettyRedeemCode(o.events?.name || 'Event', seed);
+        const orderType = isOtsList ? 'OTS' : 'PO';
+        const categoryName = getOrderCategory(o);
+        const qty = getOrderQty(o);
+        const formattedName = formatGuestName(o.guest_name);
+
+        const rowBg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+        const statusBg = o.status === 'paid' ? '#e0f2fe' : o.status === 'need_reupload' ? '#fef3c7' : '#fef2f2';
+        const statusColor = o.status === 'paid' ? '#0369a1' : o.status === 'need_reupload' ? '#b45309' : '#b91c1c';
+
+        return `
+          <tr style="background-color: ${rowBg}; font-family: Arial, sans-serif; font-size: 11px;">
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #64748b; white-space: nowrap;">${idx + 1}</td>
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: ${isOtsList ? '#0369a1' : '#0284c7'}; white-space: nowrap;">${orderType}</td>
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; font-family: monospace; font-weight: bold; color: #0f172a; white-space: nowrap;">${prettyCode}</td>
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; font-weight: bold; color: #1e293b; white-space: nowrap;">${formattedName}</td>
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; font-family: monospace; color: #334155; white-space: nowrap; mso-number-format:'\\@';">'${o.guest_wa}</td>
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; font-weight: bold; color: #0369a1; white-space: nowrap;">${categoryName}</td>
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #0f172a; white-space: nowrap;">${qty}</td>
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold; color: #0f172a; white-space: nowrap;">${o.total_price || 0}</td>
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; text-align: center; background-color: ${statusBg}; color: ${statusColor}; font-weight: bold; white-space: nowrap;">${o.status === 'paid' ? 'PAID' : o.status === 'need_reupload' ? 'REUPLOAD' : 'PENDING'}</td>
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; color: #64748b; white-space: nowrap;">${formatDateTime(o.created_at)}</td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    const excelHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+        <!--[if gte mso 9]>
+        <xml>
+          <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+              <x:ExcelWorksheet>
+                <x:Name>Rekap Penjualan LokTik</x:Name>
+                <x:WorksheetOptions>
+                  <x:DisplayGridlines/>
+                </x:WorksheetOptions>
+              </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+          </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: Arial, sans-serif; }
+          .title-banner { background-color: #0284c7; color: #ffffff; font-size: 16px; font-weight: bold; padding: 14px; text-align: left; }
+          .meta-info { background-color: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: bold; padding: 10px; border-bottom: 2px solid #0284c7; }
+          .section-header { background-color: #0369a1; color: #ffffff; font-size: 12px; font-weight: bold; padding: 10px; text-transform: uppercase; }
+          .table-header { background-color: #0284c7; color: #ffffff; font-size: 11px; font-weight: bold; padding: 10px; border: 1px solid #0284c7; text-align: left; }
+          .summary-header { background-color: #0284c7; color: #ffffff; font-size: 11px; font-weight: bold; text-align: center; padding: 8px; border: 1px solid #0369a1; }
+          .summary-cell { padding: 8px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; font-size: 11px; }
+        </style>
+      </head>
+      <body>
+        <table border="0" cellspacing="0" cellpadding="0">
+          <thead>
+            <tr>
+              <th colspan="10" class="title-banner">LOKTIK TICKETING DIRECT — LAPORAN REKAPITULASI PENJUALAN</th>
+            </tr>
+            <tr>
+              <th colspan="10" class="meta-info">EVENT: ${eventTitle} | TANGGAL CETAK: ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="10" style="height: 15px;"></td></tr>
+            
+            <!-- RINGKASAN PENJUALAN -->
+            <tr>
+              <td colspan="4" class="section-header">RINGKASAN PENJUALAN EVENT</td>
+            </tr>
+            <tr>
+              <td class="summary-header">Tipe Transaksi</td>
+              <td class="summary-header">Total Order</td>
+              <td class="summary-header">Total Tiket Terjual</td>
+              <td class="summary-header">Total Omset (Rp)</td>
+            </tr>
+            <tr>
+              <td class="summary-cell" style="background-color: #f0f9ff; color: #0284c7;">PO ONLINE</td>
+              <td class="summary-cell">${poPaid.length}</td>
+              <td class="summary-cell">${poTickets}</td>
+              <td class="summary-cell" style="text-align: right; color: #0284c7;">${poOmset}</td>
+            </tr>
+            <tr>
+              <td class="summary-cell" style="background-color: #f0f9ff; color: #0369a1;">OTS VENUE</td>
+              <td class="summary-cell">${otsPaid.length}</td>
+              <td class="summary-cell">${otsTickets}</td>
+              <td class="summary-cell" style="text-align: right; color: #0369a1;">${otsOmset}</td>
+            </tr>
+            <tr>
+              <td class="summary-cell" style="background-color: #0284c7; color: #ffffff;">GRAND TOTAL</td>
+              <td class="summary-cell" style="background-color: #e0f2fe; color: #0f172a;">${filteredOrders.length}</td>
+              <td class="summary-cell" style="background-color: #e0f2fe; color: #0f172a;">${totalTicketsSold}</td>
+              <td class="summary-cell" style="background-color: #e0f2fe; text-align: right; font-size: 13px; color: #0f172a;">${totalOmset}</td>
+            </tr>
+            <tr><td colspan="10" style="height: 20px;"></td></tr>
+
+            <!-- TABEL 1: DETAIL DAFTAR TRANSAKSI PO ONLINE -->
+            <tr>
+              <td colspan="10" class="section-header">1. TRANSAKSI PO ONLINE — ${poOrders.length} PESANAN</td>
+            </tr>
+            <tr>
+              <td class="table-header" style="text-align: center; width: 40px; white-space: nowrap;">No</td>
+              <td class="table-header" style="text-align: center; white-space: nowrap;">Tipe Pesanan</td>
+              <td class="table-header" style="white-space: nowrap;">Kode Tiket</td>
+              <td class="table-header" style="white-space: nowrap;">Nama Pembeli</td>
+              <td class="table-header" style="white-space: nowrap;">No WhatsApp</td>
+              <td class="table-header" style="white-space: nowrap;">Kategori Tiket</td>
+              <td class="table-header" style="text-align: center; white-space: nowrap;">Qty</td>
+              <td class="table-header" style="text-align: right; white-space: nowrap;">Total Bayar (Rp)</td>
+              <td class="table-header" style="text-align: center; white-space: nowrap;">Status</td>
+              <td class="table-header" style="white-space: nowrap;">Tanggal Pesan</td>
+            </tr>
+            ${generateRows(poOrders, false)}
+
+            <tr><td colspan="10" style="height: 25px;"></td></tr>
+
+            <!-- TABEL 2: DETAIL DAFTAR TRANSAKSI OTS VENUE -->
+            <tr>
+              <td colspan="10" class="section-header">2. TRANSAKSI OTS VENUE — ${otsOrders.length} TRANSAKSI</td>
+            </tr>
+            <tr>
+              <td class="table-header" style="text-align: center; width: 40px; white-space: nowrap;">No</td>
+              <td class="table-header" style="text-align: center; white-space: nowrap;">Tipe Pesanan</td>
+              <td class="table-header" style="white-space: nowrap;">Kode Tiket</td>
+              <td class="table-header" style="white-space: nowrap;">Nama Pembeli</td>
+              <td class="table-header" style="white-space: nowrap;">No WhatsApp</td>
+              <td class="table-header" style="white-space: nowrap;">Kategori Tiket</td>
+              <td class="table-header" style="text-align: center; white-space: nowrap;">Qty</td>
+              <td class="table-header" style="text-align: right; white-space: nowrap;">Total Bayar (Rp)</td>
+              <td class="table-header" style="text-align: center; white-space: nowrap;">Status</td>
+              <td class="table-header" style="white-space: nowrap;">Tanggal Pesan</td>
+            </tr>
+            ${generateRows(otsOrders, true)}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
@@ -436,9 +596,40 @@ Terima Kasih!
 
     const eventTitle = selectedEventObj ? selectedEventObj.name : 'SEMUA EVENT LOKTIK';
 
-    // Separate PO Online vs OTS Venue Orders
-    const poOrders = filteredOrders.filter((o) => !o.guest_name.startsWith('Pembeli OTS'));
-    const otsOrders = filteredOrders.filter((o) => o.guest_name.startsWith('Pembeli OTS'));
+    // Generate logo with blue background using canvas
+    const generateLogoDataUri = () => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = 3;
+        canvas.width = 180 * scale;
+        canvas.height = 80 * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        // Fill solid Cyber Blue background
+        ctx.fillStyle = '#0284c7';
+        ctx.roundRect(0, 0, 180, 80, 10);
+        ctx.fill();
+        // Draw logo centered
+        const ratio = Math.min(160 / img.width, 60 / img.height);
+        const w = img.width * ratio;
+        const h = img.height * ratio;
+        const x = (180 - w) / 2;
+        const y = (80 - h) / 2;
+        ctx.drawImage(img, x, y, w, h);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => resolve(null);
+      img.src = '/logo.png';
+    });
+
+    generateLogoDataUri().then((logoUri) => {
+      const logoHtml = logoUri
+        ? `<img src="${logoUri}" style="height: 80px; width: 180px; display: block; border-radius: 8px;" alt="LokTik Logo" />`
+        : `<div style="background-color:#0284c7;padding:12px 20px;border-radius:8px;font-weight:900;font-size:18px;color:#fff;letter-spacing:1px;">LOKTIK</div>`;
+
+    const poOrders = sortOrdersByCategory(filteredOrders.filter((o) => !isOtsOrder(o)));
+    const otsOrders = sortOrdersByCategory(filteredOrders.filter((o) => isOtsOrder(o)));
 
     const poPaid = poOrders.filter((o) => o.status === 'paid');
     const otsPaid = otsOrders.filter((o) => o.status === 'paid');
@@ -447,8 +638,8 @@ Terima Kasih!
     const otsOmset = otsPaid.reduce((sum, o) => sum + (o.total_price || 0), 0);
     const totalOmset = poOmset + otsOmset;
 
-    const poTickets = poPaid.reduce((sum, o) => sum + (o.quantity || 1), 0);
-    const otsTickets = otsPaid.reduce((sum, o) => sum + (o.quantity || 1), 0);
+    const poTickets = poPaid.reduce((sum, o) => sum + getOrderQty(o), 0);
+    const otsTickets = otsPaid.reduce((sum, o) => sum + getOrderQty(o), 0);
     const totalTicketsSold = poTickets + otsTickets;
 
     const reportWindow = window.open('', '_blank');
@@ -464,16 +655,18 @@ Terima Kasih!
       return orderList.map((o, idx) => {
         const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
         const prettyCode = generatePrettyRedeemCode(o.events?.name || 'Event', seed);
-        const categoryName = o.ticket_categories?.name || 'Tiket Standard';
+        const categoryName = getOrderCategory(o);
+        const qty = getOrderQty(o);
+        const formattedName = formatGuestName(o.guest_name);
         return `
           <tr style="border-bottom:1px solid #e2e8f0;">
-            <td style="padding:7px 10px;text-align:center;color:#64748b;font-weight:600;">${idx + 1}</td>
-            <td style="padding:7px 10px;font-family:monospace;font-weight:700;color:#0f172a;">${prettyCode}</td>
-            <td style="padding:7px 10px;font-weight:700;color:#1e293b;">${o.guest_name}</td>
-            <td style="padding:7px 10px;font-family:monospace;color:#475569;">${o.guest_wa}</td>
-            <td style="padding:7px 10px;color:#334155;font-weight:600;">${categoryName} (${o.quantity || 1}x)</td>
-            <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a;">${formatRupiah(o.total_price)}</td>
-            <td style="padding:7px 10px;text-align:center;">
+            <td style="padding:7px 10px;text-align:center;color:#64748b;font-weight:600;white-space:nowrap;">${idx + 1}</td>
+            <td style="padding:7px 10px;font-family:monospace;font-weight:700;color:#0f172a;white-space:nowrap;">${prettyCode}</td>
+            <td style="padding:7px 10px;font-weight:700;color:#1e293b;white-space:nowrap;">${formattedName}</td>
+            <td style="padding:7px 10px;font-family:monospace;color:#475569;white-space:nowrap;">${o.guest_wa}</td>
+            <td style="padding:7px 10px;color:#334155;font-weight:600;white-space:nowrap;">${categoryName} (${qty}x)</td>
+            <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a;white-space:nowrap;">${formatRupiah(o.total_price)}</td>
+            <td style="padding:7px 10px;text-align:center;white-space:nowrap;">
               <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;background:${o.status === 'paid' ? '#f0fdf4' : '#fef2f2'};color:${o.status === 'paid' ? '#15803d' : '#b91c1c'};border:1px solid ${o.status === 'paid' ? '#bbf7d0' : '#fecaca'};">
                 ${o.status.toUpperCase()}
               </span>
@@ -490,18 +683,19 @@ Terima Kasih!
       return orderList.map((o, idx) => {
         const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
         const prettyCode = generatePrettyRedeemCode(o.events?.name || 'Event', seed);
-        const categoryName = o.ticket_categories?.name || 'Tiket Standard';
-        const methodLabel = o.guest_name.includes('QRIS') ? 'QRIS VENUE' : 'TUNAI / CASH';
+        const categoryName = getOrderCategory(o);
+        const qty = getOrderQty(o);
+        const formattedName = formatGuestName(o.guest_name);
         return `
           <tr style="border-bottom:1px solid #e2e8f0;">
-            <td style="padding:7px 10px;text-align:center;color:#64748b;font-weight:600;">${idx + 1}</td>
-            <td style="padding:7px 10px;font-family:monospace;font-weight:700;color:#0f172a;">${prettyCode}</td>
-            <td style="padding:7px 10px;font-weight:700;color:#0369a1;">${methodLabel}</td>
-            <td style="padding:7px 10px;color:#334155;font-weight:600;">${categoryName} (${o.quantity || 1}x)</td>
-            <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a;">${formatRupiah(o.total_price)}</td>
-            <td style="padding:7px 10px;text-align:center;">
+            <td style="padding:7px 10px;text-align:center;color:#64748b;font-weight:600;white-space:nowrap;">${idx + 1}</td>
+            <td style="padding:7px 10px;font-family:monospace;font-weight:700;color:#0f172a;white-space:nowrap;">${prettyCode}</td>
+            <td style="padding:7px 10px;font-weight:700;color:#0369a1;white-space:nowrap;">${formattedName}</td>
+            <td style="padding:7px 10px;color:#334155;font-weight:600;white-space:nowrap;">${categoryName} (${qty}x)</td>
+            <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a;white-space:nowrap;">${formatRupiah(o.total_price)}</td>
+            <td style="padding:7px 10px;text-align:center;white-space:nowrap;">
               <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">
-                LUNAS (OTS)
+                OTS LUNAS
               </span>
             </td>
           </tr>
@@ -515,57 +709,65 @@ Terima Kasih!
       <head>
         <title>REKAP LAPORAN PENJUALAN - ${eventTitle}</title>
         <style>
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 30px; color: #1e293b; font-size: 11px; background: #fff; }
-          .header { border-bottom: 2px solid #0f172a; padding-bottom: 14px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
-          .header h1 { margin: 0; font-size: 20px; font-weight: 900; text-transform: uppercase; color: #0f172a; letter-spacing: -0.5px; }
-          .header p { margin: 4px 0 0 0; color: #475569; font-size: 11px; font-weight: 500; }
+          .header { border-bottom: 3px solid #0284c7; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+          .header h1 { margin: 0; font-size: 20px; font-weight: 900; text-transform: uppercase; color: #0284c7; letter-spacing: -0.5px; }
+          .header p { margin: 4px 0 0 0; color: #0369a1; font-size: 11px; font-weight: 600; }
           
+          .logo-container { background-color: #0284c7 !important; padding: 12px 20px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.3); }
+          .logo-img { height: 52px; width: auto; display: block; mix-blend-mode: multiply; filter: contrast(1.2); }
+
           .stats-grid { display: flex; gap: 12px; margin-bottom: 24px; }
-          .stat-box { border: 1px solid #cbd5e1; padding: 12px 14px; flex: 1; border-radius: 6px; background: #f8fafc; }
-          .stat-box h4 { margin: 0 0 4px 0; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; }
-          .stat-box .val { font-size: 18px; font-weight: 900; margin: 0; color: #0f172a; }
-          .stat-box .sub { font-size: 10px; color: #64748b; margin-top: 2px; font-weight: 600; }
+          .stat-box { border: 1.5px solid #0284c7; padding: 12px 14px; flex: 1; border-radius: 6px; background: #f0f9ff !important; }
+          .stat-box h4 { margin: 0 0 4px 0; color: #0369a1; font-size: 10px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; }
+          .stat-box .val { font-size: 18px; font-weight: 900; margin: 0; color: #0284c7; }
+          .stat-box .sub { font-size: 10px; color: #0284c7; margin-top: 2px; font-weight: 600; }
           
-          .section-title { font-size: 12px; font-weight: 900; text-transform: uppercase; margin: 20px 0 8px 0; padding-bottom: 4px; border-bottom: 1.5px solid #0f172a; color: #0f172a; display: flex; justify-content: space-between; align-items: center; }
-          .section-badge { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; color: #334155; }
+          .section-title { font-size: 12px; font-weight: 900; text-transform: uppercase; margin: 20px 0 8px 0; padding-bottom: 4px; border-bottom: 2px solid #0284c7; color: #0369a1; display: flex; justify-content: space-between; align-items: center; }
+          .section-badge { background: #e0f2fe !important; border: 1px solid #0284c7; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; color: #0369a1; }
           
           table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11px; }
-          th { background: #0f172a; color: #ffffff; padding: 8px 10px; border: 1px solid #0f172a; text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; }
+          th { background: #0284c7 !important; color: #ffffff !important; padding: 8px 10px; border: 1px solid #0284c7; text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; }
           
           .footer-section { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: center; font-size: 10px; color: #64748b; }
-          @media print { button { display: none; } }
+          @media print { .top-action-bar { display: none !important; } button { display: none; } }
         </style>
       </head>
       <body>
+        <div class="top-action-bar" style="background:#0284c7; padding:12px 20px; margin:-30px -30px 20px -30px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#ffffff; font-weight:800; font-size:12px; font-family:sans-serif;">PRATINJAU DOKUMEN LAPORAN PENJUALAN</span>
+          <button onclick="window.print()" style="background:#ffffff; color:#0284c7; border:none; padding:8px 16px; border-radius:6px; font-weight:800; font-size:11px; cursor:pointer; font-family:sans-serif;">
+            CETAK / SIMPAN KE PDF
+          </button>
+        </div>
         <div class="header">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <div style="background-color:#0a0a0a; padding:6px 12px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center;">
-              <img src="/logo.png" style="height:32px;width:auto;display:block;" alt="LokTik Logo" />
-            </div>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            ${logoHtml}
             <div>
-              <h1>LOKTIK — LAPORAN REKAPITULASI PENJUALAN</h1>
-              <p><strong>EVENT:</strong> ${eventTitle} | <strong>PANITIA EO:</strong> ${eoUsername}</p>
+              <h1 style="margin: 0; font-size: 20px; font-weight: 900; text-transform: uppercase; color: #0284c7; letter-spacing: -0.5px;">LOKTIK — LAPORAN REKAPITULASI PENJUALAN</h1>
+              <p style="margin: 4px 0 0 0; color: #0369a1; font-size: 11px; font-weight: 700;"><strong>EVENT:</strong> ${eventTitle} | <strong>PANITIA EO:</strong> ${eoUsername}</p>
             </div>
           </div>
-          <div style="text-align:right;">
-            <p><strong>TANGGAL CETAK:</strong> ${new Date().toLocaleDateString('id-ID')}</p>
+          <div style="text-align: right; color: #0369a1; font-size: 11px; font-weight: 700;">
+            <p style="margin: 0;"><strong>TANGGAL CETAK:</strong> ${new Date().toLocaleDateString('id-ID')}</p>
           </div>
         </div>
 
         <!-- SUMMARY STATS GRID -->
         <div class="stats-grid">
           <div class="stat-box">
-            <h4>Total Omset Keseluruhan</h4>
+            <h4>Total Omset</h4>
             <p class="val">${formatRupiah(totalOmset)}</p>
             <p class="sub">${totalTicketsSold} Tiket Terjual</p>
           </div>
           <div class="stat-box">
-            <h4>1. Omset Pre-Order (PO Online)</h4>
+            <h4>1. Omset PO Online</h4>
             <p class="val">${formatRupiah(poOmset)}</p>
             <p class="sub">${poTickets} Tiket (${poPaid.length} Transaksi)</p>
           </div>
           <div class="stat-box">
-            <h4>2. Omset Kasir Venue (OTS)</h4>
+            <h4>2. Omset OTS Venue</h4>
             <p class="val">${formatRupiah(otsOmset)}</p>
             <p class="sub">${otsTickets} Tiket (${otsPaid.length} Transaksi)</p>
           </div>
@@ -618,13 +820,11 @@ Terima Kasih!
           <p>Dokumen rekapitulasi penjualan ini diringkas secara otomatis oleh platform LokTik Direct Event Ticketing (loktik.web.id).</p>
         </div>
 
-        <script>
-          window.onload = function() { window.print(); };
-        </script>
       </body>
       </html>
     `);
-    reportWindow.document.close();
+      reportWindow.document.close();
+    });
   };
 
   return (
@@ -687,42 +887,14 @@ Terima Kasih!
               className="w-full px-4 py-2.5 bg-[#181818] border-2 border-brand-green/60 rounded-md text-xs font-black text-white uppercase flex items-center justify-between shadow-[0_0_15px_rgba(57,255,20,0.15)] hover:border-brand-green transition-all"
             >
               <div className="flex items-center space-x-2 truncate">
-                {selectedEventId === 'ALL' ? (
-                  <>
-                    <Layers className="w-4 h-4 text-brand-green shrink-0" />
-                    <span className="truncate">SEMUA EVENT ({orders.length} PESANAN)</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-brand-yellow shrink-0" />
-                    <span className="truncate">{selectedEventObj?.name || 'EVENT DILAYANI'}</span>
-                  </>
-                )}
+                <Sparkles className="w-4 h-4 text-brand-yellow shrink-0" />
+                <span className="truncate">{selectedEventObj?.name || 'PILIH EVENT DILAYANI'}</span>
               </div>
               {isDropdownOpen ? <ChevronUp className="w-4 h-4 text-brand-green" /> : <ChevronDown className="w-4 h-4 text-brand-green" />}
             </button>
 
             {isDropdownOpen && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-[#121212] border-2 border-brand-green rounded-md shadow-[0_15px_30px_rgba(0,0,0,0.9)] overflow-hidden z-50 py-1 divide-y divide-neutral-800">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedEventId('ALL');
-                    setIsDropdownOpen(false);
-                  }}
-                  className={`w-full px-4 py-2.5 text-xs font-black uppercase text-left flex items-center justify-between transition-colors ${
-                    selectedEventId === 'ALL'
-                      ? 'bg-brand-green text-black font-extrabold'
-                      : 'text-white hover:bg-brand-green/20 hover:text-brand-green'
-                  }`}
-                >
-                  <span className="flex items-center space-x-2">
-                    <Layers className="w-4 h-4" />
-                    <span>SEMUA EVENT ({orders.length} PESANAN)</span>
-                  </span>
-                  {selectedEventId === 'ALL' && <Check className="w-4 h-4" />}
-                </button>
-
                 {events.map((evt) => {
                   const evtCount = orders.filter((o) => o.event_id === evt.id).length;
                   const isSelected = selectedEventId === evt.id;
@@ -761,7 +933,7 @@ Terima Kasih!
           {hasBotAccess ? (
             <Badge variant={botStatus === 'online' ? 'green' : 'yellow'}>
               <Bot className="w-3 h-3 mr-1 inline" />
-              {botStatus === 'online' ? 'BOT WA ONLINE' : 'BOT WA STANDBY'}
+              {botStatus === 'online' ? 'BOT ONLINE' : 'BOT OFFLINE'}
             </Badge>
           ) : (
             <Badge variant="blue">
@@ -907,7 +1079,7 @@ Terima Kasih!
                           {formatOrderTicketCategories(o)}
                         </span>
                       </td>
-                      <td className="p-3 font-bold text-white">{o.guest_name}</td>
+                      <td className="p-3 font-bold text-white">{formatGuestName(o.guest_name)}</td>
                       <td className="p-3">
                         <a
                           href={`https://wa.me/${o.guest_wa.replace(/[^0-9]/g, '')}`}
@@ -936,18 +1108,18 @@ Terima Kasih!
                       </td>
                       <td className="p-3">
                         <Badge variant={o.status === 'paid' ? 'green' : o.status === 'need_reupload' ? 'red' : 'yellow'}>
-                          {o.status === 'paid' ? 'LUNAS' : o.status === 'need_reupload' ? 'RE-UPLOAD' : 'PENDING'}
+                          {o.status === 'paid' ? 'PAID' : o.status === 'need_reupload' ? 'REUPLOAD' : 'PENDING'}
                         </Badge>
                       </td>
 
                       <td className="p-3">
                         {hasScannedTicket ? (
                           <Badge variant="red" className="text-[10px]">
-                            SUDAH SCAN
+                            SCANNED
                           </Badge>
                         ) : o.status === 'paid' ? (
                           <Badge variant="green" className="text-[10px]">
-                            AKTIF
+                            ACTIVE
                           </Badge>
                         ) : (
                           <span className="text-neutral-500 font-mono text-[11px]">-</span>
@@ -956,30 +1128,55 @@ Terima Kasih!
 
                       <td className="p-3 text-right">
                         {o.status === 'pending' && (
-                          <div className="flex items-center justify-end space-x-1.5">
+                          <div className="flex items-center justify-end space-x-1.5 whitespace-nowrap">
                             {hasBotAccess && (
-                              <Button variant="green" size="sm" onClick={() => handleApprove(o, 'bot')}>
-                                <Bot className="w-3.5 h-3.5 mr-1" /> APPROVE (BOT)
-                              </Button>
+                              <button
+                                type="button"
+                                onClick={() => handleApprove(o, 'bot')}
+                                className="h-8 px-3 font-black text-[10px] tracking-wider uppercase bg-brand-green/10 border border-brand-green/70 text-brand-green hover:bg-brand-green hover:text-black rounded-md transition-all shadow-[0_0_12px_rgba(57,255,20,0.15)] flex items-center justify-center space-x-1 shrink-0"
+                              >
+                                <Bot className="w-3.5 h-3.5 shrink-0" />
+                                <span>APPROVE (BOT)</span>
+                              </button>
                             )}
-                            <Button variant={hasBotAccess ? "purple" : "green"} size="sm" onClick={() => handleApprove(o, 'manual')}>
-                              <Send className="w-3.5 h-3.5 mr-1" /> {hasBotAccess ? 'WA MANUAL' : 'APPROVE (WA MANUAL)'}
-                            </Button>
-                            <Button variant="red" size="sm" onClick={() => handleReject(o.id)}>
-                              <X className="w-3.5 h-3.5" />
-                            </Button>
+                            <button
+                              type="button"
+                              onClick={() => handleApprove(o, 'manual')}
+                              className="h-8 px-3 font-black text-[10px] tracking-wider uppercase bg-brand-purple/10 border border-brand-purple/70 text-brand-purple hover:bg-brand-purple hover:text-white rounded-md transition-all flex items-center justify-center space-x-1 shrink-0"
+                            >
+                              <Send className="w-3.5 h-3.5 shrink-0" />
+                              <span>{hasBotAccess ? 'WA MANUAL' : 'APPROVE (WA MANUAL)'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReject(o.id)}
+                              className="h-8 w-8 min-w-[32px] font-black bg-red-950/40 border border-red-500/50 text-red-400 hover:bg-red-600 hover:text-white rounded-md transition-all flex items-center justify-center shrink-0"
+                              title="Tolak Pesanan"
+                            >
+                              <X className="w-3.5 h-3.5 shrink-0" />
+                            </button>
                           </div>
                         )}
                         {o.status === 'paid' && (
-                          <div className="flex items-center justify-end space-x-1.5">
+                          <div className="flex items-center justify-end space-x-1.5 whitespace-nowrap">
                             {hasBotAccess && (
-                              <Button variant="outline" size="sm" onClick={() => handleResend(o, 'bot')}>
-                                <Bot className="w-3.5 h-3.5 mr-1 text-brand-green" /> BOT RE-SEND
-                              </Button>
+                              <button
+                                type="button"
+                                onClick={() => handleResend(o, 'bot')}
+                                className="h-8 px-3 font-black text-[10px] tracking-wider uppercase bg-neutral-900 border border-neutral-700 text-neutral-300 hover:border-brand-green hover:text-brand-green rounded-md transition-all flex items-center justify-center space-x-1 shrink-0"
+                              >
+                                <Bot className="w-3.5 h-3.5 text-brand-green shrink-0" />
+                                <span>BOT RE-SEND</span>
+                              </button>
                             )}
-                            <Button variant="purple" size="sm" onClick={() => handleResend(o, 'manual')}>
-                              <Send className="w-3.5 h-3.5 mr-1" /> {hasBotAccess ? 'WA MANUAL' : 'KIRIM ULANG WA'}
-                            </Button>
+                            <button
+                              type="button"
+                              onClick={() => handleResend(o, 'manual')}
+                              className="h-8 px-3 font-black text-[10px] tracking-wider uppercase bg-brand-purple/10 border border-brand-purple/70 text-brand-purple hover:bg-brand-purple hover:text-white rounded-md transition-all flex items-center justify-center space-x-1 shrink-0"
+                            >
+                              <Send className="w-3.5 h-3.5 shrink-0" />
+                              <span>{hasBotAccess ? 'WA MANUAL' : 'KIRIM ULANG WA'}</span>
+                            </button>
                           </div>
                         )}
                       </td>
@@ -1032,7 +1229,7 @@ Terima Kasih!
                 {otsOrders.map((o) => {
                   const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
                   const prettyCode = generatePrettyRedeemCode(o.events?.name, seed);
-                  const cleanName = (o.guest_name || 'Pembeli OTS').replace(/\s*\d{2}\.\d{2}\s*/g, '').trim();
+                  const cleanName = (o.guest_name || 'OTS').replace(/\s*\d{2}\.\d{2}\s*/g, '').trim();
 
                   return (
                     <tr key={o.id} className="hover:bg-neutral-900/50">
@@ -1056,7 +1253,7 @@ Terima Kasih!
                       </td>
                       <td className="p-3 font-bold text-brand-green font-mono text-sm">{formatRupiah(o.total_price)}</td>
                       <td className="p-3">
-                        <Badge variant="green">LUNAS (OTS)</Badge>
+                        <Badge variant="green">PAID (OTS)</Badge>
                       </td>
                       <td className="p-3">
                         <Badge variant="green" className="text-[10px]">

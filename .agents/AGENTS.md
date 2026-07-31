@@ -22,3 +22,12 @@
    - **EO & Admin Dashboard Pages (`/eo/dashboard`, `/admin/dashboard`):** DOMINANT NEON GREEN (`#39FF14` / `brand-green`).
    - **Staff Scanning & Gate Pages (`/gate/*`):** DOMINANT ELECTRIC PURPLE (`#8B5CF6` / `brand-purple`).
 6. **STRICT SUPABASE ONLY FOR DATABASE:** NEVER use `localStorage` or `sessionStorage` as a pseudo-database for storing stateful records like accounts, orders, or events. Always use Supabase for any CRUD operations to ensure cross-device synchronization and real-world persistence.
+7. **STRICT GLOBAL STATUS TAXONOMY (LOCKED STANDARDIZATION):**
+   - **Payment Statuses:** Use strictly `PAID`, `PENDING`, `REUPLOAD` across UI, PDF reports, and Excel exports. NEVER use `LUNAS` or `DITOLAK`.
+   - **Ticket Scan Statuses:** Use strictly `ACTIVE` (unscanned) and `SCANNED` (scanned). NEVER mix `BELUM SCAN` or `SUDAH DIGUNAKAN`.
+   - **Order Types:** Use strictly `PO` (online) and `OTS` (`OTS (QRIS)` / `OTS (CASH)`).
+   - **WA Bot Statuses:** Use strictly `BOT ONLINE` and `BOT OFFLINE` (NEVER `BOT STANDBY` or `CONNECTED`).
+   - **Staff Account Statuses:** Use strictly `ACTIVE` and `SUSPENDED`.
+   - **Event Statuses:** Use strictly `LIVE` and `EXPIRED`.
+   - **Ticket Stock Statuses:** Use strictly `AVAILABLE` and `SOLD OUT`.
+
