@@ -9,10 +9,12 @@ import { formatDate, formatRupiah } from '../../utils/formatters';
 import { FaqSection } from '../../components/landing/FaqSection';
 import { TermsSection } from '../../components/landing/TermsSection';
 import { AdBannerSection } from '../../components/landing/AdBannerSection';
+import { TicketLookupModal } from '../../components/public/TicketLookupModal';
 
 export const LandingPage = () => {
   const { events, loading, error } = useActiveEvents();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLookupOpen, setIsLookupOpen] = useState(false);
 
   // Filter events based on search query
   const filteredEvents = events.filter((evt) => {
@@ -31,7 +33,17 @@ export const LandingPage = () => {
   };
 
   return (
-    <div className="space-y-8 sm:space-y-12 pb-16 text-left bg-[#0a0a0a]">
+    <div className="space-y-8 sm:space-y-12 pb-16 text-left bg-[#0a0a0a] relative">
+      {/* Floating Ticket Lookup Action Button */}
+      <button
+        type="button"
+        onClick={() => setIsLookupOpen(true)}
+        className="fixed bottom-5 right-5 z-40 bg-[#0c1929] text-brand-blue border border-brand-blue/60 hover:bg-brand-blue hover:text-black font-black text-xs px-4 py-2.5 rounded-full shadow-[0_0_25px_rgba(6,182,212,0.4)] flex items-center space-x-2 transition-all duration-200 hover:scale-105 touch-press backdrop-blur-md"
+      >
+        <Search className="w-4 h-4" />
+        <span className="uppercase tracking-wider">CEK TIKET SAYA</span>
+      </button>
+
       {/* Running Text Marquee Banner */}
       <div className="w-full bg-[#121212] border-b border-neutral-800 py-2.5 overflow-hidden text-[11px] font-mono font-bold uppercase tracking-wider whitespace-nowrap">
         <div className="animate-marquee flex items-center space-x-8">
@@ -68,8 +80,8 @@ export const LandingPage = () => {
             Langsung amankan tiket konser, bazar, seminar, &amp; festival lokal. Direct transaksi ke panitia tanpa ribet, tanpa potongan biaya aneh-aneh.
           </p>
 
-          {/* Event Search Input */}
-          <div className="max-w-2xl mx-auto pt-2">
+          {/* Event Search Input & Cek Tiket Button */}
+          <div className="max-w-2xl mx-auto pt-2 space-y-3">
             <div className="relative flex items-center">
               <Search className="w-5 h-5 text-brand-blue absolute left-4 pointer-events-none" />
               <input
@@ -79,6 +91,17 @@ export const LandingPage = () => {
                 placeholder="Cari nama event, konser, seminar, atau venue..."
                 className="w-full pl-12 pr-4 py-3.5 bg-neutral-900 text-white font-medium text-sm rounded-xl border border-neutral-700 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue placeholder:text-neutral-500 shadow-lg"
               />
+            </div>
+            
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => setIsLookupOpen(true)}
+                className="text-xs font-black uppercase tracking-wider text-brand-blue hover:text-white bg-brand-blue/10 border border-brand-blue/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-1.5 touch-press"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>SUDAH BELI TIKET? CEK STATUS E-TICKET SAYA</span>
+              </button>
             </div>
           </div>
         </div>
@@ -186,6 +209,9 @@ export const LandingPage = () => {
 
       {/* Developer Website Builder Ad Banner by Ferdy Nurdianto */}
       <AdBannerSection />
+
+      {/* Ticket Lookup Modal */}
+      <TicketLookupModal isOpen={isLookupOpen} onClose={() => setIsLookupOpen(false)} />
     </div>
   );
 };

@@ -37,15 +37,6 @@ export const Navbar = () => {
 
         {/* Navigation Links */}
         <nav className="flex items-center space-x-2 sm:space-x-3">
-          <button
-            type="button"
-            onClick={() => setIsLookupOpen(true)}
-            className="text-xs font-black uppercase tracking-wider transition-colors px-2.5 sm:px-3 py-1.5 rounded-lg touch-press text-brand-blue bg-brand-blue/10 border border-brand-blue/30 flex items-center space-x-1 hover:bg-brand-blue/20"
-          >
-            <Search className="w-3.5 h-3.5" />
-            <span>CEK TIKET</span>
-          </button>
-
           <Link
             to="/"
             className={`text-xs font-extrabold uppercase tracking-wider transition-colors px-2.5 sm:px-3 py-1.5 rounded-lg touch-press ${
