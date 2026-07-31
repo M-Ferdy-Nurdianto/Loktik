@@ -94,7 +94,7 @@ export const OrderManagerTab = () => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [eoUsername]);
+  }, [eoUsername, user]);
 
   const filteredOrders = selectedEventId === 'ALL'
     ? orders

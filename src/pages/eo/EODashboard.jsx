@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List, Users, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../../components/ui/Card';
@@ -15,8 +15,14 @@ import { getLiveOrdersForEo } from '../../services/apiOrders';
 
 export const EODashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('my-events');
+  
+  const activeTab = searchParams.get('tab') || 'my-events';
+  const setActiveTab = (tab) => {
+    setSearchParams({ tab }, { replace: true });
+  };
+
   const [stats, setStats] = useState({
     totalEvents: '0 Event',
     totalOrders: '0 Tiket',
@@ -59,7 +65,7 @@ export const EODashboard = () => {
 
   useEffect(() => {
     fetchLiveStats();
-  }, [activeTab, eoUsername]);
+  }, [activeTab, eoUsername, user]);
 
   const handleLogout = () => {
     logout();

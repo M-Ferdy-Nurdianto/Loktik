@@ -35,7 +35,7 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
 
   useEffect(() => {
     fetchEvents();
-  }, [eoUsername]);
+  }, [eoUsername, user]);
 
   const handleToggleStatus = async (eventId, currentStatus) => {
     const nextStatus = currentStatus === 'active' ? 'draft' : 'active';
@@ -80,12 +80,12 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
           <h3 className="text-lg font-black uppercase text-white">DAFTAR EVENT SAYA (TERISOLASI AKUN)</h3>
           <p className="text-xs text-neutral-400">Kelola event khusus buatan akun {eoUsername}.</p>
           <p className="text-[10px] text-brand-yellow font-mono font-bold mt-1 uppercase">
-            RETENSI DATA: Event &amp; tiket otomatis dibersihkan sistem 14 hari (2 minggu) setelah tanggal acara selesai.
+            RETENSI DATA: Event &amp; tiket otomatis dibersihkan sistem 7 hari (H+7) setelah tanggal acara selesai.
           </p>
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" onClick={fetchEvents} disabled={loading}>
-            <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> REFRESH DB
+            <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> REFRESH
           </Button>
           <Button variant="green" size="sm" onClick={onNavigateToCreate}>
             <Plus className="w-4 h-4 mr-1" /> BUAT EVENT BARU
@@ -133,33 +133,15 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between pt-2 border-t border-neutral-800 gap-2">
+              <div className="flex flex-wrap items-center justify-end pt-2 border-t border-neutral-800 gap-2">
                 <button
                   type="button"
                   onClick={() => setEditingEvent(evt)}
-                  className="px-2.5 py-1.5 bg-brand-green/20 hover:bg-brand-green/30 text-brand-green border border-brand-green/40 text-xs font-black rounded flex items-center space-x-1"
+                  className="px-3 py-1.5 bg-brand-green/20 hover:bg-brand-green/30 text-brand-green border border-brand-green/40 text-xs font-black rounded flex items-center space-x-1"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                   <span>EDIT EVENT</span>
                 </button>
-
-                <Link
-                  to={`/event/${evt.slug}`}
-                  target="_blank"
-                  className="px-2.5 py-1.5 bg-neutral-950 hover:bg-neutral-800 text-brand-blue border border-brand-blue/30 text-xs font-bold rounded flex items-center space-x-1"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>WEBSITE</span>
-                </Link>
-
-                <Link
-                  to={`/gate/${evt.slug}`}
-                  target="_blank"
-                  className="px-2.5 py-1.5 bg-brand-purple/20 hover:bg-brand-purple/30 text-brand-purple border border-brand-purple/40 text-xs font-black rounded flex items-center space-x-1"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>POS GATE</span>
-                </Link>
 
                 <Button
                   variant={evt.status === 'active' ? 'red' : 'green'}
