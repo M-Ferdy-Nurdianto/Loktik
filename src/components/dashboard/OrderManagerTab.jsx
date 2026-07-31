@@ -13,9 +13,9 @@ import { supabase } from '../../services/supabase';
 import { useToast } from '../../context/ToastContext';
 
 export const OrderManagerTab = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
-  const eoUsername = user?.username || user?.name || 'eo_lokal';
+  const eoUsername = user?.username || user?.name || '';
   const userPlan = user?.subscriptionPlan || '1_month';
   const hasBotAccess = user?.role === 'admin' || userPlan === '3_months' || userPlan === '1_year';
 
@@ -49,13 +49,14 @@ export const OrderManagerTab = () => {
   const lastWaSendTimeRef = useRef(0);
   const botServerUrl = import.meta.env.VITE_WA_BOT_URL || 'http://localhost:5000';
 
-  const fetchData = async () => {
+  const fetchData = async (username) => {
+    if (!username) return;
     try {
       setLoading(true);
       setErrorMsg(null);
       const [ordersData, eventsData] = await Promise.all([
-        getLiveOrdersForEo(eoUsername),
-        getAllEventsForEo(eoUsername),
+        getLiveOrdersForEo(username),
+        getAllEventsForEo(username),
       ]);
       setOrders(ordersData);
       setEvents(eventsData);
@@ -84,9 +85,6 @@ export const OrderManagerTab = () => {
   };
 
   useEffect(() => {
-    fetchData();
-    checkBotStatus();
-
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsDropdownOpen(false);
@@ -94,7 +92,15 @@ export const OrderManagerTab = () => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [eoUsername, user]);
+  }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+    const username = user?.username || user?.name || '';
+    if (!username) return;
+    fetchData(username);
+    checkBotStatus();
+  }, [authLoading, user]);
 
   const filteredOrders = selectedEventId === 'ALL'
     ? orders
@@ -947,7 +953,7 @@ Terima Kasih!
           <Button variant="purple" size="sm" onClick={exportToPDF} className="font-bold">
             <FileText className="w-3.5 h-3.5 mr-1" /> EXPORT PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => fetchData(eoUsername || user?.username || user?.name)} disabled={loading}>
             <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> REFRESH
           </Button>
         </div>

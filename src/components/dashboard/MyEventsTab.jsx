@@ -11,20 +11,21 @@ import { formatRupiah, formatDate } from '../../utils/formatters';
 import { useToast } from '../../context/ToastContext';
 
 export const MyEventsTab = ({ onNavigateToCreate }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
 
-  const eoUsername = user?.username || user?.name || 'eo_lokal';
+  const eoUsername = user?.username || user?.name || '';
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (username) => {
+    if (!username) return;
     try {
       setLoading(true);
       setErrorMsg(null);
-      const data = await getAllEventsForEo(eoUsername);
+      const data = await getAllEventsForEo(username);
       setEvents(data);
     } catch (err) {
       setErrorMsg(err.message || 'Gagal memuat daftar event.');
@@ -34,8 +35,11 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
   };
 
   useEffect(() => {
-    fetchEvents();
-  }, [eoUsername, user]);
+    if (authLoading) return;
+    const username = user?.username || user?.name || '';
+    if (!username) return;
+    fetchEvents(username);
+  }, [authLoading, user]);
 
   const handleToggleStatus = async (eventId, currentStatus) => {
     const nextStatus = currentStatus === 'active' ? 'draft' : 'active';
@@ -55,7 +59,7 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
       setLoading(true);
       await deleteEventAndFiles(eventId);
       showToast(`Event "${eventName}" dan gambar berhasil dihapus.`, 'eo');
-      await fetchEvents();
+      await fetchEvents(eoUsername);
     } catch (err) {
       showToast(err.message || 'Gagal menghapus event.', 'eo');
       setLoading(false);
@@ -70,7 +74,7 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
           onCancel={() => setEditingEvent(null)}
           onSaved={() => {
             setEditingEvent(null);
-            fetchEvents();
+            fetchEvents(eoUsername);
           }}
         />
       )}
@@ -84,7 +88,7 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={fetchEvents} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => fetchEvents(eoUsername)} disabled={loading}>
             <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> REFRESH
           </Button>
           <Button variant="green" size="sm" onClick={onNavigateToCreate}>

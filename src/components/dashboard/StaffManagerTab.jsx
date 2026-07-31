@@ -9,9 +9,9 @@ import { StaffFormModal } from './StaffFormModal';
 import { useToast } from '../../context/ToastContext';
 
 export const StaffManagerTab = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
-  const eoUsername = user?.username || user?.name || 'eo_lokal';
+  const eoUsername = user?.username || user?.name || '';
 
   const [staffList, setStaffList] = useState([]);
   const [events, setEvents] = useState([]);
@@ -19,12 +19,13 @@ export const StaffManagerTab = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (username) => {
+    if (!username) return;
     try {
       setIsLoading(true);
-      const staffData = await getAllStaffForEo(eoUsername);
+      const staffData = await getAllStaffForEo(username);
       setStaffList(staffData);
-      setEvents(await getAllEventsForEo(eoUsername));
+      setEvents(await getAllEventsForEo(username));
     } catch (err) {
       console.warn('Gagal memuat data staf:', err);
     } finally {
@@ -33,8 +34,11 @@ export const StaffManagerTab = () => {
   };
 
   useEffect(() => {
-    loadData();
-  }, [eoUsername]);
+    if (authLoading) return;
+    const username = user?.username || user?.name || '';
+    if (!username) return;
+    loadData(username);
+  }, [authLoading, user]);
 
   const handleFormSubmit = async (formData) => {
     try {
@@ -51,7 +55,7 @@ export const StaffManagerTab = () => {
 
       setToastMsg(`AKUN STAF "${formData.username.toUpperCase()}" BERHASIL DIBUAT!`);
       setShowForm(false);
-      loadData();
+      loadData(eoUsername);
       setTimeout(() => setToastMsg(''), 4000);
     } catch (err) {
       showToast(err.message || 'Gagal membuat akun staf.', 'eo');
@@ -62,7 +66,7 @@ export const StaffManagerTab = () => {
     if (window.confirm(`Hapus akun staf "${staffName}"?`)) {
       try {
         await deleteStaffAccount(id);
-        loadData();
+        loadData(eoUsername);
         setToastMsg('AKUN STAF BERHASIL DIHAPUS!');
         setTimeout(() => setToastMsg(''), 3000);
       } catch (err) {
@@ -74,7 +78,7 @@ export const StaffManagerTab = () => {
   const handleToggleStatus = async (id, currentStatus) => {
     try {
       await updateStaffAccount(id, { status: currentStatus === 'active' ? 'suspended' : 'active' });
-      loadData();
+      loadData(eoUsername);
     } catch (err) {
       showToast(err.message || 'Gagal mengubah status staf', 'eo');
     }
