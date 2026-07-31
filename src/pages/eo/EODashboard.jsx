@@ -130,7 +130,7 @@ export const EODashboard = () => {
               <div className="flex items-center justify-between gap-1 text-[10px]">
                 <span className="text-neutral-500 font-bold uppercase shrink-0">PAKET:</span>
                 <span className="text-brand-blue font-black uppercase font-mono tracking-tight text-right truncate">
-                  {(user?.subscriptionPlan === '3_months' || user?.subscriptionPlan === '1_year') ? 'PRO (BOT WA)' : 'BASIC (MANUAL WA)'}
+                  {(user?.subscriptionPlan === '1_year' || user?.botAccessBonus || user?.role === 'admin') ? 'PRO (BOT WA)' : 'BASIC (MANUAL WA)'}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-1 text-[10px] border-t border-neutral-800/80 pt-1.5">

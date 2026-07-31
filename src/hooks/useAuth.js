@@ -113,6 +113,7 @@ export const useAuth = () => {
         wa: matchedEo.wa,
         subscriptionPlan: matchedEo.subscriptionPlan || '1_month',
         subscriptionStatus: matchedEo.status,
+        botAccessBonus: Boolean(matchedEo.botAccessBonus),
         expiresAt: matchedEo.expiresAt || matchedEo.subscriptionExpiresAt || null,
         loggedInAt: new Date().toISOString(),
       };

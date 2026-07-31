@@ -17,7 +17,7 @@ export const OrderManagerTab = () => {
   const { showToast } = useToast();
   const eoUsername = user?.username || user?.name || '';
   const userPlan = user?.subscriptionPlan || '1_month';
-  const hasBotAccess = user?.role === 'admin' || userPlan === '3_months' || userPlan === '1_year';
+  const hasBotAccess = user?.role === 'admin' || Boolean(user?.botAccessBonus) || userPlan === '1_year';
 
   const formatOrderTicketCategories = (order) => {
     if (!order.tickets || order.tickets.length === 0) return 'Standard Ticket';

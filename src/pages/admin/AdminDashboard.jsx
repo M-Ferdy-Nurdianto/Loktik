@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Trash2, Power, MessageSquare, Plus, Inbox, Eye, EyeOff, KeyRound, Calendar } from 'lucide-react';
+import { LogOut, Trash2, Power, MessageSquare, Plus, Inbox, Eye, EyeOff, KeyRound, Calendar, Bot } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -32,6 +32,7 @@ export const AdminDashboard = () => {
           status: 'active',
           subscriptionPlan: '1_month',
           subscriptionExpiresAt: getOneMonthExpiry(),
+          botAccessBonus: false,
         },
         {
           id: 'EO-102',
@@ -41,6 +42,7 @@ export const AdminDashboard = () => {
           status: 'active',
           subscriptionPlan: '1_month',
           subscriptionExpiresAt: getOneMonthExpiry(),
+          botAccessBonus: false,
         },
       ];
     } catch (e) {
@@ -57,10 +59,10 @@ export const AdminDashboard = () => {
   }, [eoAccounts]);
 
   const planOptions = [
-    { value: 'test', label: 'TEST (1 HARI / TEST TRIAL)' },
-    { value: '1_month', label: '1 BULAN (TRIAL / BASIC)' },
-    { value: '3_months', label: '3 BULAN (REGULER)' },
-    { value: '1_year', label: '1 TAHUN (PROMO / ANNUAL)' },
+    { value: 'test', label: 'TEST (1 HARI / MANUAL WA)' },
+    { value: '1_month', label: '1 BULAN (BASIC / MANUAL WA)' },
+    { value: '3_months', label: '3 BULAN (REGULER / MANUAL WA)' },
+    { value: '1_year', label: '1 TAHUN PRO (566K + BOT WA)' },
   ];
 
   const calculateExpiryDate = (plan) => {
@@ -79,6 +81,30 @@ export const AdminDashboard = () => {
         if (acc.id === eoId) {
           const nextStatus = acc.status === 'active' ? 'suspended' : 'active';
           return { ...acc, status: nextStatus };
+        }
+        return acc;
+      })
+    );
+  };
+
+  const handleToggleBotBonus = (eoId) => {
+    setEoAccounts((prev) =>
+      prev.map((acc) => {
+        if (acc.id === eoId) {
+          const nextBonus = !acc.botAccessBonus;
+          const savedUser = localStorage.getItem('loktik_user_session');
+          if (savedUser) {
+            try {
+              const parsedUser = JSON.parse(savedUser);
+              if (parsedUser.id === acc.id || parsedUser.username === acc.name) {
+                localStorage.setItem(
+                  'loktik_user_session',
+                  JSON.stringify({ ...parsedUser, botAccessBonus: nextBonus })
+                );
+              }
+            } catch (e) {}
+          }
+          return { ...acc, botAccessBonus: nextBonus };
         }
         return acc;
       })
@@ -107,6 +133,7 @@ export const AdminDashboard = () => {
       status: 'active',
       subscriptionPlan: newEo.plan,
       subscriptionExpiresAt: calculateExpiryDate(newEo.plan),
+      botAccessBonus: newEo.plan === '1_year',
     };
 
     setEoAccounts((prev) => [createdEo, ...prev]);
@@ -242,67 +269,82 @@ export const AdminDashboard = () => {
                   <th className="p-3">PASSWORD</th>
                   <th className="p-3">S/D EXPIRED</th>
                   <th className="p-3">STATUS</th>
+                  <th className="p-3">AKSES BOT WA</th>
                   <th className="p-3 text-right">KONTROL AKSES</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800 font-medium text-neutral-200">
-                {eoAccounts.map((eo) => (
-                  <tr key={eo.id} className="hover:bg-neutral-900/50">
-                    <td className="p-3 font-mono font-bold text-brand-purple">{eo.id}</td>
-                    <td className="p-3 font-extrabold text-white">{eo.name}</td>
-                    <td className="p-3">
-                      <a
-                        href={`https://wa.me/${eo.wa}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center space-x-1.5 text-brand-green font-bold hover:underline"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>{eo.wa}</span>
-                      </a>
-                    </td>
-                    <td className="p-3 font-mono">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-brand-yellow font-bold">
-                          {showPasswords[eo.id] ? eo.password : '••••••••'}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => togglePasswordVisibility(eo.id)}
-                          className="text-neutral-400 hover:text-white"
+                {eoAccounts.map((eo) => {
+                  const hasBot = eo.botAccessBonus || eo.subscriptionPlan === '1_year';
+                  return (
+                    <tr key={eo.id} className="hover:bg-neutral-900/50">
+                      <td className="p-3 font-mono font-bold text-brand-purple">{eo.id}</td>
+                      <td className="p-3 font-extrabold text-white">{eo.name}</td>
+                      <td className="p-3">
+                        <a
+                          href={`https://wa.me/${eo.wa}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center space-x-1.5 text-brand-green font-bold hover:underline"
                         >
-                          {showPasswords[eo.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="p-3 font-mono text-brand-yellow font-bold">
-                      {formatDate(eo.subscriptionExpiresAt || getOneMonthExpiry())}
-                    </td>
-                    <td className="p-3">
-                      <Badge variant={eo.status === 'active' ? 'green' : 'red'}>
-                        {eo.status === 'active' ? 'AKTIF' : 'SOFT-LOCKED'}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-right space-x-2">
-                      <Button
-                        variant={eo.status === 'active' ? 'yellow' : 'green'}
-                        size="sm"
-                        onClick={() => handleToggleStatus(eo.id)}
-                      >
-                        <Power className="w-3.5 h-3.5 mr-1" />
-                        {eo.status === 'active' ? 'SOFT LOCK' : 'AKTIFKAN'}
-                      </Button>
-                      
-                      <Button
-                        variant="red"
-                        size="sm"
-                        onClick={() => handleDeleteEo(eo.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5 mr-1" /> HAPUS EO
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>{eo.wa}</span>
+                        </a>
+                      </td>
+                      <td className="p-3 font-mono">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-brand-yellow font-bold">
+                            {showPasswords[eo.id] ? eo.password : '••••••••'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => togglePasswordVisibility(eo.id)}
+                            className="text-neutral-400 hover:text-white"
+                          >
+                            {showPasswords[eo.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="p-3 font-mono text-brand-yellow font-bold">
+                        {formatDate(eo.subscriptionExpiresAt || getOneMonthExpiry())}
+                      </td>
+                      <td className="p-3">
+                        <Badge variant={eo.status === 'active' ? 'green' : 'red'}>
+                          {eo.status === 'active' ? 'AKTIF' : 'SOFT-LOCKED'}
+                        </Badge>
+                      </td>
+                      <td className="p-3">
+                        <Button
+                          variant={hasBot ? 'green' : 'outline'}
+                          size="sm"
+                          onClick={() => handleToggleBotBonus(eo.id)}
+                          className="font-bold text-[10px] uppercase"
+                        >
+                          <Bot className="w-3.5 h-3.5 mr-1" />
+                          {hasBot ? 'BOT BONUS (AKTIF)' : '+ BONUS BOT'}
+                        </Button>
+                      </td>
+                      <td className="p-3 text-right space-x-2">
+                        <Button
+                          variant={eo.status === 'active' ? 'yellow' : 'green'}
+                          size="sm"
+                          onClick={() => handleToggleStatus(eo.id)}
+                        >
+                          <Power className="w-3.5 h-3.5 mr-1" />
+                          {eo.status === 'active' ? 'SOFT LOCK' : 'AKTIFKAN'}
+                        </Button>
+                        
+                        <Button
+                          variant="red"
+                          size="sm"
+                          onClick={() => handleDeleteEo(eo.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-1" /> HAPUS EO
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
