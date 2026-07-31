@@ -15,12 +15,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const archiveUrl =
   import.meta.env.VITE_SUPABASE_ARCHIVE_URL && !import.meta.env.VITE_SUPABASE_ARCHIVE_URL.includes('YOUR_SUPABASE')
     ? import.meta.env.VITE_SUPABASE_ARCHIVE_URL
-    : supabaseUrl;
+    : 'https://uvajdscwcojcvgbqvpig.supabase.co';
 
 const archiveAnonKey =
   import.meta.env.VITE_SUPABASE_ARCHIVE_ANON_KEY && !import.meta.env.VITE_SUPABASE_ARCHIVE_ANON_KEY.includes('YOUR_SUPABASE')
     ? import.meta.env.VITE_SUPABASE_ARCHIVE_ANON_KEY
-    : supabaseAnonKey;
+    : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2YWpkc2N3Y29qY3ZnYnF2cGlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0OTg4MDYsImV4cCI6MjEwMTA3NDgwNn0.YSGXdusLwS2ZmfkqHLEGpAaveIl-3D9_RtKV-t8pwjw';
 
 export const supabaseArchive = createClient(archiveUrl, archiveAnonKey);
 
