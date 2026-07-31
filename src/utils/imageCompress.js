@@ -4,8 +4,22 @@
  */
 export const compressImageToWebP = (file, maxWidth = 1000, quality = 0.75) => {
   return new Promise((resolve, reject) => {
-    if (!file || !file.type.startsWith('image/')) {
-      reject(new Error('File yang diunggah harus berupa gambar (JPG, PNG, WEBP).'));
+    if (!file) {
+      reject(new Error('File gambar tidak ditemukan.'));
+      return;
+    }
+
+    // 1. Enforce max upload size limit (10MB) to prevent Memory Exhaustion / Zip Bomb attacks
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      reject(new Error('Ukuran file terlalu besar. Maksimal 10MB.'));
+      return;
+    }
+
+    // 2. Strict MIME Type Whitelist
+    const ALLOWED_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'];
+    if (!ALLOWED_MIMES.includes(file.type.toLowerCase())) {
+      reject(new Error('Format file tidak didukung. Harap unggah gambar JPG, PNG, atau WEBP.'));
       return;
     }
 

@@ -124,8 +124,33 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+client.on('disconnected', (reason) => {
+  console.log('⚠️ WA Bot terputus, mencoba menghubungkan kembali... Alasan:', reason);
+  client.initialize();
+});
+
+// Periodic Heartbeat ke Supabase DB 1 & DB 2 (setiap 6 jam)
+const pingSupabaseKeepAlive = async () => {
+  try {
+    const db1Url = process.env.VITE_SUPABASE_URL || 'https://wptfkymsjrtrwyamsrhi.supabase.co';
+    const db1Key = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwdGZreW1zanJ0cnd5YW1zcmhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwODM4ODksImV4cCI6MjEwMDY1OTg4OX0.M2H0mmzZ8V2JhCKL55o1BSIE7Y_ZPG0xzJZz1EEm61I';
+
+    const db2Url = process.env.VITE_SUPABASE_ARCHIVE_URL || 'https://uvajdscwcojcvgbqvpig.supabase.co';
+    const db2Key = process.env.VITE_SUPABASE_ARCHIVE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2YWpkc2N3Y29qY3ZnYnF2cGlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0OTg4MDYsImV4cCI6MjEwMTA3NDgwNn0.YSGXdusLwS2ZmfkqHLEGpAaveIl-3D9_RtKV-t8pwjw';
+
+    await fetch(`${db1Url}/rest/v1/system_keep_alive?select=id`, { headers: { apikey: db1Key, Authorization: `Bearer ${db1Key}` } });
+    await fetch(`${db2Url}/rest/v1/system_keep_alive?select=id`, { headers: { apikey: db2Key, Authorization: `Bearer ${db2Key}` } });
+    console.log('💓 Heartbeat Supabase DB 1 & DB 2 dari WA Bot Server sukses!');
+  } catch (e) {
+    console.warn('Keep-alive ping notice:', e.message);
+  }
+};
+
+setInterval(pingSupabaseKeepAlive, 6 * 60 * 60 * 1000);
+
 app.listen(PORT, () => {
   console.log(`🚀 LokTik WhatsApp Bot Server berjalan di http://localhost:${PORT}`);
+  pingSupabaseKeepAlive();
 });
 
 client.initialize();

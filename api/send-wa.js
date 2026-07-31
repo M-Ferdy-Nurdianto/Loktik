@@ -20,20 +20,24 @@ export default async function handler(req, res) {
     const cleanNum = waNumber.replace(/[^0-9]/g, '');
     const targetWa = cleanNum.startsWith('0') ? `62${cleanNum.substring(1)}` : cleanNum;
 
-    const messageText = `Halo Kak *${guestName}*,
+    // Input sanitization against Prompt/Template Injection
+    const safeGuestName = String(guestName || 'Pelanggan').replace(/[^\w\s\.\-]/gi, '').trim();
+    const safeEventName = String(eventName || 'Event LokTik').replace(/[^\w\s\.\-]/gi, '').trim();
 
-Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!*
+    const messageText = `Halo Kak *${safeGuestName}*,
+
+Tiket pesanan Anda untuk event *${safeEventName}* telah *PAID & DIVERIFIKASI!*
 
 *DETAIL TIKET:*
-- ID Pesanan: \`${orderId ? orderId.substring(0, 8) : 'LOKTIK'}\`
+- ID Pesanan: \`${orderId ? String(orderId).substring(0, 8) : 'LOKTIK'}\`
 - Total Bayar: Rp ${totalPrice ? Number(totalPrice).toLocaleString('id-ID') : 0}
-- Status: LUNAS (Verified)
+- Status: PAID (Verified)
 
 Gunakan gambar QR Code terlampir di pintu masuk venue saat penukaran gelang:
 ${ticketQrUrl || ''}
 
 Terima Kasih!
-- Panitia ${eventName} via LokTik.web.id`;
+- Panitia ${safeEventName} via LokTik.web.id`;
 
     // 1. Jika ada FONNTE TOKEN di Vercel Environment Variables
     const fonnteToken = process.env.FONNTE_TOKEN;
@@ -60,9 +64,9 @@ Terima Kasih!
       success: true,
       message: 'Permintaan kirim WA Serverless Vercel berhasil diproses.',
       targetWa,
-      messageText,
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('Serverless send-wa error:', err);
+    return res.status(500).json({ error: 'Terjadi kesalahan pada server gateway WA.' });
   }
 }
