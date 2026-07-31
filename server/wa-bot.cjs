@@ -23,15 +23,18 @@ function findLocalExecutablePath() {
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
     'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
     'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/google-chrome-stable',
   ];
 
   for (const path of possiblePaths) {
     if (fs.existsSync(path)) {
-      console.log(`📌 Bot WA Menggunakan Browser Lokal: ${path}`);
+      console.log(`📌 Bot WA Menggunakan Browser: ${path}`);
       return path;
     }
   }
-  return undefined;
+  return process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
 }
 
 const executablePath = findLocalExecutablePath();
