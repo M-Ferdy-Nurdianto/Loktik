@@ -34,11 +34,11 @@ export const CreateEventTab = ({ onEventCreated }) => {
   const [errorMsg, setErrorMsg] = useState(null);
 
   const [tiers, setTiers] = useState([
-    { name: 'Tiket Presale 1', price: 35000, quota: 100, startPo: '', endPo: '', description: '' },
+    { name: 'Tiket Presale 1', price: 35000, priceOts: '', quota: 100, startPo: '', endPo: '', description: '' },
   ]);
 
   const handleAddTier = (name = 'Tiket VIP', price = 75000) => {
-    setTiers([...tiers, { name, price, quota: '', startPo: '', endPo: '', description: '' }]);
+    setTiers([...tiers, { name, price, priceOts: '', quota: '', startPo: '', endPo: '', description: '' }]);
   };
 
   const handleRemoveTier = (idx) => {
@@ -174,15 +174,9 @@ export const CreateEventTab = ({ onEventCreated }) => {
               <input type="text" required placeholder="Misal: Concert Music Fest 2026" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-green outline-none font-bold" />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">TANGGAL ACARA *</label>
-                <input type="datetime-local" required value={formData.eventDate} onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })} className="w-full px-3.5 py-2 bg-neutral-950 border border-neutral-800 rounded text-[11px] text-white focus:border-brand-green outline-none font-bold" />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">OPEN GATE</label>
-                <input type="datetime-local" value={formData.openGate} onChange={(e) => setFormData({ ...formData, openGate: e.target.value })} className="w-full px-3.5 py-2 bg-neutral-950 border border-neutral-800 rounded text-[11px] text-white focus:border-brand-green outline-none font-bold" />
-              </div>
+            <div>
+              <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">TANGGAL ACARA & OPEN GATE *</label>
+              <input type="datetime-local" required value={formData.eventDate} onChange={(e) => setFormData({ ...formData, eventDate: e.target.value, openGate: e.target.value })} className="w-full px-3.5 py-2 bg-neutral-950 border border-neutral-800 rounded text-[11px] text-white focus:border-brand-green outline-none font-bold" />
             </div>
 
             <div>
@@ -245,9 +239,12 @@ export const CreateEventTab = ({ onEventCreated }) => {
                     {tiers.length > 1 && <button type="button" onClick={() => handleRemoveTier(idx)} className="text-brand-red text-xs"><Trash2 className="w-3.5 h-3.5" /></button>}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <input type="text" required placeholder="Nama Tiket" value={t.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-bold" />
-                    <input type="text" inputMode="numeric" required placeholder="Harga (Rp)" value={t.price} onChange={(e) => handleTierChange(idx, 'price', e.target.value.replace(/[^0-9]/g, ''))} className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono font-bold" />
-                    <input type="text" inputMode="numeric" placeholder="Kuota (Unlimited)" value={t.quota} onChange={(e) => handleTierChange(idx, 'quota', e.target.value.replace(/[^0-9]/g, ''))} className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
+                    <input type="text" required placeholder="Nama Tiket" value={t.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} className="col-span-3 sm:col-span-1 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-bold" />
+                    <input type="text" inputMode="numeric" required placeholder="Harga PO (Rp)" value={t.price} onChange={(e) => handleTierChange(idx, 'price', e.target.value.replace(/[^0-9]/g, ''))} className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono font-bold" />
+                    <input type="text" inputMode="numeric" placeholder="Harga OTS (Rp)" value={t.priceOts || ''} onChange={(e) => handleTierChange(idx, 'priceOts', e.target.value.replace(/[^0-9]/g, ''))} className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
+                  </div>
+                  <div>
+                    <input type="text" inputMode="numeric" placeholder="Kuota (Unlimited)" value={t.quota} onChange={(e) => handleTierChange(idx, 'quota', e.target.value.replace(/[^0-9]/g, ''))} className="w-1/2 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[10px]">
                     <div>

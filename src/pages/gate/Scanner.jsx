@@ -309,7 +309,7 @@ export const Scanner = ({ eventId }) => {
                 {scanResult.status !== 'SUCCESS' && scanResult.status !== 'PENDING_CONFIRM' && <XCircle className="w-6 h-6 shrink-0" />}
                 
                 {scanResult.status === 'SUCCESS' && 'TIKET VALID — TIKET FISIK DISERAHKAN'}
-                {scanResult.status === 'PENDING_CONFIRM' && 'KONFIRMASI PAKAI TIKET STAF'}
+                {scanResult.status === 'PENDING_CONFIRM' && 'KONFIRMASI'}
                 {scanResult.status === 'ALREADY_SCANNED' && 'TIKET SUDAH TER-SCAN (DITOLAK)'}
                 {scanResult.status === 'FAILED' && 'TIKET INVALID (DITOLAK)'}
               </span>
@@ -362,7 +362,7 @@ export const Scanner = ({ eventId }) => {
                       MEMPROSES REDEEM...
                     </span>
                   ) : (
-                    'KONFIRMASI PAKAI TIKET & SERAHKAN TIKET FISIK'
+                    'KONFIRMASI TIKET'
                   )}
                 </Button>
               ) : (
@@ -398,16 +398,16 @@ export const Scanner = ({ eventId }) => {
             <span className="text-[9px] font-mono text-neutral-500 font-bold">FASTER GATE</span>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 w-full">
             <input
               type="text"
               value={manualCode}
               onChange={(e) => setManualCode(e.target.value)}
-              placeholder="Ketik Kode Tiket (misal: GM1972)"
-              className="flex-1 p-2.5 sm:p-3 bg-[#121212] border border-neutral-800 rounded-lg font-mono font-black text-sm text-white uppercase focus:outline-none focus:border-brand-purple"
+              placeholder="Masukkan Kode Tiket"
+              className="flex-1 bg-[#121212] border border-neutral-800 rounded-lg px-4 py-3 font-mono font-black text-sm text-white uppercase focus:outline-none focus:border-brand-purple"
             />
-            <Button type="submit" variant="purple" className="text-xs font-black uppercase px-4 sm:px-6 shrink-0 py-2.5">
-              VERIFIKASI
+            <Button type="submit" variant="purple" className="text-xs font-black uppercase px-5 shrink-0 py-3">
+              VERIF
             </Button>
           </div>
         </form>
