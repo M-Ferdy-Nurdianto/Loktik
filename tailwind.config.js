@@ -13,6 +13,7 @@ export default {
           blue: '#06B6D4',
           yellow: '#FFE600',
           red: '#FF3333',
+          orange: '#FF6B1A',
           dark: '#121212',
         }
       },

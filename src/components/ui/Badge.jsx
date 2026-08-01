@@ -10,6 +10,7 @@ export const Badge = ({ children, variant = 'green', className = '' }) => {
     blue: 'bg-brand-blue/20 text-brand-blue border border-brand-blue/40 font-extrabold',
     yellow: 'bg-brand-yellow/20 text-brand-yellow border border-brand-yellow/40 font-extrabold',
     red: 'bg-brand-red/20 text-brand-red border border-brand-red/40 font-extrabold',
+    orange: 'bg-brand-orange/20 text-brand-orange border border-brand-orange/50 font-extrabold',
     white: 'bg-white text-black font-extrabold',
   };
 

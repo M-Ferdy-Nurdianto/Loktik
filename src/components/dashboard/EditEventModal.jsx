@@ -71,11 +71,12 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const eventTime = new Date(formData.eventDate).getTime();
+    const eventDateObj = new Date(formData.eventDate);
     if (formData.openGate) {
-      const openTime = new Date(formData.openGate).getTime();
-      if (openTime > eventTime) {
-        return setErrorMsg('Waktu Open Gate tidak boleh setelah Tanggal Acara.');
+      const openDateObj = new Date(formData.openGate);
+      const isSameDay = openDateObj.toDateString() === eventDateObj.toDateString();
+      if (!isSameDay && openDateObj.getTime() > eventDateObj.getTime()) {
+        return setErrorMsg('Waktu Open Gate tidak boleh pada hari setelah Tanggal Acara.');
       }
     }
 

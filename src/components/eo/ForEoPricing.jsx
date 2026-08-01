@@ -14,12 +14,12 @@ export const pricingTiers = [
     subtitle: 'Bebas Jualan Tiket 0% Komisi — Tidak termasuk layanan Bot WA',
     waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20LokTik%201%20Bulan%20(Rp199.000).',
     features: [
-      { text: 'Bebas Jualan Tiket 0% Komisi Seumur Hidup', included: true },
+      { text: 'Bebas Jualan Tiket 0% Komisi', included: true, highlight: true },
       { text: 'Dana Direct Masuk Rekening EO (Transfer Bank)', included: true },
-      { text: 'Gate Venue & Realtime HP Scanner Staf Gate', included: true },
-      { text: 'Kasir OTS Venue Fast-Issue Direct (On The Spot)', included: true },
-      { text: 'Unlimited Kategori & Stok Tiket Per Event', included: true },
-      { text: 'Layanan Bot WA Otomatis Kirim Tiket (Add-on Terpisah)', included: false },
+      { text: 'Maksimal 1 Event Aktif Bersamaan', included: true },
+      { text: 'Maksimal 2 Akun Staf (Scanner & Kasir)', included: true },
+      { text: 'Kasir OTS Venue Fast-Issue Direct', included: true },
+      { text: 'Layanan Bot WA Kirim Tiket (Add-on)', included: false },
     ],
     highlight: false,
   },
@@ -32,12 +32,12 @@ export const pricingTiers = [
     subtitle: 'Akses 3 Bulan Full Fitur — Tidak termasuk layanan Bot WA',
     waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20LokTik%203%20Bulan%20(Rp349.000).',
     features: [
-      { text: 'Bebas Jualan Tiket 0% Komisi Seumur Hidup', included: true },
+      { text: 'Bebas Jualan Tiket 0% Komisi', included: true, highlight: true },
       { text: 'Dana Direct Masuk Rekening EO (Transfer Bank)', included: true },
-      { text: 'Gate Venue & Realtime HP Scanner Staf Gate', included: true },
-      { text: 'Kasir OTS Venue Fast-Issue Direct (On The Spot)', included: true },
-      { text: 'Unlimited Kategori & Stok Tiket Per Event', included: true },
-      { text: 'Layanan Bot WA Otomatis Kirim Tiket (Add-on Terpisah)', included: false },
+      { text: 'Unlimited Kategori & Event Aktif', included: true, upgrade: true },
+      { text: 'Hingga 5 Akun Staf (Scanner & Kasir)', included: true, upgrade: true },
+      { text: 'Export Laporan Penjualan Lengkap (PDF & XLS)', included: true, upgrade: true },
+      { text: 'Layanan Bot WA Kirim Tiket (Add-on)', included: false },
     ],
     highlight: false,
   },
@@ -50,13 +50,13 @@ export const pricingTiers = [
     subtitle: 'Paket 6 Bulan Full Fitur — Tidak termasuk layanan Bot WA',
     waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20Paket%20LokTik%206%20Bulan%20PRO%20(Rp599.000).',
     features: [
-      { text: 'Bebas Jualan Tiket 0% Komisi Seumur Hidup', included: true },
+      { text: 'Bebas Jualan Tiket 0% Komisi', included: true, highlight: true },
       { text: 'Dana Direct Masuk Rekening EO (Transfer Bank)', included: true },
-      { text: 'Gate Venue & Realtime HP Scanner Staf Gate', included: true },
-      { text: 'Kasir OTS Venue Fast-Issue Direct (On The Spot)', included: true },
-      { text: 'Unlimited Kategori & Stok Tiket Per Event', included: true },
-      { text: 'Priority Support CS LokTik (Fast Response)', included: true },
-      { text: 'Layanan Bot WA Otomatis Kirim Tiket (Add-on Terpisah)', included: false },
+      { text: 'Unlimited Kategori & Event Aktif', included: true, upgrade: true },
+      { text: 'Unlimited Akun Staf (Scanner & Kasir)', included: true, upgrade: true },
+      { text: 'Export Laporan Penjualan Lengkap (PDF & XLS)', included: true, upgrade: true },
+      { text: 'Priority Support CS LokTik (Fast Response)', included: true, upgrade: true },
+      { text: 'Layanan Bot WA Kirim Tiket (Add-on)', included: false },
     ],
     highlight: true,
   },
@@ -66,17 +66,20 @@ export const waAddOnPackages = [
   {
     name: 'PAKET 1.000 PESAN',
     price: 'Rp50.000',
+    pricePeriod: '/ Bulan',
+    proDiscount: 'Rp45.000',
     quota: '1.000',
     badge: 'ADD-ON RINGAN',
-    subtitle: 'Kuota Bot WA 1.000 Pesan — Cocok Event Kecil',
-    waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20membeli%20Add-on%20Bot%20WA%20Paket%201.000%20Pesan%20(Rp50.000).',
+    subtitle: 'Kuota Bot WA 1.000 Pesan/Bulan — Cocok Event Kecil',
+    waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20membeli%20Add-on%20Bot%20WA%20Paket%201.000%20Pesan%20(Rp50.000%2Fbulan).',
     features: [
-      { text: '+1.000 Kuota Pesan Bot WhatsApp Otomatis', included: true },
-      { text: 'Kirim Tiket QR Otomatis ke Pembeli', included: true },
-      { text: 'Auto-Reply Konfirmasi Pembayaran', included: true },
-      { text: 'Approve & Verifikasi Massal via Bot', included: true },
-      { text: 'Kuota Berlaku Selama Masa Aktif Langganan', included: true },
-      { text: 'Bisa Top Up Kapan Saja (Stacking)', included: true },
+      { text: '+1.000 Kuota Pesan Bot WhatsApp Otomatis Per Bulan', included: true },
+      { text: 'Kirim Tiket QR Otomatis ke Pembeli via WA', included: true },
+      { text: 'Auto-Reply Konfirmasi Pembayaran Real-time', included: true },
+      { text: 'Approve & Verifikasi Massal via Bot WA', included: true },
+      { text: 'Kuota di-reset setiap 1 bulan', included: true },
+      { text: 'Bisa Top Up Kapan Saja (Stacking Kuota)', included: true },
+      { text: 'Harga diskon berlaku selama masa aktif Paket PRO', included: true },
     ],
     highlight: false,
     icon: Zap,
@@ -84,17 +87,20 @@ export const waAddOnPackages = [
   {
     name: 'PAKET 10.000 PESAN',
     price: 'Rp70.000',
+    pricePeriod: '/ Bulan',
+    proDiscount: 'Rp65.000',
     quota: '10.000',
     badge: 'ADD-ON SUPER VALUE',
-    subtitle: 'Kuota Bot WA 10.000 Pesan — Hemat 86% Per Pesan!',
-    waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20membeli%20Add-on%20Bot%20WA%20Paket%2010.000%20Pesan%20(Rp70.000).',
+    subtitle: 'Kuota Bot WA 10.000 Pesan/Bulan — Hemat 86% Per Pesan!',
+    waText: 'Halo%20Admin%20LokTik,%20saya%20tertarik%20membeli%20Add-on%20Bot%20WA%20Paket%2010.000%20Pesan%20(Rp70.000%2Fbulan).',
     features: [
-      { text: '+10.000 Kuota Pesan Bot WhatsApp Otomatis', included: true },
-      { text: 'Kirim Tiket QR Otomatis ke Pembeli', included: true },
-      { text: 'Auto-Reply Konfirmasi Pembayaran', included: true },
-      { text: 'Approve & Verifikasi Massal via Bot', included: true },
-      { text: 'Kuota Berlaku Selama Masa Aktif Langganan', included: true },
-      { text: 'Bisa Top Up Kapan Saja (Stacking)', included: true },
+      { text: '+10.000 Kuota Pesan Bot WhatsApp Otomatis Per Bulan', included: true },
+      { text: 'Kirim Tiket QR Otomatis ke Pembeli via WA', included: true },
+      { text: 'Auto-Reply Konfirmasi Pembayaran Real-time', included: true },
+      { text: 'Approve & Verifikasi Massal via Bot WA', included: true },
+      { text: 'Kuota di-reset setiap 1 bulan', included: true },
+      { text: 'Bisa Top Up Kapan Saja (Stacking Kuota)', included: true },
+      { text: 'Harga diskon berlaku selama masa aktif Paket PRO', included: true },
       { text: 'Harga Per Pesan LEBIH MURAH 86%!', included: true },
     ],
     highlight: true,
@@ -156,15 +162,35 @@ export const ForEoPricing = () => {
                   <div
                     key={fIdx}
                     className={`flex items-start space-x-2 text-xs font-bold ${
-                      feat.included ? 'text-neutral-300' : 'text-neutral-500 line-through'
+                      feat.included
+                        ? feat.highlight
+                          ? 'text-white'
+                          : 'text-neutral-300'
+                        : 'text-neutral-500 line-through'
                     }`}
                   >
                     {feat.included ? (
-                      <CheckCircle2 className="w-4 h-4 text-brand-blue shrink-0 mt-0.5" />
+                      <CheckCircle2
+                        className={`w-4 h-4 shrink-0 mt-0.5 ${
+                          feat.highlight
+                            ? 'text-brand-green shadow-[0_0_5px_rgba(57,255,20,0.4)]'
+                            : 'text-brand-blue'
+                        }`}
+                      />
                     ) : (
                       <X className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
                     )}
-                    <span>{feat.text}</span>
+                    <div className="flex-1 flex items-start justify-between gap-2">
+                      <span className="leading-snug">{feat.text}</span>
+                      {feat.upgrade && feat.included && (
+                        <Badge
+                          variant="green"
+                          className="text-[7px] px-1.5 py-0 font-black shrink-0 mt-0.5 whitespace-nowrap"
+                        >
+                          ⬆ UPGRADE!
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -261,22 +287,34 @@ export const ForEoPricing = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-baseline justify-between mt-4 pt-3 border-t border-neutral-800/60">
-                      <div className="flex items-baseline space-x-1.5">
+                    <div className="mt-4 pt-3 border-t border-neutral-800/60 space-y-2.5">
+                      <div className="flex items-baseline space-x-1">
                         <span className={`text-3xl sm:text-4xl font-black font-mono ${
                           pkg.highlight ? 'text-brand-purple' : 'text-brand-blue'
                         }`}>
                           {pkg.price}
                         </span>
+                        <span className={`text-sm font-mono font-bold opacity-70 ${
+                          pkg.highlight ? 'text-brand-purple' : 'text-brand-blue'
+                        }`}>
+                          {pkg.pricePeriod}
+                        </span>
                       </div>
-                      <div className="text-right">
-                        {pkg.highlight && (
-                          <div className="text-[9px] font-black uppercase text-brand-green tracking-wider">
-                            HEMAT 86% / PESAN
+
+                      <div className="p-2.5 rounded-md border border-brand-orange/60 bg-brand-orange/10 flex items-start gap-2 shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+                        <span className="text-base shrink-0 leading-none mt-0.5">🔥</span>
+                        <div className="flex-1 text-left leading-snug">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-brand-orange">
+                            SPESIAL MEMBER PRO (6 BULAN):
+                          </span>
+                          <div className="flex items-baseline gap-1 mt-0.5">
+                            <span className="text-xs font-bold text-neutral-400 line-through">
+                              {pkg.price}
+                            </span>
+                            <span className="text-sm sm:text-base font-black font-mono text-brand-orange">
+                              Hanya {pkg.proDiscount} {pkg.pricePeriod.toLowerCase()}!
+                            </span>
                           </div>
-                        )}
-                        <div className="text-[10px] font-mono text-neutral-500">
-                          {pkg.highlight ? '@Rp7 / pesan' : '@Rp50 / pesan'}
                         </div>
                       </div>
                     </div>
@@ -292,10 +330,10 @@ export const ForEoPricing = () => {
                       >
                         <CheckCircle2 className={`w-4 h-4 shrink-0 mt-0.5 ${
                           fIdx === pkg.features.length - 1 && pkg.highlight
-                            ? 'text-brand-green'
+                            ? 'text-brand-green shadow-[0_0_6px_rgba(57,255,20,0.5)]'
                             : 'text-brand-purple'
                         }`} />
-                        <span>{feat.text}</span>
+                        <span className="leading-snug">{feat.text}</span>
                       </div>
                     ))}
                   </div>
@@ -337,10 +375,11 @@ export const ForEoPricing = () => {
                 CARA KERJA ADD-ON BOT WA
               </h4>
               <ul className="text-[11px] sm:text-xs text-neutral-400 font-medium leading-relaxed space-y-1 list-disc pl-4">
-                <li>Setiap 1 (satu) pesan bot = 1 (satu) pengiriman pesan WA otomatis (tiket QR, notifikasi approve, dll).</li>
-                <li>Kuota bisa ditambahkan kapan saja (stacking) — penambahan tidak mengganti, tapi MENAMBAH sisa kuota yang ada.</li>
-                <li>Untuk pesan paket PRO 1 Tahun, EO otomatis mendapatkan bonus kuota <strong className="text-brand-purple font-bold">10.000 PESAN</strong> GRATIS.</li>
-                <li>Jika kuota habis, fitur bot otomatis berhenti — EO perlu Top Up Add-on terlebih dahulu atau kirim manual.</li>
+                <li>Add-on Bot WA adalah <strong className="text-neutral-200">langganan bulanan terpisah</strong> dari paket inti LokTik.</li>
+                <li>Kuota Pesan Bot WA <strong className="text-brand-yellow font-bold">di-reset otomatis setiap 1 bulan</strong> sesuai tanggal pembelian (bukan stacking permanen).</li>
+                <li>Member <strong className="text-brand-purple font-bold">Paket 6 Bulan PRO</strong> otomatis dapat harga spesial <strong className="text-brand-orange font-bold">Diskon Rp5.000</strong> untuk kedua paket Add-on Bot WA.</li>
+                <li>Harga diskon PRO otomatis berlaku <strong className="text-neutral-200">selama masa aktif Paket PRO Anda</strong> — tidak perlu request manual.</li>
+                <li>Jika kuota habis sebelum tanggal reset bulan berikutnya, EO bisa Top Up tambahan kapan saja (stacking) atau kirim manual.</li>
               </ul>
             </div>
           </div>
