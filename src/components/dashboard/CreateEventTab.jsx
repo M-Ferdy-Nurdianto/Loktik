@@ -21,6 +21,7 @@ export const CreateEventTab = ({ onEventCreated }) => {
     bankName: 'BCA',
     accountNumber: '',
     accountHolder: '',
+    gatePin: '',
   });
 
   const [posterFile, setPosterFile] = useState(null);
@@ -53,6 +54,9 @@ export const CreateEventTab = ({ onEventCreated }) => {
     e.preventDefault();
     if (!formData.name || !formData.eventDate || !posterFile) {
       return setErrorMsg('Nama Event, Tanggal Acara & File Poster wajib diisi.');
+    }
+    if (!formData.gatePin || formData.gatePin.length !== 4) {
+      return setErrorMsg('PIN Gate Venue harus 4 digit angka.');
     }
 
     const eventTime = new Date(formData.eventDate).getTime();
@@ -96,7 +100,7 @@ export const CreateEventTab = ({ onEventCreated }) => {
         poster_url: uploadedPosterUrl,
         event_date: new Date(formData.eventDate).toISOString(),
         open_gate: new Date(formData.openGate || formData.eventDate).toISOString(),
-        payment_details: { bank: formData.bankName, number: formData.accountNumber, holder: formData.accountHolder, qris_url: uploadedQrisUrl },
+        payment_details: { bank: formData.bankName, number: formData.accountNumber, holder: formData.accountHolder, qris_url: uploadedQrisUrl, gate_pin: formData.gatePin || '1312' },
         status: 'active',
       };
 
@@ -182,6 +186,11 @@ export const CreateEventTab = ({ onEventCreated }) => {
                 <input type="file" accept="image/*" onChange={(e) => { if (e.target.files[0]) { setQrisFile(e.target.files[0]); setQrisPreview(URL.createObjectURL(e.target.files[0])); } }} className="w-full text-xs text-neutral-300 bg-neutral-950 p-1 rounded border border-neutral-800 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:bg-brand-purple file:text-white file:font-bold" />
               </div>
               {qrisPreview && <img src={qrisPreview} alt="QRIS" className="w-12 h-12 object-contain bg-white p-0.5 rounded border border-neutral-700" />}
+            </div>
+            <div className="pt-2 border-t border-neutral-800/60">
+              <label className="text-[10px] font-black uppercase text-brand-purple block mb-1">PIN GATE VENUE (4 DIGIT) *</label>
+              <input type="text" inputMode="numeric" maxLength={4} required placeholder="Contoh: 1234" value={formData.gatePin} onChange={(e) => setFormData({ ...formData, gatePin: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) })} className="w-full px-3 py-1.5 bg-neutral-950 border border-brand-purple/40 rounded text-xs text-brand-purple focus:border-brand-purple outline-none font-bold font-mono" />
+              <p className="text-[10px] text-neutral-500 mt-1">Kode ini dipakai staf untuk masuk ke Gate Scanner event ini.</p>
             </div>
           </div>
         </div>

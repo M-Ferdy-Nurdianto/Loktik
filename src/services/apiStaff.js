@@ -36,12 +36,12 @@ export const createStaffAccount = async (staffData) => {
     throw new Error('Username staf sudah digunakan! Pilih username lain.');
   }
 
-  const rawPin = (staffData.pinCode || staffData.password || '').toString().replace(/[^0-9]/g, '').slice(0, 4);
+  const rawPin = (staffData.password || '').toString().replace(/[^0-9]/g, '').slice(0, 4);
   const newStaff = {
     name: staffData.name.trim(),
     username: cleanUsername,
     password: staffData.password.trim(),
-    pin_code: rawPin || '1312',
+    pin_code: rawPin || null,
     eo_username: (staffData.eo_username || 'eo_lokal').trim().toLowerCase(),
     event_id: staffData.event_id || 'all',
     event_slug: staffData.event_slug || '',

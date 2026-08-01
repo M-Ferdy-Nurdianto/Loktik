@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserPlus, QrCode, Ticket, Users, Eye, EyeOff } from 'lucide-react';
+import { UserPlus, Eye, EyeOff } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { CustomSelect } from '../ui/CustomSelect';
@@ -7,7 +7,6 @@ import { CustomSelect } from '../ui/CustomSelect';
 export const StaffFormModal = ({ events = [], onSubmit, onCancel }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [pinCode, setPinCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(events[0]?.id || 'SEMUA_EVENT');
   const [errorMsg, setErrorMsg] = useState('');
@@ -23,13 +22,10 @@ export const StaffFormModal = ({ events = [], onSubmit, onCancel }) => {
       ? (events.find((ev) => ev.id === selectedEventId) || events[0])
       : { id: 'SEMUA_EVENT', name: 'Semua Event', slug: 'all-events' };
 
-    const finalPin = pinCode.trim() || password.replace(/[^0-9]/g, '').slice(0, 4) || '1312';
-
     onSubmit({
       name: username.trim(),
       username: username.trim(),
       password,
-      pinCode: finalPin,
       selectedEventId: assignedEvent.id,
       assignedEvent,
       permissions: { canScan: true, canOts: true, canViewOrders: true },
@@ -71,18 +67,13 @@ export const StaffFormModal = ({ events = [], onSubmit, onCancel }) => {
           </div>
 
           <div>
-            <label className="text-[10px] font-black uppercase text-brand-purple block mb-1">PASSWORD / KODE PIN 4-DIGIT:</label>
+            <label className="text-[10px] font-black uppercase text-brand-purple block mb-1">PASSWORD STAF:</label>
             <div className="relative flex items-center">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setPassword(val);
-                  const pinPart = val.replace(/[^0-9]/g, '').slice(0, 4);
-                  setPinCode(pinPart || val.slice(0, 4) || '1312');
-                }}
-                placeholder="Password atau PIN 4-Digit (cth: 1312)..."
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Buat password untuk akun staf..."
                 className="w-full px-3 py-2 pr-9 bg-neutral-900 border border-brand-purple/50 rounded text-xs text-brand-purple focus:border-brand-purple outline-none font-mono font-black"
                 required
               />
