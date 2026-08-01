@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { CheckCircle2, Landmark, QrCode, Copy, AlertCircle, Smartphone, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Landmark, QrCode, Copy, AlertCircle, Smartphone, RefreshCw, Download } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { compressImageToWebP } from '../../utils/imageCompress';
 import { uploadPaymentProof, createGuestOrder } from '../../services/apiOrders';
@@ -88,6 +88,24 @@ export const Checkout = () => {
       navigator.clipboard.writeText(paymentDetails.number);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleDownloadQris = async (url) => {
+    if (!url) return;
+    try {
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `QRIS-${event?.name ? event.name.replace(/[^a-zA-Z0-9]/g, '_') : 'Panitia'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      window.open(url, '_blank');
     }
   };
 
@@ -298,8 +316,20 @@ export const Checkout = () => {
               <div className="p-4 bg-neutral-950 rounded-lg border border-neutral-800 text-center space-y-3">
                 <span className="text-xs font-bold text-brand-blue uppercase">SCAN BARCODE QRIS PANITIA</span>
                 {paymentDetails.qris_url ? (
-                  <div className="w-48 h-48 sm:w-56 sm:h-56 mx-auto bg-white p-2 rounded-lg border border-neutral-700 overflow-hidden shadow-md">
-                    <img src={paymentDetails.qris_url} alt="QRIS Panitia" className="w-full h-full object-contain" />
+                  <div className="space-y-3">
+                    <div className="w-48 h-48 sm:w-56 sm:h-56 mx-auto bg-white p-2 rounded-lg border border-neutral-700 overflow-hidden shadow-md">
+                      <img src={paymentDetails.qris_url} alt="QRIS Panitia" className="w-full h-full object-contain" />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="blue"
+                      size="sm"
+                      onClick={() => handleDownloadQris(paymentDetails.qris_url)}
+                      className="mx-auto flex items-center space-x-1.5 text-xs font-black uppercase tracking-wider"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>UNDUH BARCODE QRIS</span>
+                    </Button>
                   </div>
                 ) : (
                   <div className="p-8 border border-dashed border-neutral-800 rounded-lg text-neutral-500 text-xs font-bold uppercase">
