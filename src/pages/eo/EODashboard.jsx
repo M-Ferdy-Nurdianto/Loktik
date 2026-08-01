@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List, Users, Clock } from 'lucide-react';
+import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List, Users, Clock, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -264,14 +264,25 @@ export const EODashboard = () => {
         </div>
 
         {/* Data Retention Warning Card */}
-        <Card variant="dark" className="p-4 border border-brand-yellow/60 bg-brand-yellow/10 space-y-2 text-left">
-          <div className="flex items-center space-x-2 text-brand-yellow">
-            <Clock className="w-5 h-5 shrink-0" />
-            <h3 className="text-xs font-black uppercase tracking-wide">PENTING: ATURAN RETENSI DATA EVENT (OTOMATIS HAPUS 2 MINGGU)</h3>
+        <Card variant="dark" className="p-4 border-2 border-brand-red/60 bg-gradient-to-br from-[#1a0a0a] via-[#1a130a] to-[#0a0a0a] space-y-3 text-left shadow-[0_0_25px_rgba(255,51,51,0.12)]">
+          <div className="flex items-start space-x-3">
+            <div className="p-2 bg-brand-red/20 border border-brand-red/60 rounded-md shrink-0 mt-0.5 shadow-[0_0_12px_rgba(255,51,51,0.25)]">
+              <AlertTriangle className="w-5 h-5 text-brand-red" />
+            </div>
+            <div className="space-y-2 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="red" className="text-[9px] px-2 py-0.5 font-black tracking-wider">
+                  ⚠️ PERINGATAN KRITIS
+                </Badge>
+                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wide text-white">
+                  PENTING: ATURAN RETENSI DATA EVENT (OTOMATIS HAPUS 7 HARI)
+                </h3>
+              </div>
+              <p className="text-[11px] sm:text-xs text-neutral-300 font-medium leading-relaxed pl-0.5">
+                Setiap data event, daftar transaksi pesanan, tiket QR Code, dan bukti bayar yang sudah selesai akan <strong className="text-brand-red underline decoration-wavy decoration-brand-red/60 underline-offset-2">otomatis dibersihkan &amp; dihapus oleh sistem 7 hari (1 minggu) setelah tanggal event berakhir</strong>. Harap segera lakukan ekspor/rekapan data penjualan sebelum batas waktu tersebut (tombol <strong className="text-brand-green">EXPORT EXCEL</strong> &amp; <strong className="text-brand-green">EXPORT PDF</strong> tersedia di Manajemen Pesanan).
+              </p>
+            </div>
           </div>
-          <p className="text-[11px] sm:text-xs text-neutral-300 font-medium leading-relaxed sm:pl-7">
-            Setiap data event, daftar transaksi pesanan, tiket QR Code, dan bukti bayar yang sudah selesai akan <strong className="text-brand-yellow underline">otomatis dibersihkan &amp; dihapus oleh sistem 14 hari (2 minggu) setelah tanggal event berakhir</strong>. Harap lakukan ekspor/rekapan data penjualan sebelum batas waktu tersebut (tombol <strong className="text-brand-green">EXPORT EXCEL</strong> &amp; <strong className="text-brand-green">EXPORT PDF</strong> tersedia di Manajemen Pesanan).
-          </p>
         </Card>
 
         {/* Overview Stats: Render ONLY on 'my-events' and 'orders' tabs */}
