@@ -215,6 +215,20 @@ Terima Kasih!
   };
 
   const sendAutoTicketViaBot = async (order, ticketUrl) => {
+    // --- CEK KUOTA WA BOT ---
+    const currentQuota = user?.wa_quota ?? 0;
+    if (!hasBotAccess) {
+      showToast('Akses Bot WA belum aktif. Aktifkan add-on Bot WA melalui admin.', 'eo');
+      sendManualWhatsAppMessage(order, ticketUrl);
+      return false;
+    }
+    if (currentQuota <= 0) {
+      showToast('Kuota Bot WA habis! Hubungi admin untuk top up kuota. Beralih ke WA manual.', 'eo');
+      sendManualWhatsAppMessage(order, ticketUrl);
+      return false;
+    }
+    // --- END CEK KUOTA ---
+
     const waNumber = order.guest_wa.replace(/[^0-9]/g, '');
     const eventName = order.events?.name || 'Event LokTik';
     const seed = parseInt(order.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
@@ -242,7 +256,40 @@ Terima Kasih!
 
       const result = await response.json();
       if (result.success) {
-        showToast(`Tiket Kode ${prettyCode} & QR Code otomatis terkirim via WA ke ${order.guest_name}!`, 'eo');
+        // --- KURANGI KUOTA & TAMBAH PESAN TERKIRIM ---
+        const newQuota = Math.max(0, (user?.wa_quota ?? 0) - 1);
+        const newSent = (user?.wa_messages_sent ?? 0) + 1;
+
+        // Update session user
+        const savedSession = localStorage.getItem('loktik_user_session');
+        if (savedSession) {
+          try {
+            const parsed = JSON.parse(savedSession);
+            localStorage.setItem('loktik_user_session', JSON.stringify({
+              ...parsed,
+              wa_quota: newQuota,
+              wa_messages_sent: newSent,
+            }));
+          } catch (_) {}
+        }
+
+        // Sync ke loktik_eo_accounts supaya admin dashboard ikut update
+        const savedAccounts = localStorage.getItem('loktik_eo_accounts');
+        if (savedAccounts) {
+          try {
+            const accounts = JSON.parse(savedAccounts);
+            const updated = accounts.map((acc) => {
+              if (acc.name === eoUsername || acc.id === user?.id) {
+                return { ...acc, wa_quota: newQuota, wa_messages_sent: newSent };
+              }
+              return acc;
+            });
+            localStorage.setItem('loktik_eo_accounts', JSON.stringify(updated));
+          } catch (_) {}
+        }
+        // --- END UPDATE KUOTA ---
+
+        showToast(`Tiket Kode ${prettyCode} & QR Code otomatis terkirim via WA ke ${order.guest_name}! (Sisa kuota: ${newQuota})`, 'eo');
         return true;
       }
     } catch (e) {
@@ -250,6 +297,7 @@ Terima Kasih!
     }
 
     sendManualWhatsAppMessage(order, ticketUrl);
+    return false;
   };
 
   const handleApprove = async (order, mode = 'bot') => {
@@ -937,10 +985,15 @@ Terima Kasih!
 
         <div className="flex flex-wrap items-center gap-2">
           {hasBotAccess ? (
-            <Badge variant={botStatus === 'online' ? 'green' : 'yellow'}>
-              <Bot className="w-3 h-3 mr-1 inline" />
-              {botStatus === 'online' ? 'BOT ONLINE' : 'BOT OFFLINE'}
-            </Badge>
+            <>
+              <Badge variant={botStatus === 'online' ? 'green' : 'yellow'}>
+                <Bot className="w-3 h-3 mr-1 inline" />
+                {botStatus === 'online' ? 'BOT ONLINE' : 'BOT OFFLINE'}
+              </Badge>
+              <Badge variant={(user?.wa_quota ?? 0) <= 0 ? 'red' : (user?.wa_quota ?? 0) <= 50 ? 'yellow' : 'blue'}>
+                KUOTA WA: {(user?.wa_quota ?? 0).toLocaleString('id-ID')}
+              </Badge>
+            </>
           ) : (
             <Badge variant="blue">
               <MessageSquare className="w-3 h-3 mr-1 inline" />

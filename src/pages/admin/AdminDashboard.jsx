@@ -342,6 +342,7 @@ export const AdminDashboard = () => {
                   <th className="p-3 w-[70px] whitespace-nowrap text-[9px] tracking-wider">ID EO</th>
                   <th className="p-3 w-[130px] whitespace-nowrap text-[9px] tracking-wider">NAMA EO</th>
                   <th className="p-3 w-[120px] whitespace-nowrap text-[9px] tracking-wider">NO. WHATSAPP</th>
+                  <th className="p-3 w-[110px] whitespace-nowrap text-[9px] tracking-wider">PAKET</th>
                   <th className="p-3 w-[100px] whitespace-nowrap text-[9px] tracking-wider">SISA KUOTA WA</th>
                   <th className="p-3 w-[105px] whitespace-nowrap text-[9px] tracking-wider">PESAN TERKIRIM</th>
                   <th className="p-3 w-[110px] whitespace-nowrap text-[9px] tracking-wider">S/D EXPIRED</th>
@@ -387,6 +388,28 @@ export const AdminDashboard = () => {
                           <MessageSquare className="w-3 h-3 shrink-0" />
                           <span className="font-mono truncate">{eo.wa}</span>
                         </a>
+                      </td>
+                      <td className="p-3">
+                        <div className="space-y-1">
+                          <span className={`text-[10px] font-black uppercase block ${
+                            eo.subscriptionPlan === '6_months' ? 'text-brand-blue' :
+                            eo.subscriptionPlan === '3_months' ? 'text-brand-purple' :
+                            eo.subscriptionPlan === 'test' ? 'text-neutral-400' : 'text-brand-yellow'
+                          }`}>
+                            {eo.subscriptionPlan === '6_months' ? '6 BULAN PRO' :
+                             eo.subscriptionPlan === '3_months' ? '3 BULAN' :
+                             eo.subscriptionPlan === 'test' ? 'TEST' : '1 BULAN'}
+                          </span>
+                          <span className="text-[9px] text-neutral-500 font-mono block">
+                            {eo.subscriptionPlan === '6_months' || eo.subscriptionPlan === '3_months'
+                              ? 'EVENT ∞'
+                              : 'MAX 1 EVENT'
+                            } · {
+                              eo.subscriptionPlan === '6_months' ? 'STAF ∞' :
+                              eo.subscriptionPlan === '3_months' ? 'MAX 5 STAF' : 'MAX 2 STAF'
+                            }
+                          </span>
+                        </div>
                       </td>
                       <td className="p-3">
                         <div className="flex flex-col space-y-1">

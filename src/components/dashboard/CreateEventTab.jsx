@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Landmark, CheckCircle2, QrCode, ImageIcon, Calendar } from 'lucide-react';
+import { Plus, Trash2, Landmark, CheckCircle2, QrCode, ImageIcon, Calendar, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { compressImageToWebP } from '../../utils/imageCompress';
-import { uploadEventPoster, uploadQrisCode, createEventWithTiers } from '../../services/apiEvents';
+import { uploadEventPoster, uploadQrisCode, createEventWithTiers, getAllEventsForEo } from '../../services/apiEvents';
+import { getPlanLimits, PLAN_LABELS } from '../../utils/planLimits';
 
 export const CreateEventTab = ({ onEventCreated }) => {
   const { user } = useAuth();
@@ -81,6 +82,24 @@ export const CreateEventTab = ({ onEventCreated }) => {
     try {
       setSubmitting(true);
       setErrorMsg(null);
+
+      // --- LIMIT CHECK: max event aktif per paket ---
+      const userPlan = user?.subscriptionPlan || '1_month';
+      const { maxEvents } = getPlanLimits(userPlan);
+      if (maxEvents !== Infinity) {
+        const existingEvents = await getAllEventsForEo(eoUsername);
+        const activeCount = existingEvents.filter((e) => e.status === 'active').length;
+        if (activeCount >= maxEvents) {
+          setErrorMsg(
+            `${PLAN_LABELS[userPlan] || 'Paket Anda'} hanya mengizinkan maksimal ${maxEvents} event aktif bersamaan. ` +
+            `Nonaktifkan atau hapus event lama terlebih dahulu, atau upgrade ke Paket 3/6 Bulan untuk event unlimited.`
+          );
+          setSubmitting(false);
+          return;
+        }
+      }
+      // --- END LIMIT CHECK ---
+
       const compressedPoster = await compressImageToWebP(posterFile, 1000, 0.75);
       const uploadedPosterUrl = await uploadEventPoster(compressedPoster);
 
@@ -127,7 +146,19 @@ export const CreateEventTab = ({ onEventCreated }) => {
           <h3 className="text-base font-black uppercase text-white">BUAT EVENT BARU (EO: {eoUsername})</h3>
           <p className="text-xs text-neutral-400">Form ringkas 2-kolom bebas scroll panjang.</p>
         </div>
-        <Badge variant="green">0% FEES</Badge>
+        <div className="flex items-center gap-2">
+          {(() => {
+            const userPlan = user?.subscriptionPlan || '1_month';
+            const { maxEvents } = getPlanLimits(userPlan);
+            if (maxEvents === Infinity) return <Badge variant="blue">UNLIMITED EVENT</Badge>;
+            return (
+              <Badge variant={maxEvents === 1 ? 'yellow' : 'purple'} className="text-[9px]">
+                MAX {maxEvents} EVENT AKTIF ({PLAN_LABELS[userPlan] || userPlan})
+              </Badge>
+            );
+          })()}
+          <Badge variant="green">0% FEES</Badge>
+        </div>
       </div>
 
       {errorMsg && <p className="text-xs text-brand-red font-bold uppercase bg-red-950/40 p-2.5 rounded border border-brand-red/40">{errorMsg}</p>}

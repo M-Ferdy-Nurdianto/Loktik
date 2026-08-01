@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Copy, Trash2, CheckCircle2, RefreshCw } from 'lucide-react';
+import { UserPlus, Copy, Trash2, CheckCircle2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { useAuth } from '../../hooks/useAuth';
@@ -7,6 +7,7 @@ import { getAllEventsForEo } from '../../services/apiEvents';
 import { getAllStaffForEo, createStaffAccount, deleteStaffAccount, updateStaffAccount } from '../../services/apiStaff';
 import { StaffFormModal } from './StaffFormModal';
 import { useToast } from '../../context/ToastContext';
+import { getPlanLimits, PLAN_LABELS } from '../../utils/planLimits';
 
 export const StaffManagerTab = () => {
   const { user, loading: authLoading } = useAuth();
@@ -41,6 +42,19 @@ export const StaffManagerTab = () => {
   }, [authLoading, user]);
 
   const handleFormSubmit = async (formData) => {
+    // --- LIMIT CHECK: max staf per paket ---
+    const userPlan = user?.subscriptionPlan || '1_month';
+    const { maxStaff } = getPlanLimits(userPlan);
+    if (maxStaff !== Infinity && staffList.length >= maxStaff) {
+      showToast(
+        `${PLAN_LABELS[userPlan] || 'Paket Anda'} hanya mengizinkan maksimal ${maxStaff} akun staf. ` +
+        `Hapus staf yang tidak aktif atau upgrade ke Paket 3/6 Bulan untuk lebih banyak staf.`,
+        'eo'
+      );
+      return;
+    }
+    // --- END LIMIT CHECK ---
+
     try {
       await createStaffAccount({
         name: formData.name,
@@ -97,9 +111,20 @@ export const StaffManagerTab = () => {
       {/* HEADER BAR */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#121212] p-5 rounded border border-neutral-800">
         <div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
             <Badge variant="green" className="text-[9px] px-2 py-0.5">TIM VENUE EO</Badge>
             <span className="text-xs text-neutral-400 font-mono">TOTAL: {staffList.length} STAF</span>
+            {(() => {
+              const userPlan = user?.subscriptionPlan || '1_month';
+              const { maxStaff } = getPlanLimits(userPlan);
+              if (maxStaff === Infinity) return <Badge variant="blue" className="text-[9px] px-2 py-0.5">UNLIMITED STAF</Badge>;
+              const remaining = maxStaff - staffList.length;
+              return (
+                <Badge variant={remaining <= 0 ? 'red' : remaining === 1 ? 'yellow' : 'purple'} className="text-[9px] px-2 py-0.5">
+                  {remaining <= 0 ? `LIMIT ${maxStaff} STAF TERCAPAI` : `SISA SLOT: ${remaining}/${maxStaff}`}
+                </Badge>
+              );
+            })()}
           </div>
           <h2 className="text-xl font-black uppercase text-white tracking-tight mt-1">
             AKUN STAF & PERAN AKSES
