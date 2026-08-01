@@ -156,12 +156,108 @@ END;
 $$;
 
 -- ====================================================================
+-- EO PROFILES TABLE (WhatsApp Bot Quota Management)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.eo_profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    eo_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+    eo_username VARCHAR(100) NOT NULL UNIQUE,
+    wa_quota INTEGER NOT NULL DEFAULT 0,
+    wa_messages_sent INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_eo_profiles_eo_id ON public.eo_profiles(eo_id);
+CREATE INDEX IF NOT EXISTS idx_eo_profiles_username ON public.eo_profiles(eo_username);
+
+-- ====================================================================
+-- ATOMIC FUNCTION: Top Up WA Quota for EO
+-- ====================================================================
+CREATE OR REPLACE FUNCTION public.top_up_wa_quota(
+    target_eo_id UUID,
+    quota_amount INT
+)
+RETURNS TABLE (
+    success BOOLEAN,
+    new_quota INTEGER,
+    message TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_exists BOOLEAN;
+BEGIN
+    SELECT EXISTS(SELECT 1 FROM public.eo_profiles WHERE eo_id = target_eo_id) INTO v_exists;
+
+    IF NOT v_exists THEN
+        INSERT INTO public.eo_profiles (eo_id, eo_username, wa_quota, wa_messages_sent)
+        VALUES (target_eo_id, 'unknown_' || target_eo_id::TEXT, quota_amount, 0);
+    ELSE
+        UPDATE public.eo_profiles
+        SET wa_quota = wa_quota + quota_amount,
+            updated_at = NOW()
+        WHERE eo_id = target_eo_id;
+    END IF;
+
+    SELECT wa_quota INTO new_quota FROM public.eo_profiles WHERE eo_id = target_eo_id;
+
+    RETURN QUERY SELECT TRUE, new_quota, 'Kuota WA berhasil ditambahkan sebesar ' || quota_amount::TEXT || ' pesan.'::TEXT;
+END;
+$$;
+
+-- ====================================================================
+-- ATOMIC FUNCTION: Deduct WA Quota (called when bot sends message)
+-- ====================================================================
+CREATE OR REPLACE FUNCTION public.deduct_wa_quota(
+    target_eo_id UUID,
+    messages_count INT DEFAULT 1
+)
+RETURNS TABLE (
+    success BOOLEAN,
+    remaining_quota INTEGER,
+    total_sent INTEGER,
+    message TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_current_quota INT;
+    v_current_sent INT;
+BEGIN
+    SELECT wa_quota, wa_messages_sent INTO v_current_quota, v_current_sent
+    FROM public.eo_profiles
+    WHERE eo_id = target_eo_id
+    FOR UPDATE;
+
+    IF NOT FOUND OR v_current_quota < messages_count THEN
+        RETURN QUERY SELECT FALSE, COALESCE(v_current_quota, 0), COALESCE(v_current_sent, 0), 'KUOTA WA TIDAK CUKUP ATAU EO TIDAK DITEMUKAN'::TEXT;
+        RETURN;
+    END IF;
+
+    UPDATE public.eo_profiles
+    SET wa_quota = wa_quota - messages_count,
+        wa_messages_sent = wa_messages_sent + messages_count,
+        updated_at = NOW()
+    WHERE eo_id = target_eo_id;
+
+    SELECT wa_quota, wa_messages_sent INTO remaining_quota, total_sent
+    FROM public.eo_profiles WHERE eo_id = target_eo_id;
+
+    RETURN QUERY SELECT TRUE, remaining_quota, total_sent, 'Pesan terkirim, kuota terpotong.'::TEXT;
+END;
+$$;
+
+-- ====================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ====================================================================
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ticket_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.eo_profiles ENABLE ROW LEVEL SECURITY;
 
 -- 1. Events Policies
 CREATE POLICY "Public events are viewable by anyone" 
@@ -202,4 +298,18 @@ CREATE POLICY "EO and Gate staff can scan/update tickets"
             JOIN public.events e ON o.event_id = e.id
             WHERE o.id = tickets.order_id AND e.eo_id = auth.uid()
         )
+    );
+
+-- 5. EO Profiles Policies (WA Quota Management)
+CREATE POLICY "EO can view own profile and WA quota"
+    ON public.eo_profiles FOR SELECT USING (auth.uid() = eo_id);
+
+CREATE POLICY "Admin or service role can manage EO profiles WA quota"
+    ON public.eo_profiles FOR ALL USING (
+        auth.role() = 'service_role' OR
+        auth.jwt() ->> 'email' = 'admin@loktik.id'
+    )
+    WITH CHECK (
+        auth.role() = 'service_role' OR
+        auth.jwt() ->> 'email' = 'admin@loktik.id'
     );

@@ -30,6 +30,11 @@ export const EODashboard = () => {
     totalRevenue: 0,
   });
 
+  const [waStats, setWaStats] = useState({
+    wa_quota: 0,
+    wa_messages_sent: 0,
+  });
+
   const eoName = user?.name || user?.username || 'Panitia EO';
   const eoUsername = user?.username || user?.name || 'eo_lokal';
   const eoWa = user?.wa || '081234567890';
@@ -57,6 +62,23 @@ export const EODashboard = () => {
         totalOrders: `${totalTicketsSold} Tiket`,
         pendingOrders: `${pendingCount} Pesanan`,
         totalRevenue: totalRev,
+      });
+
+      let latestWaQuota = user?.wa_quota ?? 0;
+      let latestWaSent = user?.wa_messages_sent ?? 0;
+      try {
+        const savedAccs = JSON.parse(localStorage.getItem('loktik_eo_accounts') || '[]');
+        const matchedAcc = savedAccs.find(
+          a => (a.id && user?.id && a.id === user.id) || (a.name && user?.username && a.name.toLowerCase() === user.username.toLowerCase())
+        );
+        if (matchedAcc) {
+          latestWaQuota = matchedAcc.wa_quota ?? latestWaQuota;
+          latestWaSent = matchedAcc.wa_messages_sent ?? latestWaSent;
+        }
+      } catch (e) {}
+      setWaStats({
+        wa_quota: latestWaQuota,
+        wa_messages_sent: latestWaSent,
       });
     } catch (e) {
       console.warn('Gagal memuat ringkasan stats dashboard');
@@ -130,7 +152,21 @@ export const EODashboard = () => {
               <div className="flex items-center justify-between gap-1 text-[10px]">
                 <span className="text-neutral-500 font-bold uppercase shrink-0">PAKET:</span>
                 <span className="text-brand-blue font-black uppercase font-mono tracking-tight text-right truncate">
-                  {(user?.subscriptionPlan === '1_year' || user?.botAccessBonus || user?.role === 'admin') ? 'PRO (BOT WA)' : 'BASIC (MANUAL WA)'}
+                  {user?.subscriptionPlan === '6_months'
+                    ? '6 BULAN PRO'
+                    : user?.subscriptionPlan === '3_months'
+                    ? '3 BULAN REGULER'
+                    : user?.subscriptionPlan === 'test'
+                    ? 'TEST 1 HARI'
+                    : '1 BULAN BASIC'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-1 text-[10px] border-t border-neutral-800/80 pt-1.5">
+                <span className="text-neutral-500 font-bold uppercase shrink-0">BOT WA:</span>
+                <span className={`font-black uppercase font-mono text-right ${
+                  user?.botAccessBonus ? 'text-brand-green' : 'text-neutral-400'
+                }`}>
+                  {user?.botAccessBonus ? '✓ AKTIF (ADD-ON)' : 'ADD-ON (TERPISAH)'}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-1 text-[10px] border-t border-neutral-800/80 pt-1.5">
@@ -240,7 +276,7 @@ export const EODashboard = () => {
 
         {/* Overview Stats: Render ONLY on 'my-events' and 'orders' tabs */}
         {(activeTab === 'my-events' || activeTab === 'orders') && (
-          <OverviewStats stats={stats} />
+          <OverviewStats stats={stats} waStats={waStats} />
         )}
 
         {/* Dynamic Tab Body */}

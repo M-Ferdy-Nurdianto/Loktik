@@ -46,9 +46,9 @@ export const LandingPage = () => {
 
       {/* Running Text Marquee Banner */}
       <div className="w-full bg-[#121212] border-b border-neutral-800 py-2.5 overflow-hidden text-[11px] font-mono font-bold uppercase tracking-wider whitespace-nowrap">
-        <div className="animate-marquee flex items-center space-x-8">
-          {[1, 2, 3].map((key) => (
-            <div key={key} className="flex items-center space-x-6 shrink-0">
+        <div className="animate-marquee flex items-center">
+          {[1, 2].map((key) => (
+            <div key={key} className="flex items-center space-x-6 shrink-0 pr-6">
               <span className="inline-flex items-center gap-1.5 text-white bg-neutral-900 px-2 py-0.5 rounded border border-neutral-800">
                 <Flame className="w-3.5 h-3.5 text-brand-blue fill-brand-blue" />
                 <span className="text-brand-blue font-extrabold">LIVE TICKETING DIRECT</span>

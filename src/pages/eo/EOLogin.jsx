@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, UserCheck, KeyRound, Zap } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -40,27 +39,6 @@ export const EOLogin = () => {
     }
   };
 
-  const handleDirectLoginEO = async () => {
-    setIsLoggingIn(true);
-    const result = await login('eo_lokal', 'password123');
-    setIsLoggingIn(false);
-    if (result.success) navigate(result.redirectTo);
-  };
-
-  const handleDirectLoginAdmin = async () => {
-    setIsLoggingIn(true);
-    const result = await login('BroFerADM', 'FerADM');
-    setIsLoggingIn(false);
-    if (result.success) navigate(result.redirectTo);
-  };
-
-  const handleDirectLoginStaff = async () => {
-    setIsLoggingIn(true);
-    const result = await login('staf_gate1', '1234');
-    setIsLoggingIn(false);
-    if (result.success) navigate(result.redirectTo);
-  };
-
   return (
     <div className="max-w-md mx-auto px-4 py-10 text-left">
       <Card variant="dark" className="p-6 space-y-5 border-neutral-800 shadow-2xl">
@@ -68,42 +46,6 @@ export const EOLogin = () => {
           <Badge variant="blue">UNIFIED LOGIN AKUN LOKTIK</Badge>
           <h1 className="text-2xl font-black uppercase text-white tracking-tight">MASUK AKUN</h1>
           <p className="text-xs text-neutral-400 font-medium">Masuk sebagai Admin Platform, Panitia EO, atau Akun Staf Gate.</p>
-        </div>
-
-        {/* 1-TAP INSTANT LOGIN BUTTONS FOR MOBILE */}
-        <div className="p-3 bg-neutral-900 border border-neutral-800 rounded-lg space-y-2">
-          <p className="text-[10px] font-black text-brand-blue uppercase tracking-wider flex items-center space-x-1">
-            <Zap className="w-3.5 h-3.5" />
-            <span>1-TAP INSTANT LOGIN HP:</span>
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={handleDirectLoginEO}
-              className="p-2 bg-brand-blue/20 border border-brand-blue text-white rounded text-[10px] font-black uppercase hover:bg-brand-blue hover:text-black transition-all text-center space-y-0.5"
-            >
-              <div>LOGIN EO</div>
-              <div className="text-[8px] font-mono font-normal opacity-80 text-brand-yellow truncate">eo_lokal / pass</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleDirectLoginAdmin}
-              className="p-2 bg-brand-blue/20 border border-brand-blue text-white rounded text-[10px] font-black uppercase hover:bg-brand-blue hover:text-black transition-all text-center space-y-0.5"
-            >
-              <div>LOGIN ADMIN</div>
-              <div className="text-[8px] font-mono font-normal opacity-80 text-brand-yellow truncate">BroFerADM</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleDirectLoginStaff}
-              className="p-2 bg-brand-purple/20 border border-brand-purple text-white rounded text-[10px] font-black uppercase hover:bg-brand-purple hover:text-white transition-all text-center space-y-0.5"
-            >
-              <div>STAF GATE</div>
-              <div className="text-[8px] font-mono font-normal opacity-80 text-brand-purple truncate">staf_gate1 / 1234</div>
-            </button>
-          </div>
         </div>
 
         {/* LOGIN MODE TAB SELECTOR */}

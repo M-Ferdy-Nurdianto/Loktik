@@ -115,6 +115,8 @@ export const useAuth = () => {
         subscriptionStatus: matchedEo.status,
         botAccessBonus: Boolean(matchedEo.botAccessBonus),
         expiresAt: matchedEo.expiresAt || matchedEo.subscriptionExpiresAt || null,
+        wa_quota: matchedEo.wa_quota ?? 0,
+        wa_messages_sent: matchedEo.wa_messages_sent ?? 0,
         loggedInAt: new Date().toISOString(),
       };
       localStorage.setItem('loktik_user_session', JSON.stringify(eoUserData));
