@@ -46,16 +46,16 @@ export const ForEO = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 py-4 sm:py-8 items-center border-b border-neutral-900">
         <div className="lg:col-span-7 space-y-5">
           <Badge variant="blue" className="text-[10px] px-3 py-1 font-mono uppercase tracking-widest">
-            0% KOMISI • PLATFORM DIRECT TRANSFER
+            TANPA KOMISI, TANPA POTONGAN, TANPA RIBET ADMIN
           </Badge>
           <h1 className="text-3xl sm:text-6xl font-black uppercase tracking-tighter text-white leading-none">
-            ABOUT LOK<span className="text-brand-blue">TIK</span>
+            EVENT KAMU, DANA KAMU, <span className="text-brand-blue">KENDALI KAMU</span>
           </h1>
           <p className="text-base sm:text-lg text-neutral-300 font-semibold leading-relaxed uppercase">
-            Platform e-ticketing mandiri zine-style untuk konser, festival, bazar, dan acara komunitas Anda.
+            Dari konser, fest idol, fest cosplay, sampai bazar &amp; seminar — LokTik bantu EO jualan tiket direct, tanpa perantara, tanpa drama pencairan dana.
           </p>
           <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed max-w-xl">
-            Dana tiket langsung dikirim pembeli ke rekening bank atau QRIS panitia secara real-time. LokTik tidak memotong, mengendapkan, atau menahan dana Anda sepeser pun.
+            Nggak ada dana yang mengendap di sistem. Begitu pembeli bayar, dana langsung sampai ke rekening atau QRIS panitia, real-time.
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
             <Button variant="blue" size="lg" onClick={() => document.getElementById('pricing-plans')?.scrollIntoView({ behavior: 'smooth' })} className="px-6 font-black uppercase text-xs">
@@ -98,7 +98,7 @@ export const ForEO = () => {
       <div className="space-y-6">
         <div className="text-center space-y-1.5">
           <span className="text-[10px] font-black text-brand-blue tracking-widest uppercase">KENAPA BIKIN EVENT DI LOKTIK?</span>
-          <h2 className="text-2xl sm:text-3xl font-black uppercase text-white tracking-tight">PLATFORM TERDEPAN UNTUK EVENT MANDIRI</h2>
+          <h2 className="text-2xl sm:text-3xl font-black uppercase text-white tracking-tight">DIBANGUN BUAT EVENT KOMUNITAS &amp; INDEPENDEN</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">

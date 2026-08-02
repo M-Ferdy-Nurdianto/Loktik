@@ -285,130 +285,159 @@ export const Scanner = ({ eventId }) => {
       </Card>
 
       {scanResult && createPortal(
-        <div className="fixed inset-0 z-[99999] w-screen h-screen bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-          <Card
-            variant="dark"
-            className={`w-full max-w-lg p-6 space-y-4 my-auto text-left shadow-[0_0_50px_rgba(0,0,0,0.9)] border-2 ${
+        <div className="fixed inset-0 z-[99999] w-screen h-screen bg-black/90 backdrop-blur-md flex items-end sm:items-center justify-center overflow-y-auto">
+          {/* Mobile: slide-up sheet. Desktop: centered card */}
+          <div
+            className={`w-full sm:max-w-lg sm:mx-4 sm:my-auto rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 space-y-4 shadow-[0_-10px_60px_rgba(0,0,0,0.8)] border-t-2 sm:border-2 ${
               scanResult.status === 'SUCCESS'
-                ? 'border-brand-green bg-[#0d170f]'
+                ? 'bg-[#0d170f] border-brand-green'
                 : scanResult.status === 'PENDING_CONFIRM'
-                ? 'border-brand-purple bg-[#140d21]'
-                : 'border-brand-red bg-[#1a0a0a]'
+                ? 'bg-[#140d21] border-brand-purple'
+                : 'bg-[#1a0a0a] border-brand-red'
             }`}
           >
-            <div className="flex justify-between items-center border-b border-neutral-800 pb-3">
-              <span className={`text-base font-black uppercase tracking-tight flex items-center gap-2 ${
-                scanResult.status === 'SUCCESS'
-                  ? 'text-brand-green'
-                  : scanResult.status === 'PENDING_CONFIRM'
-                  ? 'text-brand-purple'
-                  : 'text-brand-red'
+            {/* Header */}
+            <div className="flex justify-between items-center pb-3 border-b border-neutral-800">
+              <span className={`text-base font-black flex items-center gap-2 ${
+                scanResult.status === 'SUCCESS' ? 'text-brand-green'
+                : scanResult.status === 'PENDING_CONFIRM' ? 'text-brand-purple'
+                : 'text-brand-red'
               }`}>
-                {scanResult.status === 'SUCCESS' && <CheckCircle2 className="w-6 h-6 shrink-0" />}
-                {scanResult.status === 'PENDING_CONFIRM' && <ShieldCheck className="w-6 h-6 shrink-0" />}
-                {scanResult.status !== 'SUCCESS' && scanResult.status !== 'PENDING_CONFIRM' && <XCircle className="w-6 h-6 shrink-0" />}
-                
-                {scanResult.status === 'SUCCESS' && 'TIKET VALID — TIKET FISIK DISERAHKAN'}
-                {scanResult.status === 'PENDING_CONFIRM' && 'KONFIRMASI'}
-                {scanResult.status === 'ALREADY_SCANNED' && 'TIKET SUDAH TER-SCAN (DITOLAK)'}
-                {scanResult.status === 'FAILED' && 'TIKET INVALID (DITOLAK)'}
+                {scanResult.status === 'SUCCESS' && <CheckCircle2 className="w-5 h-5 shrink-0" />}
+                {scanResult.status === 'PENDING_CONFIRM' && <ShieldCheck className="w-5 h-5 shrink-0" />}
+                {scanResult.status !== 'SUCCESS' && scanResult.status !== 'PENDING_CONFIRM' && <XCircle className="w-5 h-5 shrink-0" />}
+                {scanResult.status === 'SUCCESS' && 'Tiket Berhasil Ditukar'}
+                {scanResult.status === 'PENDING_CONFIRM' && 'Konfirmasi Tiket'}
+                {scanResult.status === 'ALREADY_SCANNED' && 'Tiket Sudah Dipakai'}
+                {scanResult.status === 'FAILED' && 'Tiket Tidak Valid'}
               </span>
-              <Button variant="outline" size="sm" onClick={() => setScanResult(null)} className="text-xs">
-                TUTUP
-              </Button>
+              <button
+                onClick={() => setScanResult(null)}
+                className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition-colors"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
             </div>
 
-            <p className="text-sm font-black uppercase font-mono leading-snug">{scanResult.msg}</p>
+            {/* Sub-message */}
+            <p className="text-sm font-semibold font-mono leading-snug text-neutral-200">
+              {scanResult.status === 'PENDING_CONFIRM'
+                ? `Tiket valid, siap ditukar (${scanResult.progress || '1/1'})`
+                : scanResult.msg}
+            </p>
 
+            {/* Guest info card */}
             {scanResult.guest && (
-              <div className="bg-[#121212] text-white p-4 rounded border border-neutral-800 font-mono text-xs space-y-2">
-                <div className="flex justify-between items-center border-b border-neutral-800/80 pb-2">
-                  <span className="text-neutral-400 font-bold">NAMA PEMBELI:</span>
-                  <strong className="text-brand-yellow text-sm font-black uppercase">{scanResult.guest}</strong>
+              <div className="bg-black/50 rounded-xl border border-neutral-800 p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] text-neutral-400 font-medium">Nama Pembeli</span>
+                  <strong className="text-brand-yellow font-black text-sm">{scanResult.guest}</strong>
                 </div>
-                <div className="flex justify-between items-center border-b border-neutral-800/80 pb-2">
-                  <span className="text-neutral-400 font-bold">KATEGORI TIKET:</span>
-                  <strong className="text-brand-purple text-xs font-black uppercase">{scanResult.category}</strong>
+                <div className="flex justify-between items-center border-t border-neutral-800/60 pt-3">
+                  <span className="text-[11px] text-neutral-400 font-medium">Kategori Tiket</span>
+                  <strong className="text-brand-purple font-black text-xs">{scanResult.category}</strong>
                 </div>
                 {scanResult.progress && (
-                  <div className="flex justify-between items-center bg-brand-purple/15 border border-brand-purple/40 p-2 rounded text-xs">
-                    <span className="text-neutral-300 font-bold">STATUS PROGRES PENUKARAN:</span>
-                    <span className="font-black font-mono text-brand-purple bg-brand-purple/30 px-2 py-0.5 rounded border border-brand-purple/60">
-                      TIKET KE-{scanResult.progress}
+                  <div className="flex justify-between items-center bg-brand-purple/15 border border-brand-purple/40 px-3 py-2.5 rounded-lg border-t border-neutral-800/60 mt-1">
+                    <span className="text-[11px] text-neutral-300 font-medium">Progres Penukaran</span>
+                    <span className="font-black font-mono text-brand-purple bg-brand-purple/30 px-2.5 py-1 rounded-lg border border-brand-purple/60 text-xs">
+                      Tiket ke-{scanResult.progress}
                     </span>
                   </div>
                 )}
                 {scanResult.scannedAt && (
-                  <div className="flex justify-between items-center border-t border-neutral-800/80 pt-2">
-                    <span className="text-neutral-400 font-bold">WAKTU DI-SCAN:</span>
+                  <div className="flex justify-between items-center border-t border-neutral-800/60 pt-3">
+                    <span className="text-[11px] text-neutral-400 font-medium">Waktu Scan</span>
                     <strong className="text-brand-red text-xs font-black">{scanResult.scannedAt}</strong>
                   </div>
                 )}
               </div>
             )}
 
-            <div className="pt-2">
+            {/* Action button */}
+            <div className="pt-1">
               {scanResult.status === 'PENDING_CONFIRM' ? (
-                <Button
+                <button
                   onClick={handleConfirmRedeem}
                   disabled={redeeming}
-                  variant="purple"
-                  fullWidth
-                  className="py-4 text-xs font-black uppercase justify-center tracking-wider shadow-[0_0_20px_rgba(139,92,246,0.6)]"
+                  className="w-full bg-brand-purple hover:bg-brand-purple/80 disabled:opacity-60 text-white font-black rounded-xl py-4 text-sm transition-colors shadow-[0_0_20px_rgba(139,92,246,0.5)] flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
                   {redeeming ? (
-                    <span className="flex items-center justify-center">
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin text-white" />
-                      MEMPROSES REDEEM...
-                    </span>
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Memproses...
+                    </>
                   ) : (
-                    'KONFIRMASI TIKET'
+                    'Konfirmasi & Serahkan Tiket'
                   )}
-                </Button>
+                </button>
               ) : (
-                <Button
+                <button
                   onClick={() => setScanResult(null)}
-                  variant="outline"
-                  fullWidth
-                  className="py-3 text-xs font-black uppercase justify-center"
+                  className="w-full bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl py-4 text-sm transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
-                  TUTUP &amp; SCAN TIKET SELANJUTNYA
-                </Button>
+                  Tutup & Scan Berikutnya
+                </button>
               )}
             </div>
-          </Card>
+          </div>
         </div>,
         document.body
       )}
 
       <Card variant="dark" className="p-4 sm:p-5 border-neutral-800 space-y-4 text-left">
-        {/* Top: Fast Manual Code Input Form */}
+
+        {/* ── INPUT MANUAL — dedicated mobile markup ── */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
             if (manualCode) processCode(manualCode);
           }}
-          className="space-y-2 p-3.5 bg-neutral-950 rounded-xl border border-neutral-800 shadow-inner"
         >
-          <div className="flex justify-between items-center">
-            <label className="text-[10px] font-black uppercase text-brand-purple tracking-wider flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-brand-purple fill-brand-purple" />
-              <span>INPUT KODE TIKET MANUAL (TANPA SCAN):</span>
-            </label>
-            <span className="text-[9px] font-mono text-neutral-500 font-bold">FASTER GATE</span>
+          {/* Mobile layout */}
+          <div className="block sm:hidden bg-neutral-950 rounded-xl border border-neutral-800 p-3 space-y-2.5">
+            <p className="text-[11px] font-bold text-brand-purple flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 fill-brand-purple" />
+              Input Manual
+            </p>
+            <div className="flex gap-2 items-stretch">
+              <input
+                type="text"
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+                placeholder="Kode tiket (misal: GM1972)"
+                autoCapitalize="characters"
+                className="flex-1 min-w-0 bg-[#121212] border border-neutral-700 rounded-lg px-3 py-3 font-mono font-black text-base text-white uppercase focus:outline-none focus:border-brand-purple"
+              />
+              <button
+                type="submit"
+                className="shrink-0 bg-brand-purple text-white font-black text-sm rounded-lg px-5 py-3 active:scale-95 transition-transform"
+              >
+                Verif
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full">
-            <input
-              type="text"
-              value={manualCode}
-              onChange={(e) => setManualCode(e.target.value)}
-              placeholder="Masukkan Kode Tiket"
-              className="flex-1 bg-[#121212] border border-neutral-800 rounded-lg px-4 py-3 font-mono font-black text-sm text-white uppercase focus:outline-none focus:border-brand-purple"
-            />
-            <Button type="submit" variant="purple" className="text-xs font-black uppercase px-5 shrink-0 py-3">
-              VERIF
-            </Button>
+          {/* Desktop layout */}
+          <div className="hidden sm:block bg-neutral-950 rounded-xl border border-neutral-800 p-3.5 space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-black uppercase text-brand-purple tracking-wider flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-brand-purple fill-brand-purple" />
+                Input Manual
+              </label>
+            </div>
+            <div className="flex items-center gap-2 w-full">
+              <input
+                type="text"
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+                placeholder="Masukkan Kode Tiket"
+                className="flex-1 bg-[#121212] border border-neutral-800 rounded-lg px-4 py-3 font-mono font-black text-sm text-white uppercase focus:outline-none focus:border-brand-purple"
+              />
+              <Button type="submit" variant="purple" className="text-xs font-black uppercase px-5 shrink-0 py-3">
+                VERIF
+              </Button>
+            </div>
           </div>
         </form>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { QrCode, Users, Ticket, ShieldCheck, LogOut, UserCheck, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { QrCode, Users, Ticket, LogOut, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { getEventBySlug } from '../../services/apiEvents';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,7 +8,6 @@ import { GatePinLock } from './GatePinLock';
 import { Scanner } from './Scanner';
 import { GuestList } from './GuestList';
 import { OtsCashier } from './OtsCashier';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';
 
@@ -138,28 +137,54 @@ export const GatePortal = () => {
   const gridColsClass = allowedTabsCount === 3 ? 'grid-cols-3' : allowedTabsCount === 2 ? 'grid-cols-2' : 'grid-cols-1';
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-brand-purple selection:text-white p-4 sm:p-8 space-y-5 w-full max-w-7xl mx-auto text-left">
-      {/* STREETWEAR HEADER BAR */}
-      <div className="bg-[#121212] p-4 rounded border border-neutral-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <Badge variant="purple" className="text-[9px] px-1.5 py-0 flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" />
-              <span>POS GATE VENUE</span>
-            </Badge>
-            <Badge variant="purple" className="text-[9px] px-1.5 py-0">● GATE ONLINE</Badge>
-            {user?.name && (
-              <span className="text-xs font-mono text-brand-purple font-bold flex items-center gap-1">
-                <UserCheck className="w-3.5 h-3.5" /> {user.name} ({user.role?.toUpperCase()})
-              </span>
-            )}
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-brand-purple selection:text-white w-full max-w-7xl mx-auto text-left">
+
+      {/* ── MOBILE HEADER (dedicated, phone-first) ── */}
+      <div className="block sm:hidden bg-[#0f0f0f] border-b border-neutral-800 px-4 py-3">
+        {/* Row 1: event name + logout */}
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-xl font-black uppercase tracking-tight text-white leading-none truncate">
             {event.name}
           </h1>
+          <button
+            type="button"
+            onClick={handleGateLogout}
+            className="shrink-0 flex items-center gap-1 text-[11px] font-bold text-brand-red border border-brand-red/30 rounded-lg px-2.5 py-1.5 bg-brand-red/10 active:bg-brand-red/20"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Keluar
+          </button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        {/* Row 2: panduan + nama staf kecil */}
+        <div className="flex items-center justify-between mt-2">
+          <button
+            type="button"
+            onClick={() => setShowGuide(!showGuide)}
+            className="flex items-center gap-1 text-[11px] font-bold text-brand-purple"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            {showGuide ? 'Tutup Panduan' : 'Panduan Staf'}
+          </button>
+          {user?.name && (
+            <span className="text-[10px] font-mono text-neutral-500 truncate max-w-[140px]">
+              {user.name}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── DESKTOP HEADER ── */}
+      <div className="hidden sm:flex bg-[#121212] p-4 sm:p-5 border-b border-neutral-800 items-center justify-between gap-3 sm:rounded-t">
+        <div className="space-y-0.5">
+          <h1 className="text-2xl font-black uppercase tracking-tight text-white leading-none">
+            {event.name}
+          </h1>
+          {user?.name && (
+            <p className="text-[11px] font-mono text-neutral-500">{user.name}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -167,10 +192,9 @@ export const GatePortal = () => {
             className="text-brand-purple hover:bg-brand-purple/10 border-brand-purple/40 text-xs font-black uppercase"
           >
             <HelpCircle className="w-3.5 h-3.5 mr-1" />
-            <span>PANDUAN STAF</span>
+            <span>PANDUAN</span>
             {showGuide ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />}
           </Button>
-
           <Button variant="outline" size="sm" onClick={handleGateLogout} className="text-brand-red hover:bg-brand-red/10 border-brand-red/30 text-xs font-bold uppercase">
             <LogOut className="w-4 h-4 mr-1.5" />
             <span>KELUAR GATE</span>
@@ -178,84 +202,82 @@ export const GatePortal = () => {
         </div>
       </div>
 
-      {/* EXPANDABLE 1-TAP QUICK OPERATIONAL GUIDE FOR STAFF */}
+      {/* EXPANDABLE QUICK GUIDE */}
       {showGuide && (
-        <div className="bg-[#121212] p-4 rounded-xl border border-brand-purple/40 space-y-2 text-xs text-neutral-300 shadow-[0_0_30px_rgba(139,92,246,0.15)]">
+        <div className="mx-4 sm:mx-0 mt-3 bg-[#121212] p-4 rounded-xl border border-brand-purple/40 space-y-2 text-xs text-neutral-300 shadow-[0_0_30px_rgba(139,92,246,0.15)]">
           <div className="flex items-center space-x-2 border-b border-neutral-800 pb-2">
             <HelpCircle className="w-4 h-4 text-brand-purple shrink-0" />
-            <h3 className="font-black text-white uppercase tracking-wider">PANDUAN CEPAT OPERASIONAL STAF GATE VENUE</h3>
+            <h3 className="font-black text-white uppercase tracking-wider text-[11px]">Panduan Cepat Gate</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-medium pt-1">
             <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
-              <p className="font-black text-brand-purple uppercase">1. INPUT MANUALLY (PALING CEPAT):</p>
-              <p className="text-neutral-400">Ketik Kode Tiket (misal <span className="font-mono text-white">GM1972</span>) di kolom paling atas lalu tekan Enter/Verifikasi.</p>
+              <p className="font-black text-brand-purple uppercase text-[10px]">1. Input Manual (Tercepat)</p>
+              <p className="text-neutral-400">Ketik kode tiket (contoh: <span className="font-mono text-white">GM1972</span>) lalu tekan Enter.</p>
             </div>
             <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
-              <p className="font-black text-brand-purple uppercase">2. PROGRES PENUKARAN (1/3, 2/3):</p>
-              <p className="text-neutral-400">Perhatikan teks progres. Serahkan 1 Tiket Fisik tiap kali konfirmasi penukaran berhasil.</p>
+              <p className="font-black text-brand-purple uppercase text-[10px]">2. Progres Penukaran (1/3, 2/3)</p>
+              <p className="text-neutral-400">Serahkan 1 tiket fisik tiap kali konfirmasi berhasil.</p>
             </div>
             <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
-              <p className="font-black text-brand-purple uppercase">3. LUPA KODE / HP MATI (GUEST LIST):</p>
-              <p className="text-neutral-400">Buka tab <span className="font-bold text-white">GUEST LIST</span> ➔ Ketik Nama Pembeli ➔ Klik tombol <span className="font-bold text-brand-green">CHECK-IN</span>.</p>
+              <p className="font-black text-brand-purple uppercase text-[10px]">3. HP Mati / Lupa Kode</p>
+              <p className="text-neutral-400">Buka tab <span className="font-bold text-white">GUEST LIST</span> → cari nama → klik <span className="font-bold text-brand-green">CHECK-IN</span>.</p>
             </div>
             <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
-              <p className="font-black text-brand-purple uppercase">4. PEMBELIAN VENUE (KASIR OTS):</p>
-              <p className="text-neutral-400">Buka tab <span className="font-bold text-white">KASIR OTS</span> untuk melayani pengunjung yang beli langsung di venue.</p>
+              <p className="font-black text-brand-purple uppercase text-[10px]">4. Beli di Venue</p>
+              <p className="text-neutral-400">Buka tab <span className="font-bold text-white">KASIR OTS</span> untuk pembelian langsung di venue.</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* DYNAMIC TAB NAVIGATION BASED ON STAFF PERMISSIONS */}
-      <div className={`grid ${gridColsClass} gap-2 sm:gap-3`}>
+      {/* TAB NAVIGATION */}
+      <div className={`grid ${gridColsClass} gap-2 px-4 sm:px-0 mt-3`}>
         {permissions.canScan && (
           <button
             type="button"
             onClick={() => setActiveTab('scanner')}
-            className={`py-3 px-2 font-black text-xs sm:text-sm uppercase rounded transition-all flex items-center justify-center space-x-2 cursor-pointer ${
+            className={`py-3 px-2 font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center space-x-2 cursor-pointer ${
               activeTab === 'scanner'
                 ? 'bg-brand-purple text-white border border-brand-purple shadow-[0_0_15px_rgba(139,92,246,0.5)]'
                 : 'bg-[#121212] text-neutral-400 border border-neutral-800 hover:text-white hover:bg-neutral-900'
             }`}
           >
-            <QrCode className="w-4 h-4" />
-            <span>1. SCANNER</span>
+            <QrCode className="w-4 h-4 shrink-0" />
+            <span>Scanner</span>
           </button>
         )}
-
         {permissions.canViewOrders && (
           <button
             type="button"
             onClick={() => setActiveTab('guest-list')}
-            className={`py-3 px-2 font-black text-xs sm:text-sm uppercase rounded transition-all flex items-center justify-center space-x-2 cursor-pointer ${
+            className={`py-3 px-2 font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center space-x-2 cursor-pointer ${
               activeTab === 'guest-list'
                 ? 'bg-brand-purple text-white border border-brand-purple shadow-[0_0_15px_rgba(139,92,246,0.5)]'
                 : 'bg-[#121212] text-neutral-400 border border-neutral-800 hover:text-white hover:bg-neutral-900'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>2. GUEST LIST</span>
+            <Users className="w-4 h-4 shrink-0" />
+            <span>Guest List</span>
           </button>
         )}
-
         {permissions.canOts && (
           <button
             type="button"
             onClick={() => setActiveTab('ots')}
-            className={`py-3 px-2 font-black text-xs sm:text-sm uppercase rounded transition-all flex items-center justify-center space-x-2 cursor-pointer ${
+            className={`py-3 px-2 font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center space-x-2 cursor-pointer ${
               activeTab === 'ots'
                 ? 'bg-brand-purple text-white border border-brand-purple shadow-[0_0_15px_rgba(139,92,246,0.5)]'
                 : 'bg-[#121212] text-neutral-400 border border-neutral-800 hover:text-white hover:bg-neutral-900'
             }`}
           >
-            <Ticket className="w-4 h-4" />
-            <span>3. KASIR OTS</span>
+            <Ticket className="w-4 h-4 shrink-0" />
+            <span>Kasir OTS</span>
           </button>
         )}
       </div>
 
       {/* ACTIVE GATE VIEW */}
-      <div>
+      <div className="px-4 sm:px-0 mt-3 pb-8">
         {activeTab === 'scanner' && permissions.canScan && <Scanner eventId={event.id} eventName={event.name} />}
         {activeTab === 'guest-list' && permissions.canViewOrders && <GuestList eventId={event.id} />}
         {activeTab === 'ots' && permissions.canOts && <OtsCashier eventId={event.id} />}

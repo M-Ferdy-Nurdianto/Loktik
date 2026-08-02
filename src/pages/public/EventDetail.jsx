@@ -43,13 +43,16 @@ export const EventDetail = () => {
 
   const eventUrl = `${window.location.origin}/event/${slug}`;
 
+  // Teks share yang spesifik ke tiket event ini
+  const shareTitle = event?.name || 'Event';
+  const shareText = `🎟️ *${shareTitle}*\n\nBeli tiket sekarang sebelum habis!\n📅 ${event?.event_date ? new Date(event.event_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : ''}\n\n👉 Link tiket:`;
+
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(eventUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // fallback
       const el = document.createElement('textarea');
       el.value = eventUrl;
       document.body.appendChild(el);
@@ -63,21 +66,32 @@ export const EventDetail = () => {
   };
 
   const handleShareIG = () => {
-    // Copy link dulu lalu buka Instagram (tidak ada deep link langsung ke story, tapi kita copy dulu)
-    navigator.clipboard.writeText(eventUrl).catch(() => {});
-    window.open('https://www.instagram.com/', '_blank');
+    // Instagram tidak punya deep link share URL, copy link tiket dulu baru buka IG
+    navigator.clipboard.writeText(`${shareText}\n${eventUrl}`).catch(() => {});
     setShowShareMenu(false);
+    // Beri jeda singkat supaya clipboard ter-set sebelum tab baru terbuka
+    setTimeout(() => window.open('https://www.instagram.com/', '_blank'), 150);
   };
 
   const handleShareWA = () => {
-    const text = encodeURIComponent(`Beli tiket *${event.name}* di sini:\n${eventUrl}`);
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    const fullText = encodeURIComponent(`${shareText}\n${eventUrl}`);
+    window.open(`https://wa.me/?text=${fullText}`, '_blank');
+    setShowShareMenu(false);
+  };
+
+  const handleShareTwitter = () => {
+    const text = encodeURIComponent(`🎟️ ${shareTitle} — beli tiket sekarang!\n${eventUrl}`);
+    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
     setShowShareMenu(false);
   };
 
   const handleNativeShare = () => {
     if (navigator.share) {
-      navigator.share({ title: event.name, url: eventUrl });
+      navigator.share({
+        title: shareTitle,
+        text: `🎟️ Beli tiket ${shareTitle} — sebelum habis!`,
+        url: eventUrl,
+      });
     } else {
       setShowShareMenu((v) => !v);
     }
@@ -112,35 +126,67 @@ export const EventDetail = () => {
           <div className="relative shrink-0">
             <button
               onClick={handleNativeShare}
-              className="flex items-center gap-1.5 px-3 py-2 bg-neutral-900 border border-neutral-700 hover:border-brand-blue text-neutral-300 hover:text-white rounded-lg text-xs font-bold uppercase transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 bg-brand-blue/10 border border-brand-blue/50 hover:bg-brand-blue hover:text-black text-brand-blue rounded-lg text-xs font-black uppercase transition-all duration-150 shadow-[0_0_12px_rgba(6,182,212,0.2)] hover:shadow-[0_0_18px_rgba(6,182,212,0.45)]"
             >
               <Share2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">SHARE</span>
+              <span>SHARE TIKET</span>
             </button>
 
             {/* Dropdown share menu (fallback jika native share tidak tersedia) */}
             {showShareMenu && (
-              <div className="absolute right-0 top-full mt-1.5 z-50 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl overflow-hidden w-44">
-                <button
-                  onClick={handleShareIG}
-                  className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 transition-colors border-b border-neutral-800"
-                >
-                  <span className="text-base">📸</span> Bagikan ke Instagram
-                </button>
-                <button
-                  onClick={handleShareWA}
-                  className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 transition-colors border-b border-neutral-800"
-                >
-                  <span className="text-base">💬</span> Bagikan ke WhatsApp
-                </button>
-                <button
-                  onClick={handleCopyLink}
-                  className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 transition-colors"
-                >
-                  {copied ? <Check className="w-4 h-4 text-brand-green" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'Link Tersalin!' : 'Salin Link'}
-                </button>
-              </div>
+              <>
+                {/* overlay transparan untuk tutup menu klik di luar */}
+                <div className="fixed inset-0 z-40" onClick={() => setShowShareMenu(false)} />
+                <div className="absolute right-0 top-full mt-1.5 z-50 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl overflow-hidden w-52">
+                  <div className="px-4 py-2 border-b border-neutral-800">
+                    <p className="text-[9px] font-black uppercase text-neutral-500 tracking-widest">BAGIKAN TIKET EVENT INI</p>
+                  </div>
+                  <button
+                    onClick={handleShareIG}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 transition-colors border-b border-neutral-800/60"
+                  >
+                    <span className="text-lg leading-none">📸</span>
+                    <div className="text-left">
+                      <p className="font-black">Instagram</p>
+                      <p className="text-[10px] text-neutral-500 font-medium">Salin teks + buka IG</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={handleShareWA}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 transition-colors border-b border-neutral-800/60"
+                  >
+                    <span className="text-lg leading-none">💬</span>
+                    <div className="text-left">
+                      <p className="font-black">WhatsApp</p>
+                      <p className="text-[10px] text-neutral-500 font-medium">Kirim ke kontak / grup</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={handleShareTwitter}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 transition-colors border-b border-neutral-800/60"
+                  >
+                    <span className="text-lg leading-none">🐦</span>
+                    <div className="text-left">
+                      <p className="font-black">Twitter / X</p>
+                      <p className="text-[10px] text-neutral-500 font-medium">Post tweet tiket</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={handleCopyLink}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 transition-colors"
+                  >
+                    {copied
+                      ? <Check className="w-4 h-4 text-brand-green shrink-0" />
+                      : <Copy className="w-4 h-4 shrink-0" />}
+                    <div className="text-left">
+                      <p className={`font-black ${copied ? 'text-brand-green' : ''}`}>
+                        {copied ? 'Link Tersalin!' : 'Salin Link Tiket'}
+                      </p>
+                      <p className="text-[10px] text-neutral-500 font-medium">Copy URL halaman ini</p>
+                    </div>
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>

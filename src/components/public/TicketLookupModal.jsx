@@ -56,22 +56,156 @@ export const TicketLookupModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleDownloadQr = async (prettyCode, qrImageUrl) => {
+  const handleDownloadQr = async (prettyCode, qrImageUrl, guestName, eventName, totalPrice) => {
     try {
-      const resp = await fetch(qrImageUrl);
-      const blob = await resp.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Muat QR image dulu
+      const qrImg = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = qrImageUrl;
+      });
+
+      // Buat canvas tiket lengkap (sama persis dengan info yang dikirim via WA)
+      const W = 600;
+      const H = 780;
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+
+      // Background
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, 0, W, H);
+
+      // Border card
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(12, 12, W - 24, H - 24);
+
+      // Header bar
+      ctx.fillStyle = '#7c3aed';
+      ctx.fillRect(12, 12, W - 24, 56);
+
+      // Logo teks kiri
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px monospace';
+      ctx.fillText('LOKTIK', 30, 50);
+
+      // Label kanan
+      ctx.fillStyle = '#d8b4fe';
+      ctx.font = 'bold 13px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText('E-TICKET', W - 30, 50);
+      ctx.textAlign = 'left';
+
+      // Nama event
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 26px sans-serif';
+      const eventLines = wrapText(ctx, eventName.toUpperCase(), W - 60, 30);
+      let y = 105;
+      eventLines.forEach((line) => {
+        ctx.fillText(line, 30, y);
+        y += 34;
+      });
+
+      // Divider
+      ctx.strokeStyle = '#374151';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(30, y + 10);
+      ctx.lineTo(W - 30, y + 10);
+      ctx.stroke();
+      y += 30;
+
+      // Nama pembeli
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('NAMA PEMBELI', 30, y);
+      y += 22;
+      ctx.fillStyle = '#fde68a';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText(guestName.toUpperCase(), 30, y);
+      y += 36;
+
+      // Total bayar
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('TOTAL BAYAR', 30, y);
+      y += 22;
+      ctx.fillStyle = '#34d399';
+      ctx.font = 'bold 16px monospace';
+      ctx.fillText(`Rp ${Number(totalPrice).toLocaleString('id-ID')}`, 30, y);
+      y += 36;
+
+      // Status
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('STATUS', 30, y);
+      y += 22;
+      ctx.fillStyle = '#34d399';
+      ctx.font = 'bold 15px monospace';
+      ctx.fillText('LUNAS — AKTIF', 30, y);
+      y += 36;
+
+      // QR Code (center)
+      const qrSize = 200;
+      const qrX = (W - qrSize) / 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(qrX - 8, y - 8, qrSize + 16, qrSize + 16);
+      ctx.drawImage(qrImg, qrX, y, qrSize, qrSize);
+      y += qrSize + 24;
+
+      // Kode tiket
+      ctx.fillStyle = '#c4b5fd';
+      ctx.font = 'bold 22px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(prettyCode, W / 2, y);
+      ctx.textAlign = 'left';
+      y += 26;
+
+      // Instruksi kecil
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Tunjukkan QR ini ke staf gate saat penukaran tiket fisik', W / 2, y);
+      y += 20;
+      ctx.fillStyle = '#374151';
+      ctx.font = '11px monospace';
+      ctx.fillText('loktik.vercel.app', W / 2, y);
+      ctx.textAlign = 'left';
+
+      // Download
+      const dataUrl = canvas.toDataURL('image/png');
       const a = document.createElement('a');
-      a.href = url;
+      a.href = dataUrl;
       a.download = `E-TICKET_${prettyCode}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      showToast(`E-Tiket ${prettyCode} berhasil diunduh ke galeri!`, 'buyer');
+      showToast(`E-Tiket ${prettyCode} berhasil diunduh!`, 'buyer');
     } catch (err) {
-      showToast('Gagal mengunduh gambar e-tiket.', 'buyer');
+      showToast('Gagal mengunduh tiket.', 'buyer');
     }
+  };
+
+  // Helper: wrap teks panjang di canvas
+  const wrapText = (ctx, text, maxWidth, fontSize) => {
+    const words = text.split(' ');
+    const lines = [];
+    let current = '';
+    for (const word of words) {
+      const test = current ? `${current} ${word}` : word;
+      if (ctx.measureText(test).width > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
   };
 
   return createPortal(
@@ -178,25 +312,25 @@ export const TicketLookupModal = ({ isOpen, onClose }) => {
 
                     {/* Details & Actions */}
                     <div className="flex-1 text-xs space-y-2 w-full">
-                      <div className="flex items-center justify-between">
+                      {/* Kode tiket + Download button */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div className="flex items-center space-x-2">
-                          <span className="text-neutral-400 font-bold">KODE TIKET:</span>
+                          <span className="text-neutral-400 font-bold text-[11px]">KODE TIKET:</span>
                           <span className="font-mono font-black text-brand-blue text-sm bg-neutral-900 px-2 py-0.5 rounded border border-brand-blue/30 flex items-center gap-1">
                             <Key className="w-3.5 h-3.5 text-brand-blue" /> {prettyCode}
                           </span>
                         </div>
 
-                        {/* Download E-Ticket Button for Active Unscanned Tickets */}
                         {isPaid && !isScanned && (
                           <Button
                             type="button"
                             variant="blue"
-                            size="sm"
-                            onClick={() => handleDownloadQr(prettyCode, qrImageUrl)}
-                            className="text-[10px] font-black uppercase py-1 px-3 flex items-center space-x-1.5"
+                            size="md"
+                            onClick={() => handleDownloadQr(prettyCode, qrImageUrl, ord.guest_name, eventName, ord.total_price)}
+                            className="text-xs font-black uppercase py-2 px-4 flex items-center gap-1.5 w-full sm:w-auto justify-center"
                           >
-                            <Download className="w-3 h-3" />
-                            <span>DOWNLOAD TIKET</span>
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download Tiket</span>
                           </Button>
                         )}
                       </div>
