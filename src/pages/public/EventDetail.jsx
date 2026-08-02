@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Plus, Minus, MapPin, ShieldCheck, ExternalLink, CheckCircle2, QrCode } from 'lucide-react';
+import { Calendar, Clock, Plus, Minus, MapPin, ShieldCheck, ExternalLink, CheckCircle2, QrCode, Share2, Copy, Check } from 'lucide-react';
 import { useEventDetail } from '../../hooks/useEvents';
 import { useCart } from '../../hooks/useCart';
 import { Card } from '../../components/ui/Card';
@@ -13,6 +13,9 @@ export const EventDetail = () => {
   const navigate = useNavigate();
   const { event, loading, error } = useEventDetail(slug);
   const { quantities, updateQuantity, calculateTotal } = useCart();
+
+  const [copied, setCopied] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
 
   if (loading) {
     return (
@@ -38,6 +41,48 @@ export const EventDetail = () => {
 
   const { totalAmount, totalItems, selectedItems } = calculateTotal(event.ticket_categories || []);
 
+  const eventUrl = `${window.location.origin}/event/${slug}`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(eventUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback
+      const el = document.createElement('textarea');
+      el.value = eventUrl;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+    setShowShareMenu(false);
+  };
+
+  const handleShareIG = () => {
+    // Copy link dulu lalu buka Instagram (tidak ada deep link langsung ke story, tapi kita copy dulu)
+    navigator.clipboard.writeText(eventUrl).catch(() => {});
+    window.open('https://www.instagram.com/', '_blank');
+    setShowShareMenu(false);
+  };
+
+  const handleShareWA = () => {
+    const text = encodeURIComponent(`Beli tiket *${event.name}* di sini:\n${eventUrl}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+    setShowShareMenu(false);
+  };
+
+  const handleNativeShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: event.name, url: eventUrl });
+    } else {
+      setShowShareMenu((v) => !v);
+    }
+  };
+
   const handleProceedCheckout = () => {
     if (totalItems === 0) return;
     const checkoutData = { event, selectedItems, items: selectedItems, totalAmount, totalItems };
@@ -58,10 +103,48 @@ export const EventDetail = () => {
       
       {/* 1. Header Section: Title & Metadata (Full Width) */}
       <div className="border-b border-neutral-800 pb-4 space-y-3">
-        <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-white leading-tight">
-          {event.name}
-        </h1>
-        
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-tight text-white leading-tight">
+            {event.name}
+          </h1>
+
+          {/* Share Button */}
+          <div className="relative shrink-0">
+            <button
+              onClick={handleNativeShare}
+              className="flex items-center gap-1.5 px-3 py-2 bg-neutral-900 border border-neutral-700 hover:border-brand-blue text-neutral-300 hover:text-white rounded-lg text-xs font-bold uppercase transition-colors"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">SHARE</span>
+            </button>
+
+            {/* Dropdown share menu (fallback jika native share tidak tersedia) */}
+            {showShareMenu && (
+              <div className="absolute right-0 top-full mt-1.5 z-50 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl overflow-hidden w-44">
+                <button
+                  onClick={handleShareIG}
+                  className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 transition-colors border-b border-neutral-800"
+                >
+                  <span className="text-base">📸</span> Bagikan ke Instagram
+                </button>
+                <button
+                  onClick={handleShareWA}
+                  className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 transition-colors border-b border-neutral-800"
+                >
+                  <span className="text-base">💬</span> Bagikan ke WhatsApp
+                </button>
+                <button
+                  onClick={handleCopyLink}
+                  className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-bold text-white hover:bg-neutral-800 transition-colors"
+                >
+                  {copied ? <Check className="w-4 h-4 text-brand-green" /> : <Copy className="w-4 h-4" />}
+                  {copied ? 'Link Tersalin!' : 'Salin Link'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="flex flex-wrap items-center gap-y-2.5 gap-x-5 text-xs font-mono uppercase text-neutral-400 font-bold">
           <div className="flex items-center space-x-1.5">
             <Calendar className="w-4 h-4 text-brand-blue" />
@@ -77,9 +160,10 @@ export const EventDetail = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-1.5 text-brand-blue hover:text-white transition-colors"
+              title={event.location}
             >
               <MapPin className="w-4 h-4" />
-              <span className="uppercase">{event.location}</span>
+              <span className="text-brand-blue">LIHAT LOKASI</span>
             </a>
           )}
         </div>

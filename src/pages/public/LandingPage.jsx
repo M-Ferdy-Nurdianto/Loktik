@@ -68,16 +68,16 @@ export const LandingPage = () => {
       <section className="relative pt-6 pb-12 sm:pb-16 border-b border-neutral-800 bg-[#0d0d0d]">
         <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-5 text-center relative z-10">
           <Badge variant="blue" className="py-1 px-3 text-xs tracking-widest font-black uppercase">
-            PLATFORM TIKET EVENT LOKAL &amp; KOMUNITAS
+            PLATFORM TIKET RESMI EVENT LOKAL &amp; KOMUNITAS
           </Badge>
 
           <h1 className="text-3xl sm:text-6xl md:text-7xl font-black tracking-tighter uppercase leading-[0.95] text-white max-w-4xl mx-auto">
-            AMBIL TIKET EVENT <br />
-            <span className="text-brand-blue">INDEPENDEN FAVORITMU</span>
+            AMANKAN TIKET EVENT FAVORITMU, <br />
+            <span className="text-brand-blue">TANPA RIBET</span>
           </h1>
 
           <p className="text-xs sm:text-base text-neutral-300 font-medium max-w-2xl mx-auto leading-relaxed">
-            Langsung amankan tiket konser, bazar, seminar, &amp; festival lokal. Direct transaksi ke panitia tanpa ribet, tanpa potongan biaya aneh-aneh.
+            Konser, fest idol &amp; cosplay, HTM, sampai cheki — semua ada di sini. Transaksi langsung ke panitia, tanpa calo, tanpa biaya siluman.
           </p>
 
           {/* Event Search Input & Cek Tiket Button */}
@@ -88,7 +88,7 @@ export const LandingPage = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari nama event, konser, seminar, atau venue..."
+                placeholder="Mau cari event apa hari ini? Konser, fest idol, cheki, seminar..."
                 className="w-full pl-12 pr-4 py-3.5 bg-neutral-900 text-white font-medium text-sm rounded-xl border border-neutral-700 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue placeholder:text-neutral-500 shadow-lg"
               />
             </div>
@@ -100,7 +100,7 @@ export const LandingPage = () => {
                 className="text-xs font-black uppercase tracking-wider text-brand-blue hover:text-white bg-brand-blue/10 border border-brand-blue/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-1.5 touch-press"
               >
                 <Search className="w-3.5 h-3.5" />
-                <span>SUDAH BELI TIKET? CEK STATUS E-TICKET SAYA</span>
+                <span>SUDAH PUNYA TIKET? CEK STATUS DI SINI</span>
               </button>
             </div>
           </div>
