@@ -109,18 +109,22 @@ export const AdminDashboard = () => {
       prev.map((acc) => {
         if (acc.id === eoId) {
           const nextBonus = !acc.botAccessBonus;
-          const savedUser = localStorage.getItem('loktik_user_session');
-          if (savedUser) {
-            try {
+          // Sync ke session aktif jika EO ini sedang login
+          try {
+            const savedUser = localStorage.getItem('loktik_user_session');
+            if (savedUser) {
               const parsedUser = JSON.parse(savedUser);
-              if (parsedUser.id === acc.id || parsedUser.username === acc.name) {
+              const isMatch =
+                parsedUser.id === acc.id ||
+                (parsedUser.username || '').toLowerCase() === (acc.name || '').toLowerCase();
+              if (isMatch) {
                 localStorage.setItem(
                   'loktik_user_session',
                   JSON.stringify({ ...parsedUser, botAccessBonus: nextBonus })
                 );
               }
-            } catch (e) {}
-          }
+            }
+          } catch (e) {}
           return { ...acc, botAccessBonus: nextBonus };
         }
         return acc;
@@ -141,6 +145,15 @@ export const AdminDashboard = () => {
   const handleAddEoSubmit = (e) => {
     e.preventDefault();
     if (!newEo.name || !newEo.wa || !newEo.password) return;
+
+    // Cek duplikat username
+    const duplicate = eoAccounts.find(
+      (acc) => (acc.name || '').trim().toLowerCase() === newEo.name.trim().toLowerCase()
+    );
+    if (duplicate) {
+      alert(`Username EO "${newEo.name}" sudah terdaftar! Gunakan nama lain.`);
+      return;
+    }
 
     const createdEo = {
       id: `EO-${Math.floor(100 + Math.random() * 900)}`,
@@ -185,11 +198,15 @@ export const AdminDashboard = () => {
             ...acc,
             wa_quota: (acc.wa_quota || 0) + quotaToAdd,
           };
-          const savedUser = localStorage.getItem('loktik_user_session');
-          if (savedUser) {
-            try {
+          // Sync ke session aktif jika EO ini sedang login
+          try {
+            const savedUser = localStorage.getItem('loktik_user_session');
+            if (savedUser) {
               const parsedUser = JSON.parse(savedUser);
-              if (parsedUser.id === acc.id || parsedUser.username === acc.name) {
+              const isMatch =
+                parsedUser.id === acc.id ||
+                (parsedUser.username || '').toLowerCase() === (acc.name || '').toLowerCase();
+              if (isMatch) {
                 localStorage.setItem(
                   'loktik_user_session',
                   JSON.stringify({
@@ -199,8 +216,8 @@ export const AdminDashboard = () => {
                   })
                 );
               }
-            } catch (err) {}
-          }
+            }
+          } catch (err) {}
           return updatedEo;
         }
         return acc;
@@ -236,34 +253,26 @@ export const AdminDashboard = () => {
       </div>
 
       {/* Admin Overview Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card variant="dark" className="p-5 space-y-1 border-neutral-800">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase">TOTAL EO TERDAFTAR</p>
-          <p className="text-2xl font-black text-white">{eoAccounts.length} EO</p>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+        <Card variant="dark" className="p-4 sm:p-5 space-y-1.5 border-neutral-800">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">TOTAL EO TERDAFTAR</p>
+          <p className="text-2xl font-black text-white">{eoAccounts.length} <span className="text-base font-bold text-neutral-500">EO</span></p>
         </Card>
-        <Card variant="dark" className="p-5 space-y-1 border-neutral-800">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase">EO STATUS AKTIF</p>
-          <p className="text-2xl font-black text-brand-green">
-            {eoAccounts.filter((a) => a.status === 'active').length} EO
-          </p>
+        <Card variant="dark" className="p-4 sm:p-5 space-y-1.5 border-neutral-800">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">EO AKTIF</p>
+          <p className="text-2xl font-black text-brand-green">{eoAccounts.filter((a) => a.status === 'active').length} <span className="text-base font-bold text-neutral-500">EO</span></p>
         </Card>
-        <Card variant="dark" className="p-5 space-y-1 border-neutral-800">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase">AKUN SOFT-LOCKED</p>
-          <p className="text-2xl font-black text-brand-red">
-            {eoAccounts.filter((a) => a.status === 'suspended').length} EO
-          </p>
+        <Card variant="dark" className="p-4 sm:p-5 space-y-1.5 border-neutral-800">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">SOFT-LOCKED</p>
+          <p className="text-2xl font-black text-brand-red">{eoAccounts.filter((a) => a.status === 'suspended').length} <span className="text-base font-bold text-neutral-500">EO</span></p>
         </Card>
-        <Card variant="dark" className="p-5 space-y-1 border-neutral-800">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase">TOTAL KUOTA WA AKTIF</p>
-          <p className="text-2xl font-black text-brand-blue">
-            {eoAccounts.reduce((sum, a) => sum + (a.wa_quota || 0), 0).toLocaleString('id-ID')}
-          </p>
+        <Card variant="dark" className="p-4 sm:p-5 space-y-1.5 border-neutral-800">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">KUOTA WA AKTIF</p>
+          <p className="text-2xl font-black text-brand-blue">{eoAccounts.reduce((sum, a) => sum + (a.wa_quota || 0), 0).toLocaleString('id-ID')}</p>
         </Card>
-        <Card variant="dark" className="p-5 space-y-1 border-neutral-800">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase">TOTAL PESAN TERKIRIM</p>
-          <p className="text-2xl font-black text-brand-purple">
-            {eoAccounts.reduce((sum, a) => sum + (a.wa_messages_sent || 0), 0).toLocaleString('id-ID')}
-          </p>
+        <Card variant="dark" className="p-4 sm:p-5 space-y-1.5 border-neutral-800">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">PESAN TERKIRIM</p>
+          <p className="text-2xl font-black text-brand-purple">{eoAccounts.reduce((sum, a) => sum + (a.wa_messages_sent || 0), 0).toLocaleString('id-ID')}</p>
         </Card>
       </div>
 
@@ -335,162 +344,254 @@ export const AdminDashboard = () => {
             <p className="text-xs text-neutral-500 font-medium">Klik tombol "TAMBAH EO BARU" di atas untuk mendaftarkan akun &amp; password EO.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[1100px] table-fixed">
-              <thead className="bg-neutral-900 text-neutral-400 font-bold uppercase border-b border-neutral-800">
-                <tr>
-                  <th className="p-3 w-[70px] whitespace-nowrap text-[9px] tracking-wider">ID EO</th>
-                  <th className="p-3 w-[130px] whitespace-nowrap text-[9px] tracking-wider">NAMA EO</th>
-                  <th className="p-3 w-[120px] whitespace-nowrap text-[9px] tracking-wider">NO. WHATSAPP</th>
-                  <th className="p-3 w-[110px] whitespace-nowrap text-[9px] tracking-wider">PAKET</th>
-                  <th className="p-3 w-[100px] whitespace-nowrap text-[9px] tracking-wider">SISA KUOTA WA</th>
-                  <th className="p-3 w-[105px] whitespace-nowrap text-[9px] tracking-wider">PESAN TERKIRIM</th>
-                  <th className="p-3 w-[110px] whitespace-nowrap text-[9px] tracking-wider">S/D EXPIRED</th>
-                  <th className="p-3 w-[80px] whitespace-nowrap text-[9px] tracking-wider">STATUS</th>
-                  <th className="p-3 w-[115px] whitespace-nowrap text-[9px] tracking-wider">AKSES BOT WA</th>
-                  <th className="p-3 whitespace-nowrap text-[9px] tracking-wider text-right">KONTROL AKSES</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800 font-medium text-neutral-200">
-                {eoAccounts.map((eo) => {
-                  const hasBot = Boolean(eo.botAccessBonus);
-                  const quotaLow = (eo.wa_quota || 0) <= 0;
-                  const quotaMedium = (eo.wa_quota || 0) > 0 && (eo.wa_quota || 0) <= 100;
-                  return (
-                    <tr key={eo.id} className="hover:bg-neutral-900/50">
-                      <td className="p-3 font-mono font-bold text-brand-purple text-xs">
-                        {eo.id}
-                      </td>
-                      <td className="p-3">
-                        <span className="font-extrabold text-white text-sm block truncate">
-                          {eo.name}
-                        </span>
-                        <div className="flex items-center space-x-1.5 mt-1">
-                          <span className="text-[10px] font-mono text-brand-yellow font-bold">
+          <>
+            {/* ── MOBILE: card per EO (dedicated, bukan shrink dari tabel) ── */}
+            <div className="block lg:hidden space-y-3">
+              {eoAccounts.map((eo) => {
+                const hasBot = Boolean(eo.botAccessBonus);
+                const quotaLow = (eo.wa_quota || 0) <= 0;
+                const quotaMedium = (eo.wa_quota || 0) > 0 && (eo.wa_quota || 0) <= 100;
+                const planLabel =
+                  eo.subscriptionPlan === '6_months' ? '6 BULAN PRO' :
+                  eo.subscriptionPlan === '3_months' ? '3 BULAN' :
+                  eo.subscriptionPlan === 'test' ? 'TEST' : '1 BULAN';
+                const planColor =
+                  eo.subscriptionPlan === '6_months' ? 'text-brand-blue' :
+                  eo.subscriptionPlan === '3_months' ? 'text-brand-purple' :
+                  eo.subscriptionPlan === 'test' ? 'text-neutral-400' : 'text-brand-yellow';
+                const limitText =
+                  `${eo.subscriptionPlan === '6_months' || eo.subscriptionPlan === '3_months' ? 'Event ∞' : 'Max 1 Event'} · ` +
+                  `${eo.subscriptionPlan === '6_months' ? 'Staf ∞' : eo.subscriptionPlan === '3_months' ? 'Max 5 Staf' : eo.subscriptionPlan === 'test' ? 'Max 1 Staf' : 'Max 2 Staf'}`;
+
+                return (
+                  <div key={eo.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3">
+                    {/* Row 1: ID + nama + status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-mono text-brand-purple font-bold">{eo.id}</p>
+                        <p className="text-sm font-black text-white truncate">{eo.name}</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[11px] font-mono text-brand-yellow font-bold">
                             {showPasswords[eo.id] ? eo.password : '••••••••'}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => togglePasswordVisibility(eo.id)}
-                            className="text-neutral-500 hover:text-white transition-colors"
-                          >
+                          <button type="button" onClick={() => togglePasswordVisibility(eo.id)} className="text-neutral-500 hover:text-white">
                             {showPasswords[eo.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                           </button>
                         </div>
-                      </td>
-                      <td className="p-3">
-                        <a
-                          href={`https://wa.me/${eo.wa}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center space-x-1 text-brand-green font-bold hover:underline text-xs"
-                        >
-                          <MessageSquare className="w-3 h-3 shrink-0" />
-                          <span className="font-mono truncate">{eo.wa}</span>
+                      </div>
+                      <Badge variant={eo.status === 'active' ? 'green' : 'red'} className="shrink-0 whitespace-nowrap text-[10px]">
+                        {eo.status === 'active' ? 'AKTIF' : 'LOCKED'}
+                      </Badge>
+                    </div>
+
+                    {/* Row 2: detail info grid */}
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
+                        <p className="text-neutral-500 font-bold uppercase text-[9px]">Paket</p>
+                        <p className={`font-black uppercase ${planColor}`}>{planLabel}</p>
+                        <p className="text-neutral-500 font-mono text-[9px]">{limitText}</p>
+                      </div>
+                      <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
+                        <p className="text-neutral-500 font-bold uppercase text-[9px]">Expired</p>
+                        <p className="font-mono font-bold text-brand-yellow text-[11px] leading-snug">
+                          {formatDate(eo.subscriptionExpiresAt || getOneMonthExpiry())}
+                        </p>
+                      </div>
+                      <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
+                        <p className="text-neutral-500 font-bold uppercase text-[9px]">Kuota WA</p>
+                        <p className={`font-mono font-black text-sm ${quotaLow ? 'text-brand-red' : quotaMedium ? 'text-brand-yellow' : 'text-brand-blue'}`}>
+                          {(eo.wa_quota || 0).toLocaleString('id-ID')}
+                        </p>
+                        {quotaLow && <span className="text-[9px] text-brand-red font-bold">HABIS</span>}
+                      </div>
+                      <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
+                        <p className="text-neutral-500 font-bold uppercase text-[9px]">WA</p>
+                        <a href={`https://wa.me/${eo.wa}`} target="_blank" rel="noreferrer"
+                          className="text-brand-green font-bold font-mono text-[11px] hover:underline flex items-center gap-1">
+                          <MessageSquare className="w-3 h-3 shrink-0" />{eo.wa}
                         </a>
-                      </td>
-                      <td className="p-3">
-                        <div className="space-y-1">
-                          <span className={`text-[10px] font-black uppercase block ${
+                      </div>
+                    </div>
+
+                    {/* Row 3: tombol aksi */}
+                    <div className="flex flex-wrap gap-2 pt-1 border-t border-neutral-800">
+                      <Button variant={hasBot ? 'green' : 'outline'} size="sm"
+                        onClick={() => handleToggleBotBonus(eo.id)}
+                        className="font-black text-[10px] uppercase whitespace-nowrap flex-1 justify-center">
+                        <Bot className="w-3 h-3 mr-1 shrink-0" />
+                        {hasBot ? '✓ Bot Aktif' : '+ Bot'}
+                      </Button>
+                      <Button variant="blue" size="sm" onClick={() => openTopUpModal(eo)}
+                        className="font-black text-[10px] uppercase whitespace-nowrap">
+                        <Zap className="w-3 h-3 mr-1 shrink-0" /> Top Up
+                      </Button>
+                      <Button variant={eo.status === 'active' ? 'yellow' : 'green'} size="sm"
+                        onClick={() => handleToggleStatus(eo.id)}
+                        className="font-black text-[10px] uppercase whitespace-nowrap">
+                        <Power className="w-3 h-3 mr-1 shrink-0" />
+                        {eo.status === 'active' ? 'Lock' : 'Unlock'}
+                      </Button>
+                      <Button variant="red" size="sm" onClick={() => handleDeleteEo(eo.id)}
+                        className="font-black text-[10px] uppercase whitespace-nowrap">
+                        <Trash2 className="w-3 h-3 shrink-0" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── DESKTOP: tabel (lg ke atas) ── */}
+            <div className="hidden lg:block overflow-x-auto rounded-lg border border-neutral-800">
+              <table className="w-full text-left table-fixed" style={{ minWidth: '1160px' }}>
+                <thead className="bg-neutral-900 text-neutral-400 font-bold uppercase border-b border-neutral-800">
+                  <tr>
+                    <th className="px-4 py-3 w-[72px] text-[9px] tracking-wider whitespace-nowrap">ID EO</th>
+                    <th className="px-4 py-3 w-[145px] text-[9px] tracking-wider whitespace-nowrap">NAMA EO</th>
+                    <th className="px-4 py-3 w-[130px] text-[9px] tracking-wider whitespace-nowrap">NO. WA</th>
+                    <th className="px-4 py-3 w-[120px] text-[9px] tracking-wider whitespace-nowrap">PAKET</th>
+                    <th className="px-4 py-3 w-[95px] text-[9px] tracking-wider whitespace-nowrap">KUOTA WA</th>
+                    <th className="px-4 py-3 w-[90px] text-[9px] tracking-wider whitespace-nowrap">TERKIRIM</th>
+                    <th className="px-4 py-3 w-[105px] text-[9px] tracking-wider whitespace-nowrap">EXPIRED</th>
+                    <th className="px-4 py-3 w-[90px] text-[9px] tracking-wider whitespace-nowrap">STATUS</th>
+                    <th className="px-4 py-3 w-[130px] text-[9px] tracking-wider whitespace-nowrap">BOT WA</th>
+                    <th className="px-4 py-3 w-[200px] text-[9px] tracking-wider whitespace-nowrap text-right">KONTROL AKSES</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-800 font-medium text-neutral-200">
+                  {eoAccounts.map((eo) => {
+                    const hasBot = Boolean(eo.botAccessBonus);
+                    const quotaLow = (eo.wa_quota || 0) <= 0;
+                    const quotaMedium = (eo.wa_quota || 0) > 0 && (eo.wa_quota || 0) <= 100;
+                    return (
+                      <tr key={eo.id} className="hover:bg-neutral-900/50 align-middle">
+
+                        {/* ID */}
+                        <td className="px-4 py-3 font-mono font-bold text-brand-purple text-xs whitespace-nowrap">
+                          {eo.id}
+                        </td>
+
+                        {/* Nama + password */}
+                        <td className="px-4 py-3">
+                          <span className="font-extrabold text-white text-sm block truncate leading-snug">
+                            {eo.name}
+                          </span>
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <span className="text-[10px] font-mono text-brand-yellow font-bold">
+                              {showPasswords[eo.id] ? eo.password : '••••••••'}
+                            </span>
+                            <button type="button" onClick={() => togglePasswordVisibility(eo.id)}
+                              className="text-neutral-500 hover:text-white transition-colors shrink-0">
+                              {showPasswords[eo.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* WhatsApp */}
+                        <td className="px-4 py-3">
+                          <a href={`https://wa.me/${eo.wa}`} target="_blank" rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-brand-green font-bold hover:underline text-xs">
+                            <MessageSquare className="w-3 h-3 shrink-0" />
+                            <span className="font-mono truncate">{eo.wa}</span>
+                          </a>
+                        </td>
+
+                        {/* Paket */}
+                        <td className="px-4 py-3">
+                          <span className={`text-xs font-black uppercase block leading-snug ${
                             eo.subscriptionPlan === '6_months' ? 'text-brand-blue' :
                             eo.subscriptionPlan === '3_months' ? 'text-brand-purple' :
                             eo.subscriptionPlan === 'test' ? 'text-neutral-400' : 'text-brand-yellow'
                           }`}>
-                            {eo.subscriptionPlan === '6_months' ? '6 BULAN PRO' :
+                            {eo.subscriptionPlan === '6_months' ? '6 BLN PRO' :
                              eo.subscriptionPlan === '3_months' ? '3 BULAN' :
                              eo.subscriptionPlan === 'test' ? 'TEST' : '1 BULAN'}
                           </span>
-                          <span className="text-[9px] text-neutral-500 font-mono block">
-                            {eo.subscriptionPlan === '6_months' || eo.subscriptionPlan === '3_months'
-                              ? 'EVENT ∞'
-                              : 'MAX 1 EVENT'
-                            } · {
-                              eo.subscriptionPlan === '6_months' ? 'STAF ∞' :
-                              eo.subscriptionPlan === '3_months' ? 'MAX 5 STAF' : 'MAX 2 STAF'
-                            }
+                          <span className="text-[9px] text-neutral-500 font-mono block mt-1 leading-tight">
+                            {eo.subscriptionPlan === '6_months' || eo.subscriptionPlan === '3_months' ? 'Event ∞' : 'Max 1 Event'}
+                            {' · '}
+                            {eo.subscriptionPlan === '6_months' ? 'Staf ∞' :
+                             eo.subscriptionPlan === '3_months' ? 'Max 5 Staf' :
+                             eo.subscriptionPlan === 'test' ? 'Max 1 Staf' : 'Max 2 Staf'}
                           </span>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div className="flex flex-col space-y-1">
-                          <span className={`font-mono font-black text-sm ${
+                        </td>
+
+                        {/* Kuota WA */}
+                        <td className="px-4 py-3">
+                          <span className={`font-mono font-black text-sm block leading-snug ${
                             quotaLow ? 'text-brand-red' : quotaMedium ? 'text-brand-yellow' : 'text-brand-blue'
                           }`}>
                             {(eo.wa_quota || 0).toLocaleString('id-ID')}
                           </span>
                           {quotaLow ? (
-                            <Badge variant="red" className="text-[8px] px-1.5 py-0 w-fit font-black whitespace-nowrap">
-                              KUOTA HABIS
-                            </Badge>
+                            <span className="text-[9px] text-brand-red font-black uppercase mt-0.5 block">HABIS</span>
                           ) : quotaMedium ? (
-                            <Badge variant="yellow" className="text-[8px] px-1.5 py-0 w-fit font-black whitespace-nowrap">
-                              SISA SEDIKIT
-                            </Badge>
+                            <span className="text-[9px] text-brand-yellow font-black uppercase mt-0.5 block">SEDIKIT</span>
                           ) : null}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <span className="font-mono font-bold text-sm text-brand-purple block">
-                          {(eo.wa_messages_sent || 0).toLocaleString('id-ID')}
-                        </span>
-                        <span className="text-[9px] font-mono text-neutral-500 uppercase">pesan</span>
-                      </td>
-                      <td className="p-3 font-mono text-brand-yellow font-bold text-[11px] leading-tight">
-                        {formatDate(eo.subscriptionExpiresAt || getOneMonthExpiry())}
-                      </td>
-                      <td className="p-3">
-                        <Badge variant={eo.status === 'active' ? 'green' : 'red'} className="whitespace-nowrap">
-                          {eo.status === 'active' ? 'AKTIF' : 'SOFT-LOCKED'}
-                        </Badge>
-                      </td>
-                      <td className="p-3">
-                        <Button
-                          variant={hasBot ? 'green' : 'outline'}
-                          size="sm"
-                          onClick={() => handleToggleBotBonus(eo.id)}
-                          className={`font-black text-[9px] uppercase w-full whitespace-nowrap justify-center ${
-                            hasBot ? 'shadow-[0_0_10px_rgba(57,255,20,0.25)]' : ''
-                          }`}
-                        >
-                          <Bot className="w-3 h-3 mr-1 shrink-0" />
-                          {hasBot ? '✓ BOT AKTIF' : '+ AKTIFKAN BOT'}
-                        </Button>
-                      </td>
-                      <td className="p-3">
-                        <div className="flex flex-wrap justify-end gap-1.5 items-center">
-                          <Button
-                            variant="blue"
-                            size="sm"
-                            onClick={() => openTopUpModal(eo)}
-                            className="font-black text-[9px] uppercase whitespace-nowrap"
+                        </td>
+
+                        {/* Pesan terkirim */}
+                        <td className="px-4 py-3">
+                          <span className="font-mono font-bold text-sm text-brand-purple block leading-snug">
+                            {(eo.wa_messages_sent || 0).toLocaleString('id-ID')}
+                          </span>
+                          <span className="text-[9px] font-mono text-neutral-500 uppercase">pesan</span>
+                        </td>
+
+                        {/* Expired */}
+                        <td className="px-4 py-3 font-mono text-brand-yellow font-bold text-[11px] leading-tight">
+                          {formatDate(eo.subscriptionExpiresAt || getOneMonthExpiry())}
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-4 py-3">
+                          <Badge variant={eo.status === 'active' ? 'green' : 'red'} className="whitespace-nowrap px-2.5 py-0.5 text-[10px]">
+                            {eo.status === 'active' ? 'AKTIF' : 'LOCKED'}
+                          </Badge>
+                        </td>
+
+                        {/* Bot WA — lebar cukup, tidak overflow ke kolom berikutnya */}
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBotBonus(eo.id)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase whitespace-nowrap w-full justify-center transition-colors ${
+                              hasBot
+                                ? 'bg-brand-green/20 border border-brand-green text-brand-green shadow-[0_0_10px_rgba(57,255,20,0.2)]'
+                                : 'bg-neutral-800 border border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                            }`}
                           >
-                            <Zap className="w-3 h-3 mr-1 shrink-0" /> TOP UP
-                          </Button>
-                          <Button
-                            variant={eo.status === 'active' ? 'yellow' : 'green'}
-                            size="sm"
-                            onClick={() => handleToggleStatus(eo.id)}
-                            className="font-black text-[9px] uppercase whitespace-nowrap"
-                          >
-                            <Power className="w-3 h-3 mr-1 shrink-0" />
-                            {eo.status === 'active' ? 'LOCK' : 'UNLOCK'}
-                          </Button>
-                          <Button
-                            variant="red"
-                            size="sm"
-                            onClick={() => handleDeleteEo(eo.id)}
-                            className="font-black text-[9px] uppercase whitespace-nowrap"
-                          >
-                            <Trash2 className="w-3 h-3 mr-1 shrink-0" /> HAPUS
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            <Bot className="w-3.5 h-3.5 shrink-0" />
+                            <span>{hasBot ? '✓ Bot Aktif' : '+ Aktifkan'}</span>
+                          </button>
+                        </td>
+
+                        {/* Kontrol Akses — gap konsisten, tidak wrap */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button variant="blue" size="sm" onClick={() => openTopUpModal(eo)}
+                              className="font-black text-[10px] uppercase whitespace-nowrap px-3">
+                              <Zap className="w-3 h-3 mr-1 shrink-0" /> Top Up
+                            </Button>
+                            <Button variant={eo.status === 'active' ? 'yellow' : 'green'} size="sm"
+                              onClick={() => handleToggleStatus(eo.id)}
+                              className="font-black text-[10px] uppercase whitespace-nowrap px-3">
+                              <Power className="w-3 h-3 mr-1 shrink-0" />
+                              {eo.status === 'active' ? 'Lock' : 'Unlock'}
+                            </Button>
+                            <Button variant="red" size="sm" onClick={() => handleDeleteEo(eo.id)}
+                              className="font-black text-[10px] uppercase whitespace-nowrap px-3">
+                              <Trash2 className="w-3 h-3 shrink-0" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </Card>
 

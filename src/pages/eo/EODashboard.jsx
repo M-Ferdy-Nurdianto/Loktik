@@ -95,24 +95,28 @@ export const EODashboard = () => {
   };
 
   const getSubExpiryInfo = () => {
-    let expDate = user?.expiresAt || user?.subscriptionExpiresAt;
+    // Baca dari subscriptionExpiresAt (field standar yang disimpan di session)
+    const expDate = user?.subscriptionExpiresAt || user?.expiresAt;
     if (!expDate) {
+      // Fallback: anggap 30 hari dari sekarang jika tidak ada data
       const d = new Date();
       d.setDate(d.getDate() + 30);
-      expDate = d.toISOString().split('T')[0];
+      return {
+        dateStr: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+        diffDays: 30,
+      };
     }
     try {
       const target = new Date(expDate);
+      if (isNaN(target.getTime())) throw new Error('Invalid date');
       const today = new Date();
       const diffTime = target - today;
       const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-
       const dateStr = target.toLocaleDateString('id-ID', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
       });
-
       return { dateStr, diffDays };
     } catch (e) {
       return { dateStr: '30 Hari', diffDays: 30 };

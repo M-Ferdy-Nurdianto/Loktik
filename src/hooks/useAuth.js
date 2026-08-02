@@ -39,7 +39,8 @@ export const useAuth = () => {
       return { success: true, role: 'admin', redirectTo: '/admin/dashboard' };
     }
 
-    // 2. Check Staff Accounts created by EO (Prioritized)
+    // 2. Check Staff Accounts created by EO (Supabase + PIN fallback)
+    //    Dilakukan SEBELUM cek EO hardcoded agar PIN 4-digit tidak ter-intercept
     const staffAuthRes = await authenticateStaff(cleanUsername, cleanPassword);
     if (staffAuthRes.success && staffAuthRes.staff) {
       const staff = staffAuthRes.staff;
@@ -82,6 +83,7 @@ export const useAuth = () => {
         name: cleanUsername === 'pace' ? 'Pace Event Panitia' : cleanUsername === 'abin' ? 'Abin Event Panitia' : 'EO Komunitas Lokal',
         subscriptionPlan: cleanUsername === 'pace' ? '3_months' : '1_month',
         subscriptionStatus: 'active',
+        subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         loggedInAt: new Date().toISOString(),
       };
       localStorage.setItem('loktik_user_session', JSON.stringify(eoUserData));
@@ -90,14 +92,29 @@ export const useAuth = () => {
     }
 
     // 4. Check Dynamic EO Accounts created in Admin Dashboard
-    const dynamicAccounts = JSON.parse(localStorage.getItem('loktik_eo_accounts') || '[]');
+    let dynamicAccounts = [];
+    try {
+      dynamicAccounts = JSON.parse(localStorage.getItem('loktik_eo_accounts') || '[]');
+    } catch (e) {}
+
     const matchedEo = dynamicAccounts.find(
       (acc) =>
         (acc.name || '').trim().toLowerCase() === cleanUsername ||
         (acc.id || '').trim().toLowerCase() === cleanUsername
     );
 
-    if (matchedEo && ((matchedEo.password || '').trim() === cleanPassword || (matchedEo.password || '').trim().toLowerCase() === cleanPasswordLower)) {
+    if (matchedEo) {
+      const passwordMatch =
+        (matchedEo.password || '').trim() === cleanPassword ||
+        (matchedEo.password || '').trim().toLowerCase() === cleanPasswordLower;
+
+      if (!passwordMatch) {
+        return {
+          success: false,
+          message: 'Username / Password salah! Gunakan akun EO atau Akun Staf.',
+        };
+      }
+
       if (matchedEo.status === 'suspended') {
         return {
           success: false,
@@ -113,8 +130,8 @@ export const useAuth = () => {
         wa: matchedEo.wa,
         subscriptionPlan: matchedEo.subscriptionPlan || '1_month',
         subscriptionStatus: matchedEo.status,
+        subscriptionExpiresAt: matchedEo.subscriptionExpiresAt || null,
         botAccessBonus: Boolean(matchedEo.botAccessBonus),
-        expiresAt: matchedEo.expiresAt || matchedEo.subscriptionExpiresAt || null,
         wa_quota: matchedEo.wa_quota ?? 0,
         wa_messages_sent: matchedEo.wa_messages_sent ?? 0,
         loggedInAt: new Date().toISOString(),
