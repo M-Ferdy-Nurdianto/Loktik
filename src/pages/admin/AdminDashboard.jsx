@@ -1,18 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Trash2, Power, MessageSquare, Plus, Inbox, Eye, EyeOff, KeyRound, Calendar, Bot, CreditCard, X, Zap, AlertTriangle, Database } from 'lucide-react';
+import { LogOut, Trash2, Power, MessageSquare, Plus, Inbox, Eye, EyeOff, KeyRound, Bot, CreditCard, X, Zap, Database, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { CustomSelect } from '../../components/ui/CustomSelect';
 import { formatDate } from '../../utils/formatters';
 import { topUpEoWaQuotaInDb } from '../../services/apiAdmin';
-import { updateEoPackageTier } from '../../services/apiEntitlements';
+import {
+  getAllEoAccounts,
+  createEoAccount,
+  updateEoStatus,
+  toggleEoBotBonus,
+  deleteEoAccount,
+} from '../../services/apiEo';
 import { FactoryResetView } from '../../components/admin/FactoryResetView';
-
-const RESET_DELAY_SECONDS = 3;
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -20,49 +23,46 @@ export const AdminDashboard = () => {
 
   const getOneMonthExpiry = () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [eoAccounts, setEoAccounts] = useState(() => {
+  // ── State: EO list — diambil dari Supabase, bukan localStorage ──────────
+  const [eoAccounts, setEoAccounts] = useState([]);
+  const [isLoadingEo, setIsLoadingEo] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  // ── Fetch EO list dari Supabase ─────────────────────────────────────────
+  const fetchEoAccounts = useCallback(async () => {
+    console.log('[AdminDashboard] fetchEoAccounts: mulai fetch dari Supabase...');
+    setIsLoadingEo(true);
+    setLoadError(null);
     try {
-      const saved = localStorage.getItem('loktik_eo_accounts');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.length > 0) {
-          return parsed.map(acc => ({
-            ...acc,
-            wa_quota: acc.wa_quota ?? 0,
-            wa_messages_sent: acc.wa_messages_sent ?? 0,
-          }));
-        }
-      }
-      return [
-        {
-          id: 'EO-101',
-          name: 'eo_lokal',
-          wa: '085765907580',
-          password: 'password123',
-          status: 'active',
-          subscriptionPlan: '1_month',
-          subscriptionExpiresAt: getOneMonthExpiry(),
-          botAccessBonus: false,
-          wa_quota: 0,
-          wa_messages_sent: 0,
-        },
-        {
-          id: 'EO-102',
-          name: 'abin',
-          wa: '081234567890',
-          password: '1234',
-          status: 'active',
-          subscriptionPlan: '1_month',
-          subscriptionExpiresAt: getOneMonthExpiry(),
-          botAccessBonus: false,
-          wa_quota: 0,
-          wa_messages_sent: 0,
-        },
-      ];
-    } catch (e) {
-      return [];
+      const data = await getAllEoAccounts();
+      console.log('[AdminDashboard] fetchEoAccounts: berhasil, count =', data.length);
+      // Normalise field names dari snake_case Supabase ke camelCase UI
+      const normalised = data.map((row) => ({
+        id: row.id,
+        name: row.name,
+        wa: row.wa,
+        password: row.password,
+        status: row.status,
+        subscriptionPlan: row.subscription_plan || '1_month',
+        subscriptionExpiresAt: row.subscription_expires_at || getOneMonthExpiry(),
+        botAccessBonus: Boolean(row.bot_access_bonus),
+        wa_quota: row.wa_quota ?? 0,
+        wa_messages_sent: row.wa_messages_sent ?? 0,
+      }));
+      setEoAccounts(normalised);
+      // Sync ke localStorage hanya sebagai cache — bukan source of truth
+      localStorage.setItem('loktik_eo_accounts', JSON.stringify(normalised));
+    } catch (err) {
+      console.error('[AdminDashboard] fetchEoAccounts ERROR:', err);
+      setLoadError(err.message || 'Gagal memuat daftar EO dari server.');
+    } finally {
+      setIsLoadingEo(false);
     }
-  });
+  }, []);
+
+  useEffect(() => {
+    fetchEoAccounts();
+  }, [fetchEoAccounts]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEo, setNewEo] = useState({ name: '', wa: '', password: '', plan: '1_month' });
@@ -71,6 +71,9 @@ export const AdminDashboard = () => {
   const [selectedEo, setSelectedEo] = useState(null);
   const [topUpPackage, setTopUpPackage] = useState('1000');
 
+  // ── State: delete confirmation modal ────────────────────────────────────
+  const [deleteModal, setDeleteModal] = useState({ open: false, eoId: null, eoName: '', isDeleting: false, error: null });
+
   const waPackages = [
     { value: '1000', label: 'PAKET 1.000 PESAN', quota: 1000, price: 'Rp50.000' },
     { value: '10000', label: 'PAKET 10.000 PESAN', quota: 10000, price: 'Rp70.000' },
@@ -78,10 +81,6 @@ export const AdminDashboard = () => {
 
   // Factory Reset Page View State
   const [showResetModal, setShowResetModal] = useState(false);
-
-  useEffect(() => {
-    localStorage.setItem('loktik_eo_accounts', JSON.stringify(eoAccounts));
-  }, [eoAccounts]);
 
   const planOptions = [
     { value: 'test', label: 'TEST (1 HARI / MANUAL WA)' },
@@ -102,29 +101,42 @@ export const AdminDashboard = () => {
     return new Date(now + days * 24 * 60 * 60 * 1000).toISOString();
   };
 
-  const handleToggleStatus = (eoId) => {
+  const handleToggleStatus = async (eoId) => {
+    const acc = eoAccounts.find((a) => a.id === eoId);
+    if (!acc) return;
+    const nextStatus = acc.status === 'active' ? 'suspended' : 'active';
+    console.log('[AdminDashboard] handleToggleStatus:', eoId, '->', nextStatus);
+
+    // Optimistic UI update
     setEoAccounts((prev) =>
-      prev.map((acc) => {
-        if (acc.id === eoId) {
-          const nextStatus = acc.status === 'active' ? 'suspended' : 'active';
-          return { ...acc, status: nextStatus };
-        }
-        return acc;
-      })
+      prev.map((a) => (a.id === eoId ? { ...a, status: nextStatus } : a))
     );
+
+    try {
+      await updateEoStatus(eoId, nextStatus);
+      console.log('[AdminDashboard] handleToggleStatus: berhasil update Supabase');
+    } catch (err) {
+      console.error('[AdminDashboard] handleToggleStatus ERROR:', err);
+      // Rollback optimistic update
+      setEoAccounts((prev) =>
+        prev.map((a) => (a.id === eoId ? { ...a, status: acc.status } : a))
+      );
+      alert(`Gagal mengubah status EO: ${err.message}`);
+    }
   };
 
-  const handleToggleBotBonus = (eoId) => {
+  const handleToggleBotBonus = async (eoId) => {
     const acc = eoAccounts.find((a) => a.id === eoId);
     if (!acc) return;
     const nextBonus = !acc.botAccessBonus;
+    console.log('[AdminDashboard] handleToggleBotBonus:', eoId, '->', nextBonus);
 
-    // Update state + loktik_eo_accounts localStorage
+    // Optimistic UI update
     setEoAccounts((prev) =>
       prev.map((a) => (a.id === eoId ? { ...a, botAccessBonus: nextBonus } : a))
     );
 
-    // Sync ke session EO yang sedang login — match by username (ID format berbeda)
+    // Sync ke session EO yang sedang login
     try {
       const savedUser = localStorage.getItem('loktik_eo_session');
       if (savedUser) {
@@ -141,133 +153,121 @@ export const AdminDashboard = () => {
         }
       }
     } catch (e) {}
-  };
 
-
-  const handleDeleteEo = (eoId) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus akun EO ini secara permanen?')) {
-      setEoAccounts((prev) => prev.filter((acc) => acc.id !== eoId));
-    }
-  };
-
-  const handleFactoryReset = async (e) => {
-    e.preventDefault();
-    if (resetInput !== 'RESET DATABASE' || resetCountdown > 0 || isResetting) return;
-    
-    setIsResetting(true);
-    setResetError(null);
-    setResetProgress([]);
-    setResetReport(null);
     try {
-      const result = await factoryResetDatabase({
-        mode: resetMode,
-        actorName: user?.name || user?.username || 'Unknown',
-        actorRole: user?.role || 'admin',
-        onProgress: (payload) => {
-          setResetProgress((prev) => [
-            ...prev,
-            {
-              phase: payload.phase,
-              detail: payload.detail,
-              deleted: payload.deleted,
-              bucket: payload.bucket,
-              table: payload.table,
-              at: new Date().toISOString(),
-            },
-          ].slice(-20));
-        },
-      });
-      if (result.success) {
-        setResetReport(result.report);
-        setResetAuditLog(getFactoryResetAuditLog());
-      }
+      await toggleEoBotBonus(eoId, nextBonus);
+      console.log('[AdminDashboard] handleToggleBotBonus: berhasil update Supabase');
     } catch (err) {
-      setResetError(err.message || 'Terjadi kesalahan saat reset.');
-      setResetReport(err.report || null);
-    } finally {
-      setIsResetting(false);
+      console.error('[AdminDashboard] handleToggleBotBonus ERROR:', err);
+      // Rollback
+      setEoAccounts((prev) =>
+        prev.map((a) => (a.id === eoId ? { ...a, botAccessBonus: acc.botAccessBonus } : a))
+      );
+      alert(`Gagal mengubah status bot EO: ${err.message}`);
     }
   };
 
-  const handleBackupExport = async () => {
+  // ── Buka modal konfirmasi delete ────────────────────────────────────────
+  const handleDeleteEo = (eoId) => {
+    const acc = eoAccounts.find((a) => a.id === eoId);
+    if (!acc) return;
+    console.log('[AdminDashboard] handleDeleteEo: membuka modal konfirmasi untuk', eoId, acc.name);
+    setDeleteModal({ open: true, eoId, eoName: acc.name, isDeleting: false, error: null });
+  };
+
+  // ── Eksekusi delete setelah konfirmasi ──────────────────────────────────
+  const confirmDeleteEo = async () => {
+    const { eoId, eoName } = deleteModal;
+    console.log('[AdminDashboard] confirmDeleteEo: mulai hapus EO', eoId, eoName);
+
+    setDeleteModal((prev) => ({ ...prev, isDeleting: true, error: null }));
+
     try {
-      setIsBackupExporting(true);
-      const backup = await exportFactoryResetBackup(resetMode);
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `loktik-backup-${resetMode}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      setResetError(error.message || 'Gagal mengekspor backup.');
-    } finally {
-      setIsBackupExporting(false);
+      // 1. Hapus dari Supabase (source of truth)
+      console.log('[AdminDashboard] confirmDeleteEo: memanggil deleteEoAccount(', eoId, ')...');
+      await deleteEoAccount(eoId);
+      console.log('[AdminDashboard] confirmDeleteEo: Supabase DELETE berhasil');
+
+      // 2. Update React state — hapus dari daftar UI
+      setEoAccounts((prev) => {
+        const updated = prev.filter((acc) => acc.id !== eoId);
+        // 3. Sync cache localStorage
+        localStorage.setItem('loktik_eo_accounts', JSON.stringify(updated));
+        console.log('[AdminDashboard] confirmDeleteEo: state dan localStorage diperbarui, sisa:', updated.length);
+        return updated;
+      });
+
+      // 4. Invalidate session EO yang baru dihapus jika sedang login
+      try {
+        const savedSession = localStorage.getItem('loktik_eo_session');
+        if (savedSession) {
+          const parsedSession = JSON.parse(savedSession);
+          const sessionMatchById = parsedSession.id === eoId;
+          const sessionMatchByName = (parsedSession.username || parsedSession.name || '').toLowerCase() === eoName.toLowerCase();
+          if (sessionMatchById || sessionMatchByName) {
+            localStorage.removeItem('loktik_eo_session');
+            console.log('[AdminDashboard] confirmDeleteEo: session EO yang dihapus dibersihkan dari localStorage');
+          }
+        }
+      } catch (_) {}
+
+      // 5. Tutup modal
+      setDeleteModal({ open: false, eoId: null, eoName: '', isDeleting: false, error: null });
+      console.log('[AdminDashboard] confirmDeleteEo: selesai, modal ditutup');
+
+    } catch (err) {
+      console.error('[AdminDashboard] confirmDeleteEo ERROR:', err);
+      setDeleteModal((prev) => ({
+        ...prev,
+        isDeleting: false,
+        error: err.message || 'Gagal menghapus akun EO. Coba lagi.',
+      }));
     }
   };
 
-  const handleRefreshDryRun = async () => {
+  const handleAddEoSubmit = async (e) => {
+    e.preventDefault();
+    if (!newEo.name || !newEo.wa || !newEo.password) return;
+    console.log('[AdminDashboard] handleAddEoSubmit: membuat EO baru', newEo.name);
+
     try {
-      setIsDryRunning(true);
-      const data = await factoryResetDryRun(resetMode);
-      setResetDryRun(data);
-      setResetError(null);
-    } catch (error) {
-      setResetError(error.message || 'Gagal menjalankan dry run.');
-    } finally {
-      setIsDryRunning(false);
-    }
-  };
+      const created = await createEoAccount({
+        name: newEo.name.trim(),
+        wa: newEo.wa,
+        password: newEo.password.trim(),
+        subscriptionPlan: newEo.plan,
+        subscriptionExpiresAt: calculateExpiryDate(newEo.plan),
+      });
+      console.log('[AdminDashboard] handleAddEoSubmit: EO berhasil dibuat, id =', created.id);
 
-  const closeResetModal = () => {
-    setShowResetModal(false);
-    setResetInput('');
-    setResetMode(RESET_MODES.quick);
-    setResetDryRun(null);
-    setResetProgress([]);
-    setResetReport(null);
-    setResetError(null);
-    setResetCountdown(RESET_DELAY_SECONDS);
-    setIsDryRunning(false);
-    setIsBackupExporting(false);
+      const normalised = {
+        id: created.id,
+        name: created.name,
+        wa: created.wa,
+        password: created.password,
+        status: created.status,
+        subscriptionPlan: created.subscription_plan || '1_month',
+        subscriptionExpiresAt: created.subscription_expires_at || getOneMonthExpiry(),
+        botAccessBonus: Boolean(created.bot_access_bonus),
+        wa_quota: created.wa_quota ?? 0,
+        wa_messages_sent: created.wa_messages_sent ?? 0,
+      };
+
+      setEoAccounts((prev) => {
+        const updated = [normalised, ...prev];
+        localStorage.setItem('loktik_eo_accounts', JSON.stringify(updated));
+        return updated;
+      });
+      setNewEo({ name: '', wa: '', password: '', plan: '1_month' });
+      setShowAddModal(false);
+    } catch (err) {
+      console.error('[AdminDashboard] handleAddEoSubmit ERROR:', err);
+      alert(err.message || 'Gagal membuat akun EO.');
+    }
   };
 
   const togglePasswordVisibility = (eoId) => {
     setShowPasswords((prev) => ({ ...prev, [eoId]: !prev[eoId] }));
-  };
-
-  const handleAddEoSubmit = (e) => {
-    e.preventDefault();
-    if (!newEo.name || !newEo.wa || !newEo.password) return;
-
-    // Cek duplikat username
-    const duplicate = eoAccounts.find(
-      (acc) => (acc.name || '').trim().toLowerCase() === newEo.name.trim().toLowerCase()
-    );
-    if (duplicate) {
-      alert(`Username EO "${newEo.name}" sudah terdaftar! Gunakan nama lain.`);
-      return;
-    }
-
-    const createdEo = {
-      id: `EO-${Math.floor(100 + Math.random() * 900)}`,
-      name: newEo.name.trim(),
-      wa: newEo.wa.replace(/[^0-9]/g, ''),
-      password: newEo.password.trim(),
-      status: 'active',
-      subscriptionPlan: newEo.plan,
-      subscriptionExpiresAt: calculateExpiryDate(newEo.plan),
-      botAccessBonus: false,
-      wa_quota: 0,
-      wa_messages_sent: 0,
-    };
-
-    setEoAccounts((prev) => [createdEo, ...prev]);
-    setNewEo({ name: '', wa: '', password: '', plan: '1_month' });
-    setShowAddModal(false);
   };
 
   const openTopUpModal = (eo) => {
@@ -334,6 +334,76 @@ export const AdminDashboard = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  // ── Delete confirmation modal render ────────────────────────────────────
+  const DeleteConfirmModal = () => {
+    if (!deleteModal.open) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="w-full max-w-md bg-[#111111] border border-brand-red/40 rounded-xl shadow-[0_0_60px_rgba(239,68,68,0.2)]">
+          <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-brand-red/20 border border-brand-red/40 rounded-lg">
+                <Trash2 className="w-4 h-4 text-brand-red" />
+              </div>
+              <h3 className="text-sm font-black uppercase text-white tracking-tight">Hapus Akun EO</h3>
+            </div>
+            {!deleteModal.isDeleting && (
+              <button
+                type="button"
+                onClick={() => setDeleteModal({ open: false, eoId: null, eoName: '', isDeleting: false, error: null })}
+                className="p-1.5 text-neutral-500 hover:text-brand-red transition-colors rounded-lg hover:bg-brand-red/10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <div className="px-6 py-5 space-y-4">
+            <p className="text-sm text-neutral-300 leading-relaxed">
+              Apakah Anda yakin ingin menghapus akun EO{' '}
+              <span className="font-black text-white">"{deleteModal.eoName}"</span> secara permanen?
+            </p>
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              Akun akan dihapus dari database. Data event, order, staff, dan tiket yang dimiliki EO ini mungkin perlu dihapus secara terpisah via Factory Reset.
+            </p>
+            {deleteModal.error && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-brand-red/10 border border-brand-red/30">
+                <AlertCircle className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
+                <p className="text-xs text-brand-red font-medium">{deleteModal.error}</p>
+              </div>
+            )}
+            <div className="flex gap-3 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                fullWidth
+                onClick={() => setDeleteModal({ open: false, eoId: null, eoName: '', isDeleting: false, error: null })}
+                disabled={deleteModal.isDeleting}
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                variant="red"
+                size="md"
+                fullWidth
+                onClick={confirmDeleteEo}
+                disabled={deleteModal.isDeleting}
+                className="font-black justify-center"
+              >
+                {deleteModal.isDeleting ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menghapus...</>
+                ) : (
+                  <><Trash2 className="w-4 h-4 mr-2" /> Ya, Hapus Permanen</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (showResetModal) {
@@ -487,7 +557,28 @@ export const AdminDashboard = () => {
         )}
 
         {/* EO List — card layout, no horizontal scroll */}
-        {eoAccounts.length === 0 ? (
+        {isLoadingEo ? (
+          <div className="py-20 flex flex-col items-center gap-3 text-neutral-500">
+            <Loader2 className="w-7 h-7 animate-spin" />
+            <p className="text-xs font-bold uppercase tracking-wider">Memuat daftar EO...</p>
+          </div>
+        ) : loadError ? (
+          <div className="py-10 flex flex-col items-center gap-3">
+            <div className="flex items-start gap-2 p-4 rounded-xl bg-brand-red/10 border border-brand-red/30 max-w-md w-full">
+              <AlertCircle className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-brand-red">{loadError}</p>
+                <button
+                  type="button"
+                  onClick={fetchEoAccounts}
+                  className="text-[11px] font-black uppercase text-brand-red underline hover:no-underline"
+                >
+                  Coba Lagi
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : eoAccounts.length === 0 ? (
           <div className="py-20 text-center space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto">
               <Inbox className="w-8 h-8 text-neutral-600" />
@@ -626,8 +717,9 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      {topUpModalOpen && selectedEo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+      <DeleteConfirmModal />
+
+      {topUpModalOpen && selectedEo && (        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-lg bg-[#111111] border border-brand-blue/40 rounded-xl shadow-[0_0_60px_rgba(6,182,212,0.2)] animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-5">
               <div className="flex items-center gap-3">
