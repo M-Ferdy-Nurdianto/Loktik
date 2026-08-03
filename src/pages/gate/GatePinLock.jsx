@@ -15,7 +15,9 @@ export const GatePinLock = ({ eventName, correctPin = '1312', onSuccess }) => {
 
   const handleSubmitPin = (e) => {
     e.preventDefault();
-    if (pin.trim() === correctPin || pin.trim() === '1312') {
+    // Validasi hanya terhadap correctPin yang dikirim dari GatePortal (bersumber dari DB event).
+    // TIDAK ada hardcoded bypass — setiap event wajib memiliki gate_pin sendiri di DB.
+    if (correctPin && pin.trim() === correctPin.toString().trim()) {
       onSuccess();
     } else {
       setErrorMsg('PIN GATE SALAH! MINTA PIN PADA EO PANITIA.');

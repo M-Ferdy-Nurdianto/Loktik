@@ -13,6 +13,7 @@ import { StaffManagerTab } from '../../components/dashboard/StaffManagerTab';
 import { EoGuideTab } from '../../components/dashboard/EoGuideTab';
 import { getAllEventsForEo } from '../../services/apiEvents';
 import { getLiveOrdersForEo } from '../../services/apiOrders';
+import { resolveWhatsAppMode } from '../../utils/resolveWhatsAppMode';
 
 export const EODashboard = () => {
   const navigate = useNavigate();
@@ -42,8 +43,9 @@ export const EODashboard = () => {
   const eoUsername = user?.username || user?.name || 'eo_lokal';
   const eoWa = user?.wa || '081234567890';
 
-  // Flag: Bot WA aktif jika admin set status aktif (botAccessBonus) ATAU punya kuota > 0
-  const hasBotAddon = Boolean(user?.botAccessBonus) || ((user?.wa_quota ?? 0) > 0);
+  // resolveWhatsAppMode — SINGLE SOURCE OF TRUTH untuk mode pengiriman WA
+  const waMode = resolveWhatsAppMode(user); // 'bot' | 'quota' | 'manual'
+  const hasBotAddon = waMode === 'bot';
 
   const fetchLiveStats = async () => {
     try {
@@ -173,6 +175,8 @@ export const EODashboard = () => {
                 ? '6 BULAN PRO'
                 : user?.subscriptionPlan === '3_months'
                 ? '3 BULAN REGULER'
+                : user?.subscriptionPlan === 'event_pass'
+                ? 'EVENT PASS'
                 : user?.subscriptionPlan === 'test'
                 ? 'TEST 1 HARI'
                 : '1 BULAN BASIC'}

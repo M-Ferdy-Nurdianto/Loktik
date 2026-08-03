@@ -19,6 +19,7 @@ export const Scanner = ({ eventId }) => {
   const [redeeming, setRedeeming] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [cameraError, setCameraError] = useState(null);
+  const [cameraRunning, setCameraRunning] = useState(false);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(document.createElement('canvas'));
@@ -182,6 +183,10 @@ export const Scanner = ({ eventId }) => {
   };
 
   useEffect(() => {
+    if (!(cameraRunning && scanMode === 'camera')) {
+      // Camera not requested to run
+      return;
+    }
     let stream = null;
     let isActive = true;
     setCameraError(null);
@@ -239,16 +244,14 @@ export const Scanner = ({ eventId }) => {
       animFrameRef.current = requestAnimationFrame(tick);
     };
 
-    if (scanMode === 'camera') {
-      startCamera();
-    }
+    startCamera();
 
     return () => {
       isActive = false;
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
-  }, [scanMode]);
+  }, [scanMode, cameraRunning]);
 
   const handleFileUpload = (e) => {
     if (!e.target.files?.[0]) return;
@@ -267,6 +270,10 @@ export const Scanner = ({ eventId }) => {
     img.src = URL.createObjectURL(e.target.files[0]);
   };
 
+  const toggleCamera = () => {
+    setCameraRunning((prev) => !prev);
+  };
+
   return (
     <div className="space-y-4 text-left font-sans">
       <Card variant="dark" className="p-4 border-neutral-800 flex items-center justify-between">
@@ -283,6 +290,9 @@ export const Scanner = ({ eventId }) => {
           <RefreshCw className="w-4 h-4" />
         </Button>
       </Card>
+      <Button variant="outline" size="sm" onClick={toggleCamera} className="mt-2">
+        {cameraRunning ? 'Tutup Kamera' : 'Buka Kamera'}
+      </Button>
 
       {scanResult && createPortal(
         <div className="fixed inset-0 z-[99999] w-screen h-screen bg-black/90 backdrop-blur-md flex items-end sm:items-center justify-center overflow-y-auto">

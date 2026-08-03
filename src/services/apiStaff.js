@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { validateEoAction } from './apiEntitlements';
 
 /**
  * Staff Accounts API Service
@@ -23,6 +24,13 @@ export const getAllStaffForEo = async (eoUsername) => {
 };
 
 export const createStaffAccount = async (staffData) => {
+  if (staffData.eo_id) {
+    const val = await validateEoAction(staffData.eo_id, 'ADD_STAFF');
+    if (!val.allowed) {
+      throw new Error(val.message);
+    }
+  }
+
   const cleanUsername = staffData.username.trim().toLowerCase();
 
   // Check unique username

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Banknote, QrCode, Zap, RefreshCw } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { createGuestOrder } from '../../services/apiOrders';
+import { getOtsTickets } from '../../services/apiEvents';
 import { formatRupiah } from '../../utils/formatters';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -23,12 +24,11 @@ export const OtsCashier = ({ eventId }) => {
   const fetchCategories = async () => {
     if (!eventId) return;
     try {
-      const { data } = await supabase.from('ticket_categories').select('*').eq('event_id', eventId);
-      const otsCategories = (data || []).filter((cat) => cat.is_ots_enabled);
+      const otsCategories = await getOtsTickets(eventId);
       setCategories(otsCategories);
-      if (otsCategories && otsCategories.length > 0) setSelectedCatId(otsCategories[0].id);
+      if (otsCategories.length > 0) setSelectedCatId(otsCategories[0].id);
     } catch (e) {
-      console.warn('Gagal memuat kategori tiket:', e);
+      console.warn('Gagal memuat kategori tiket OTS:', e);
     }
   };
 

@@ -158,20 +158,27 @@ END;
 $$;
 
 -- ====================================================================
--- EO PROFILES TABLE (WhatsApp Bot Quota Management)
+-- EO PROFILES & SUBSCRIPTION ENTITLEMENTS TABLE
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.eo_profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     eo_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     eo_username VARCHAR(100) NOT NULL UNIQUE,
+    tier_code VARCHAR(50) NOT NULL DEFAULT 'starter', -- 'starter', 'pro', 'enterprise'
+    max_active_events INTEGER NOT NULL DEFAULT 1,
+    max_staff_accounts INTEGER NOT NULL DEFAULT 2,
+    allow_event_pass BOOLEAN NOT NULL DEFAULT FALSE,
+    allow_custom_domain BOOLEAN NOT NULL DEFAULT FALSE,
     wa_quota INTEGER NOT NULL DEFAULT 0,
     wa_messages_sent INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE', -- 'ACTIVE', 'SUSPENDED'
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_eo_profiles_eo_id ON public.eo_profiles(eo_id);
 CREATE INDEX IF NOT EXISTS idx_eo_profiles_username ON public.eo_profiles(eo_username);
+CREATE INDEX IF NOT EXISTS idx_eo_profiles_tier ON public.eo_profiles(tier_code);
 
 -- ====================================================================
 -- ATOMIC FUNCTION: Top Up WA Quota for EO
@@ -249,6 +256,182 @@ BEGIN
     FROM public.eo_profiles WHERE eo_id = target_eo_id;
 
     RETURN QUERY SELECT TRUE, remaining_quota, total_sent, 'Pesan terkirim, kuota terpotong.'::TEXT;
+END;
+$$;
+
+-- ====================================================================
+-- ATOMIC FUNCTION: Get EO Entitlements & Active Usage
+-- ====================================================================
+CREATE OR REPLACE FUNCTION public.get_eo_entitlements(
+    target_eo_id UUID
+)
+RETURNS TABLE (
+    eo_id UUID,
+    eo_username VARCHAR(100),
+    tier_code VARCHAR(50),
+    max_active_events INT,
+    current_active_events INT,
+    max_staff_accounts INT,
+    current_staff_accounts INT,
+    allow_event_pass BOOLEAN,
+    allow_custom_domain BOOLEAN,
+    wa_quota INT,
+    wa_messages_sent INT,
+    status VARCHAR(20)
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_prof RECORD;
+    v_active_events INT := 0;
+    v_active_staff INT := 0;
+BEGIN
+    SELECT * INTO v_prof FROM public.eo_profiles WHERE public.eo_profiles.eo_id = target_eo_id;
+
+    IF NOT FOUND THEN
+        -- Fallback default if profile not yet seeded
+        RETURN QUERY SELECT 
+            target_eo_id, 
+            'eo_user'::VARCHAR(100), 
+            'starter'::VARCHAR(50), 
+            1, 0, 2, 0, 
+            FALSE, FALSE, 0, 0, 
+            'ACTIVE'::VARCHAR(20);
+        RETURN;
+    END IF;
+
+    -- Count active events for this EO
+    SELECT COUNT(*)::INT INTO v_active_events
+    FROM public.events e
+    WHERE e.eo_id = target_eo_id AND e.status = 'active';
+
+    -- Count active staff accounts for this EO
+    SELECT COUNT(*)::INT INTO v_active_staff
+    FROM public.staff_accounts s
+    WHERE s.eo_username = v_prof.eo_username AND s.status = 'ACTIVE';
+
+    RETURN QUERY SELECT 
+        v_prof.eo_id,
+        v_prof.eo_username,
+        v_prof.tier_code,
+        v_prof.max_active_events,
+        v_active_events,
+        v_prof.max_staff_accounts,
+        v_active_staff,
+        v_prof.allow_event_pass,
+        v_prof.allow_custom_domain,
+        v_prof.wa_quota,
+        v_prof.wa_messages_sent,
+        v_prof.status;
+END;
+$$;
+
+-- ====================================================================
+-- ATOMIC FUNCTION: Validate EO Action Authorization
+-- ====================================================================
+CREATE OR REPLACE FUNCTION public.validate_eo_action(
+    target_eo_id UUID,
+    action_type VARCHAR(50)
+)
+RETURNS TABLE (
+    allowed BOOLEAN,
+    message TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_ent RECORD;
+BEGIN
+    SELECT * INTO v_ent FROM public.get_eo_entitlements(target_eo_id);
+
+    IF v_ent.status <> 'ACTIVE' THEN
+        RETURN QUERY SELECT FALSE, 'AKUN EO SUSPENDED/TIDAK AKTIF'::TEXT;
+        RETURN;
+    END IF;
+
+    IF action_type = 'CREATE_EVENT' THEN
+        IF v_ent.current_active_events >= v_ent.max_active_events THEN
+            RETURN QUERY SELECT FALSE, ('KUOTA EVENT HABIIS. MAKSIMAL ' || v_ent.max_active_events || ' EVENT AKTIF UNTUK PAKET ' || UPPER(v_ent.tier_code))::TEXT;
+            RETURN;
+        END IF;
+    ELSIF action_type = 'ADD_STAFF' THEN
+        IF v_ent.current_staff_accounts >= v_ent.max_staff_accounts THEN
+            RETURN QUERY SELECT FALSE, ('BATAS MAKSIMAL AKUN STAF (' || v_ent.max_staff_accounts || ' STAF) SUDAH TERPAKAII UNTUK PAKET ' || UPPER(v_ent.tier_code))::TEXT;
+            RETURN;
+        END IF;
+    ELSIF action_type = 'SEND_WA' THEN
+        IF v_ent.wa_quota <= 0 THEN
+            RETURN QUERY SELECT FALSE, 'KUOTA BOT WA HABIS. SILAKAN TOP-UP PAKET WA BOT'::TEXT;
+            RETURN;
+        END IF;
+    ELSIF action_type = 'USE_EVENT_PASS' THEN
+        IF NOT v_ent.allow_event_pass THEN
+            RETURN QUERY SELECT FALSE, 'FITUR EVENT PASS MEMBUTUHKAN PAKET PRO ATAU ENTERPRISE'::TEXT;
+            RETURN;
+        END IF;
+    END IF;
+
+    RETURN QUERY SELECT TRUE, 'IZIN DISETUJUI'::TEXT;
+END;
+$$;
+
+-- ====================================================================
+-- ATOMIC FUNCTION: Update EO Package Tier
+-- ====================================================================
+CREATE OR REPLACE FUNCTION public.update_eo_package(
+    target_eo_id UUID,
+    new_tier VARCHAR(50),
+    add_wa_quota INT DEFAULT 0
+)
+RETURNS TABLE (
+    success BOOLEAN,
+    message TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_max_events INT := 1;
+    v_max_staff INT := 2;
+    v_event_pass BOOLEAN := FALSE;
+    v_custom_domain BOOLEAN := FALSE;
+BEGIN
+    IF LOWER(new_tier) = 'pro' THEN
+        v_max_events := 5;
+        v_max_staff := 10;
+        v_event_pass := TRUE;
+        v_custom_domain := FALSE;
+    ELSIF LOWER(new_tier) = 'enterprise' THEN
+        v_max_events := 99;
+        v_max_staff := 99;
+        v_event_pass := TRUE;
+        v_custom_domain := TRUE;
+    ELSE
+        -- Default starter
+        v_max_events := 1;
+        v_max_staff := 2;
+        v_event_pass := FALSE;
+        v_custom_domain := FALSE;
+    END IF;
+
+    UPDATE public.eo_profiles
+    SET tier_code = LOWER(new_tier),
+        max_active_events = v_max_events,
+        max_staff_accounts = v_max_staff,
+        allow_event_pass = v_event_pass,
+        allow_custom_domain = v_custom_domain,
+        wa_quota = wa_quota + add_wa_quota,
+        updated_at = NOW()
+    WHERE eo_id = target_eo_id;
+
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT FALSE, 'PROFIL EO TIDAK DITEMUKAN'::TEXT;
+        RETURN;
+    END IF;
+
+    RETURN QUERY SELECT TRUE, ('PAKET EO BERHASIL DIUPDATE KE ' || UPPER(new_tier))::TEXT;
 END;
 $$;
 

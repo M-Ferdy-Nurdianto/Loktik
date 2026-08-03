@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Trash2, Power, MessageSquare, Plus, Inbox, Eye, EyeOff, KeyRound, Calendar, Bot, CreditCard, X, Zap } from 'lucide-react';
+import { LogOut, Trash2, Power, MessageSquare, Plus, Inbox, Eye, EyeOff, KeyRound, Calendar, Bot, CreditCard, X, Zap, AlertTriangle, Database } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -8,7 +8,11 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { CustomSelect } from '../../components/ui/CustomSelect';
 import { formatDate } from '../../utils/formatters';
-import { toggleBot } from '../../services/apiEo';
+import { topUpEoWaQuotaInDb } from '../../services/apiAdmin';
+import { updateEoPackageTier } from '../../services/apiEntitlements';
+import { FactoryResetView } from '../../components/admin/FactoryResetView';
+
+const RESET_DELAY_SECONDS = 3;
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -72,12 +76,16 @@ export const AdminDashboard = () => {
     { value: '10000', label: 'PAKET 10.000 PESAN', quota: 10000, price: 'Rp70.000' },
   ];
 
+  // Factory Reset Page View State
+  const [showResetModal, setShowResetModal] = useState(false);
+
   useEffect(() => {
     localStorage.setItem('loktik_eo_accounts', JSON.stringify(eoAccounts));
   }, [eoAccounts]);
 
   const planOptions = [
     { value: 'test', label: 'TEST (1 HARI / MANUAL WA)' },
+    { value: 'event_pass', label: 'EVENT PASS (Rp149RB / 1 EVENT + H+7)' },
     { value: '1_month', label: '1 BULAN (Rp199RB / MANUAL WA)' },
     { value: '3_months', label: '3 BULAN (Rp349RB / MANUAL WA)' },
     { value: '6_months', label: '6 BULAN PRO (Rp599RB / MANUAL WA)' },
@@ -87,6 +95,7 @@ export const AdminDashboard = () => {
     const now = Date.now();
     let days = 30;
     if (plan === 'test') days = 1;
+    else if (plan === 'event_pass') days = 30;
     else if (plan === '1_month') days = 30;
     else if (plan === '3_months') days = 90;
     else if (plan === '6_months') days = 180;
@@ -105,43 +114,125 @@ export const AdminDashboard = () => {
     );
   };
 
-  const handleToggleBotBonus = async (eoId) => {
-  // Find current EO and toggle flag
-  const acc = eoAccounts.find((a) => a.id === eoId);
-  if (!acc) return;
-  const nextBonus = !acc.botAccessBonus;
-  try {
-    await toggleBot(eoId, nextBonus);
-  } catch (err) {
-    console.error('Failed to toggle bot flag', err);
-    return;
-  }
-  // Update state
-  setEoAccounts((prev) =>
-    prev.map((a) => (a.id === eoId ? { ...a, botAccessBonus: nextBonus } : a))
-  );
-  // Sync to current session if this EO is logged in
-  try {
-    const savedUser = localStorage.getItem('loktik_user_session');
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      const isMatch =
-        parsedUser.id === acc.id ||
-        (parsedUser.username || '').toLowerCase() === (acc.name || '').toLowerCase();
-      if (isMatch) {
-        localStorage.setItem(
-          'loktik_user_session',
-          JSON.stringify({ ...parsedUser, botAccessBonus: nextBonus })
-        );
+  const handleToggleBotBonus = (eoId) => {
+    const acc = eoAccounts.find((a) => a.id === eoId);
+    if (!acc) return;
+    const nextBonus = !acc.botAccessBonus;
+
+    // Update state + loktik_eo_accounts localStorage
+    setEoAccounts((prev) =>
+      prev.map((a) => (a.id === eoId ? { ...a, botAccessBonus: nextBonus } : a))
+    );
+
+    // Sync ke session EO yang sedang login — match by username (ID format berbeda)
+    try {
+      const savedUser = localStorage.getItem('loktik_eo_session');
+      if (savedUser) {
+        const parsedUser = JSON.parse(savedUser);
+        if (parsedUser.role === 'eo') {
+          const sessionName = (parsedUser.username || parsedUser.name || '').toLowerCase();
+          const accName = (acc.name || '').toLowerCase();
+          if (sessionName && accName && sessionName === accName) {
+            localStorage.setItem(
+              'loktik_eo_session',
+              JSON.stringify({ ...parsedUser, botAccessBonus: nextBonus })
+            );
+          }
+        }
       }
-    }
-  } catch (e) {}
-};
+    } catch (e) {}
+  };
+
 
   const handleDeleteEo = (eoId) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus akun EO ini secara permanen?')) {
       setEoAccounts((prev) => prev.filter((acc) => acc.id !== eoId));
     }
+  };
+
+  const handleFactoryReset = async (e) => {
+    e.preventDefault();
+    if (resetInput !== 'RESET DATABASE' || resetCountdown > 0 || isResetting) return;
+    
+    setIsResetting(true);
+    setResetError(null);
+    setResetProgress([]);
+    setResetReport(null);
+    try {
+      const result = await factoryResetDatabase({
+        mode: resetMode,
+        actorName: user?.name || user?.username || 'Unknown',
+        actorRole: user?.role || 'admin',
+        onProgress: (payload) => {
+          setResetProgress((prev) => [
+            ...prev,
+            {
+              phase: payload.phase,
+              detail: payload.detail,
+              deleted: payload.deleted,
+              bucket: payload.bucket,
+              table: payload.table,
+              at: new Date().toISOString(),
+            },
+          ].slice(-20));
+        },
+      });
+      if (result.success) {
+        setResetReport(result.report);
+        setResetAuditLog(getFactoryResetAuditLog());
+      }
+    } catch (err) {
+      setResetError(err.message || 'Terjadi kesalahan saat reset.');
+      setResetReport(err.report || null);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleBackupExport = async () => {
+    try {
+      setIsBackupExporting(true);
+      const backup = await exportFactoryResetBackup(resetMode);
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `loktik-backup-${resetMode}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setResetError(error.message || 'Gagal mengekspor backup.');
+    } finally {
+      setIsBackupExporting(false);
+    }
+  };
+
+  const handleRefreshDryRun = async () => {
+    try {
+      setIsDryRunning(true);
+      const data = await factoryResetDryRun(resetMode);
+      setResetDryRun(data);
+      setResetError(null);
+    } catch (error) {
+      setResetError(error.message || 'Gagal menjalankan dry run.');
+    } finally {
+      setIsDryRunning(false);
+    }
+  };
+
+  const closeResetModal = () => {
+    setShowResetModal(false);
+    setResetInput('');
+    setResetMode(RESET_MODES.quick);
+    setResetDryRun(null);
+    setResetProgress([]);
+    setResetReport(null);
+    setResetError(null);
+    setResetCountdown(RESET_DELAY_SECONDS);
+    setIsDryRunning(false);
+    setIsBackupExporting(false);
   };
 
   const togglePasswordVisibility = (eoId) => {
@@ -190,12 +281,17 @@ export const AdminDashboard = () => {
     setSelectedEo(null);
   };
 
-  const handleTopUpSubmit = (e) => {
+  const handleTopUpSubmit = async (e) => {
     e.preventDefault();
     if (!selectedEo) return;
 
     const selectedPackage = waPackages.find(p => p.value === topUpPackage);
     const quotaToAdd = selectedPackage ? selectedPackage.quota : parseInt(topUpPackage);
+
+    // Sync to Supabase DB via RPC
+    topUpEoWaQuotaInDb(selectedEo.id, quotaToAdd).catch((err) =>
+      console.warn('topUpEoWaQuotaInDb warning:', err)
+    );
 
     setEoAccounts((prev) =>
       prev.map((acc) => {
@@ -208,7 +304,7 @@ export const AdminDashboard = () => {
           };
           // Sync ke session aktif jika EO ini sedang login
           try {
-            const savedUser = localStorage.getItem('loktik_user_session');
+            const savedUser = localStorage.getItem('loktik_eo_session');
             if (savedUser) {
               const parsedUser = JSON.parse(savedUser);
               const isMatch =
@@ -216,7 +312,7 @@ export const AdminDashboard = () => {
                 (parsedUser.username || '').toLowerCase() === (acc.name || '').toLowerCase();
               if (isMatch) {
                 localStorage.setItem(
-                  'loktik_user_session',
+                  'loktik_eo_session',
                   JSON.stringify({
                     ...parsedUser,
                     wa_quota: updatedEo.wa_quota,
@@ -240,6 +336,14 @@ export const AdminDashboard = () => {
     navigate('/');
   };
 
+  if (showResetModal) {
+    return (
+      <div className="min-h-screen bg-[#050505]">
+        <FactoryResetView onCloseView={() => setShowResetModal(false)} currentAdminUser={user} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* Top Admin Bar */}
@@ -248,15 +352,25 @@ export const AdminDashboard = () => {
           <div className="flex items-center gap-3 flex-wrap">
             <Badge variant="green">PLATFORM OWNER ADMIN</Badge>
             <div className="h-4 w-px bg-neutral-700" />
-            <span className="text-[11px] font-mono text-neutral-400 font-bold">
-              LOGGED IN: <span className="text-brand-green">BroFerADM (Ferdy)</span>
-            </span>
+            <h1 className="text-xl font-black tracking-tight text-white uppercase flex items-center">
+              <KeyRound className="w-6 h-6 mr-3 text-brand-blue" /> MASTER ADMIN DASHBOARD
+            </h1>
           </div>
-          <Button variant="outline" size="sm" onClick={handleLogout} className="border-brand-red/40 text-brand-red hover:bg-brand-red/10 hover:border-brand-red hover:text-brand-red shrink-0">
-            <LogOut className="w-3.5 h-3.5 mr-1.5" /> LOGOUT
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowResetModal(true)}
+              className="font-bold border-brand-red text-brand-red hover:bg-brand-red hover:text-white"
+            >
+              <Database className="w-4 h-4 mr-2" /> FACTORY RESET
+            </Button>
+            <Button variant="outline" onClick={logout} className="font-bold border-neutral-800 hover:bg-brand-red hover:text-white hover:border-brand-red">
+              <LogOut className="w-4 h-4 mr-2" /> LOGOUT
+            </Button>
+          </div>
         </div>
       </div>
+
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-8 text-left">
       {/* Page Title */}
@@ -390,14 +504,17 @@ export const AdminDashboard = () => {
               const planLabel =
                 eo.subscriptionPlan === '6_months' ? '6 BULAN PRO' :
                 eo.subscriptionPlan === '3_months' ? '3 BULAN' :
+                eo.subscriptionPlan === 'event_pass' ? 'EVENT PASS' :
                 eo.subscriptionPlan === 'test' ? 'TEST' : '1 BULAN';
               const planColor =
                 eo.subscriptionPlan === '6_months' ? 'text-brand-blue' :
                 eo.subscriptionPlan === '3_months' ? 'text-brand-purple' :
+                eo.subscriptionPlan === 'event_pass' ? 'text-brand-blue' :
                 eo.subscriptionPlan === 'test' ? 'text-neutral-400' : 'text-brand-yellow';
               const planBorder =
                 eo.subscriptionPlan === '6_months' ? 'border-brand-blue/30' :
                 eo.subscriptionPlan === '3_months' ? 'border-brand-purple/30' :
+                eo.subscriptionPlan === 'event_pass' ? 'border-brand-blue/30' :
                 eo.subscriptionPlan === 'test' ? 'border-neutral-700' : 'border-brand-yellow/30';
 
               return (
@@ -633,6 +750,7 @@ export const AdminDashboard = () => {
           </div>
         </div>
       )}
+
       </div>
     </div>
   );

@@ -11,13 +11,16 @@ import html2canvas from 'html2canvas';
 import { TicketGraphic } from './TicketGraphic';
 import { supabase } from '../../services/supabase';
 import { useToast } from '../../context/ToastContext';
+import { resolveWhatsAppMode } from '../../utils/resolveWhatsAppMode';
 
 export const OrderManagerTab = () => {
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const eoUsername = user?.username || user?.name || '';
   const userPlan = user?.subscriptionPlan || '1_month';
-  const hasBotAccess = user?.role === 'admin' || Boolean(user?.botAccessBonus) || userPlan === '1_year';
+  // resolveWhatsAppMode — SINGLE SOURCE OF TRUTH untuk mode pengiriman WA
+  const waMode = resolveWhatsAppMode(user); // 'bot' | 'quota' | 'manual'
+  const hasBotAccess = waMode === 'bot';
 
   const formatOrderTicketCategories = (order) => {
     if (!order.tickets || order.tickets.length === 0) return 'Standard Ticket';
@@ -215,19 +218,19 @@ Terima Kasih!
   };
 
   const sendAutoTicketViaBot = async (order, ticketUrl) => {
-    // --- CEK KUOTA WA BOT ---
-    const currentQuota = user?.wa_quota ?? 0;
-    if (!hasBotAccess) {
-      showToast('Akses Bot WA belum aktif. Aktifkan add-on Bot WA melalui admin.', 'eo');
+    // --- resolveWhatsAppMode: SINGLE SOURCE OF TRUTH ---
+    const resolvedMode = resolveWhatsAppMode(user);
+    const isBotActive = resolvedMode === 'bot';
+
+    if (resolvedMode === 'manual') {
+      // Bot tidak aktif DAN kuota habis → fallback ke WA manual
+      showToast('Bot WA tidak aktif & kuota habis. Beralih ke WA manual.', 'eo');
       sendManualWhatsAppMessage(order, ticketUrl);
       return false;
     }
-    if (currentQuota <= 0) {
-      showToast('Kuota Bot WA habis! Hubungi admin untuk top up kuota. Beralih ke WA manual.', 'eo');
-      sendManualWhatsAppMessage(order, ticketUrl);
-      return false;
-    }
-    // --- END CEK KUOTA ---
+    // resolvedMode === 'bot' → unlimited, tidak cek kuota
+    // resolvedMode === 'quota' → lanjut, kuota akan dikurangi setelah kirim
+    // --- END MODE CHECK ---
 
     const waNumber = order.guest_wa.replace(/[^0-9]/g, '');
     const eventName = order.events?.name || 'Event LokTik';
@@ -256,16 +259,19 @@ Terima Kasih!
 
       const result = await response.json();
       if (result.success) {
-        // --- KURANGI KUOTA & TAMBAH PESAN TERKIRIM ---
-        const newQuota = Math.max(0, (user?.wa_quota ?? 0) - 1);
+        // Bot aktif = unlimited, tidak kurangi kuota
+        // Kuota hanya berkurang jika mode kuota (bot tidak aktif)
         const newSent = (user?.wa_messages_sent ?? 0) + 1;
+        const newQuota = isBotActive
+          ? (user?.wa_quota ?? 0)                      // bot aktif: kuota tidak berubah
+          : Math.max(0, (user?.wa_quota ?? 0) - 1);    // kuota mode: kurangi 1
 
         // Update session user
-        const savedSession = localStorage.getItem('loktik_user_session');
+        const savedSession = localStorage.getItem('loktik_eo_session');
         if (savedSession) {
           try {
             const parsed = JSON.parse(savedSession);
-            localStorage.setItem('loktik_user_session', JSON.stringify({
+            localStorage.setItem('loktik_eo_session', JSON.stringify({
               ...parsed,
               wa_quota: newQuota,
               wa_messages_sent: newSent,
@@ -287,9 +293,9 @@ Terima Kasih!
             localStorage.setItem('loktik_eo_accounts', JSON.stringify(updated));
           } catch (_) {}
         }
-        // --- END UPDATE KUOTA ---
 
-        showToast(`Tiket Kode ${prettyCode} & QR Code otomatis terkirim via WA ke ${order.guest_name}! (Sisa kuota: ${newQuota})`, 'eo');
+        const quotaInfo = isBotActive ? 'BOT AKTIF (Unlimited)' : `Sisa kuota: ${newQuota}`;
+        showToast(`Tiket Kode ${prettyCode} & QR Code otomatis terkirim via WA ke ${order.guest_name}! (${quotaInfo})`, 'eo');
         return true;
       }
     } catch (e) {
@@ -1006,20 +1012,22 @@ Terima Kasih!
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {hasBotAccess ? (
-            <>
-              <Badge variant={botStatus === 'online' ? 'green' : 'yellow'}>
-                <Bot className="w-3 h-3 mr-1 inline" />
-                {botStatus === 'online' ? 'BOT ONLINE' : 'BOT OFFLINE'}
-              </Badge>
-              <Badge variant={(user?.wa_quota ?? 0) <= 0 ? 'red' : (user?.wa_quota ?? 0) <= 50 ? 'yellow' : 'blue'}>
-                KUOTA WA: {(user?.wa_quota ?? 0).toLocaleString('id-ID')}
-              </Badge>
-            </>
-          ) : (
-            <Badge variant="blue">
+          {waMode === 'bot' && (
+            <Badge variant={botStatus === 'online' ? 'green' : 'yellow'}>
+              <Bot className="w-3 h-3 mr-1 inline" />
+              {botStatus === 'online' ? 'BOT ONLINE' : 'BOT OFFLINE'}
+            </Badge>
+          )}
+          {waMode === 'quota' && (
+            <Badge variant={(user?.wa_quota ?? 0) <= 0 ? 'red' : (user?.wa_quota ?? 0) <= 50 ? 'yellow' : 'blue'}>
               <MessageSquare className="w-3 h-3 mr-1 inline" />
-              MANUAL WA (PAKET 1 BULAN)
+              KUOTA WA: {(user?.wa_quota ?? 0).toLocaleString('id-ID')}
+            </Badge>
+          )}
+          {waMode === 'manual' && (
+            <Badge variant="yellow">
+              <Send className="w-3 h-3 mr-1 inline" />
+              MANUAL WA (PAKET {userPlan === 'event_pass' ? 'EVENT PASS' : userPlan === '1_month' ? '1 BULAN' : userPlan === '3_months' ? '3 BULAN' : userPlan === '6_months' ? '6 BULAN PRO' : userPlan.toUpperCase()})
             </Badge>
           )}
           <Button variant="green" size="sm" onClick={exportToExcel} className="font-bold">

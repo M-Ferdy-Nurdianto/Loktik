@@ -1,4 +1,5 @@
 import { supabase, supabaseArchive } from './supabase';
+import { validateEoAction } from './apiEntitlements';
 
 // Simple in-memory cache to boost mobile loading speed and prevent DB spam (15s TTL)
 export const cacheStore = {
@@ -18,7 +19,7 @@ export const clearEoEventsCache = (username = null) => {
   }
 };
 
-const clearPublicEventsCache = () => {
+export const clearPublicEventsCache = () => {
   cacheStore.activeEvents = null;
   cacheStore.activeEventsExpiry = 0;
   cacheStore.eventDetails.clear();
@@ -236,10 +237,12 @@ export const getEventBySlug = async (slug) => {
 
   if (!event) return null;
 
+  // Hanya ambil tiket Presale (PO) untuk halaman publik — tiket OTS tidak boleh muncul di website pembeli
   const { data: tiers } = await supabase
     .from('ticket_categories')
-    .select('id, name, price, quota, start_po, end_po')
-    .eq('event_id', event.id);
+    .select('id, name, price, quota, start_po, end_po, description')
+    .eq('event_id', event.id)
+    .not('name', 'ilike', '%— OTS%');
 
   const res = { ...event, ticket_categories: tiers || [] };
   cacheStore.eventDetails.set(slugWithDashes, { data: res, expiry: now + CACHE_TTL });
@@ -295,6 +298,14 @@ export const uploadQrisCode = async (compressedWebPFile) => {
  */
 export const createEventWithTiers = async (eventPayload, categoryRows) => {
   clearPublicEventsCache();
+
+  if (eventPayload.eo_id) {
+    const val = await validateEoAction(eventPayload.eo_id, 'CREATE_EVENT');
+    if (!val.allowed) {
+      throw new Error(val.message);
+    }
+  }
+
   const { data: newEvent, error: eventError } = await supabase
     .from('events')
     .insert([eventPayload])
@@ -472,5 +483,38 @@ export const deleteEventAndFiles = async (eventId) => {
 
   if (error) throw new Error(`Gagal menghapus event: ${error.message}`);
   return true;
+};
+
+/**
+ * Fetch OTS-only ticket categories for Staff Gate / Kasir OTS.
+ * Filter: name contains '— OTS' suffix (production source of truth).
+ * @param {string} eventId
+ * @returns {Promise<Array>}
+ */
+export const getOtsTickets = async (eventId) => {
+  if (!eventId) return [];
+  const { data, error } = await supabase
+    .from('ticket_categories')
+    .select('id, name, price, quota, description')
+    .eq('event_id', eventId)
+    .ilike('name', '%— OTS%');
+  if (error) throw new Error(error.message);
+  return data || [];
+};
+
+/**
+ * Fetch Presale-only ticket categories (no OTS) — for website / checkout.
+ * @param {string} eventId
+ * @returns {Promise<Array>}
+ */
+export const getPresaleTickets = async (eventId) => {
+  if (!eventId) return [];
+  const { data, error } = await supabase
+    .from('ticket_categories')
+    .select('id, name, price, quota, start_po, end_po, description')
+    .eq('event_id', eventId)
+    .not('name', 'ilike', '%— OTS%');
+  if (error) throw new Error(error.message);
+  return data || [];
 };
 
