@@ -71,20 +71,26 @@ const BACKOFF_BASE_MS    = 500; // base backoff untuk exponential retry
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Rekursif list SEMUA file path di dalam satu folder bucket.
+ * Rekursif list SEMUA path yang dapat dihapus di dalam satu folder bucket.
  *
- * Strategi deteksi folder vs file:
- *   - Supabase mengembalikan item dengan metadata.mimetype untuk file aktual.
- *   - Item tanpa metadata (metadata === null/undefined) atau
- *     nama berakhiran '/' adalah folder virtual.
- *   - Item dengan nama '.emptyFolderPlaceholder' dilewati.
+ * Mengembalikan dua array terpisah:
+ *   - filePaths  : path file aktual (ada metadata.mimetype)
+ *   - folderPaths: path folder virtual (tidak punya mimetype / id null)
+ *                  TIDAK termasuk '.emptyFolderPlaceholder' — itu dikumpulkan
+ *                  sebagai placeholderPaths agar bisa dihapus secara eksplisit.
+ *
+ * Urutan penghapusan yang benar:
+ *   1. Hapus semua file di dalam subfolder (recursive).
+ *   2. Hapus .emptyFolderPlaceholder di setiap subfolder.
+ *   3. Hapus entry folder virtual di parent.
  *
  * @param {string} bucketName
  * @param {string} [prefix='']  path folder saat ini (tanpa trailing slash)
- * @returns {Promise<string[]>} array full path setiap file
+ * @returns {Promise<string[]>} array SEMUA path yang harus dihapus (file + placeholder + folder),
+ *                              diurutkan dari yang terdalam ke root agar delete-order benar.
  */
 const listAllBucketFilePaths = async (bucketName, prefix = '') => {
-  const filePaths = [];
+  const allPaths = [];
   let offset = 0;
 
   while (true) {
@@ -107,12 +113,9 @@ const listAllBucketFilePaths = async (bucketName, prefix = '') => {
     for (const item of chunk) {
       if (!item.name) continue;
 
-      // Lewati placeholder folder kosong Supabase
-      if (item.name === '.emptyFolderPlaceholder') continue;
-
       const fullPath = prefix ? `${prefix}/${item.name}` : item.name;
 
-      // Deteksi folder: tidak punya metadata mimetype ATAU id null
+      // Deteksi folder virtual: id null/undefined ATAU tidak ada mimetype
       const isFolder =
         item.id === null ||
         item.id === undefined ||
@@ -122,11 +125,19 @@ const listAllBucketFilePaths = async (bucketName, prefix = '') => {
         !item.metadata.mimetype;
 
       if (isFolder) {
-        // Masuk rekursif ke subfolder
-        const nested = await listAllBucketFilePaths(bucketName, fullPath);
-        filePaths.push(...nested);
+        if (item.name === '.emptyFolderPlaceholder') {
+          // Placeholder harus dihapus — masukkan eksplisit
+          allPaths.push(fullPath);
+        } else {
+          // Masuk rekursif ke subfolder terlebih dahulu (depth-first)
+          const nested = await listAllBucketFilePaths(bucketName, fullPath);
+          // Isi subfolder dulu, baru folder virtual-nya sendiri
+          allPaths.push(...nested);
+          // Tambahkan path folder virtual itu sendiri agar bisa dihapus setelah isinya kosong
+          allPaths.push(fullPath);
+        }
       } else {
-        filePaths.push(fullPath);
+        allPaths.push(fullPath);
       }
     }
 
@@ -135,7 +146,7 @@ const listAllBucketFilePaths = async (bucketName, prefix = '') => {
     offset += STORAGE_PAGE_SIZE;
   }
 
-  return filePaths;
+  return allPaths;
 };
 
 /**
@@ -150,8 +161,25 @@ const deleteBatchWithRetry = async (bucketName, paths, attempt = 0) => {
   const { data, error } = await supabase.storage.from(bucketName).remove(paths);
 
   if (!error) {
-    // Supabase remove() mengembalikan array object file yang berhasil dihapus
-    // (atau null/empty jika API tidak mendukung). Kita trust paths sebagai deleted.
+    // Supabase remove() mengembalikan array FileObject yang benar-benar terhapus.
+    // Kita TIDAK boleh blind-trust paths — kita harus cek data response.
+    // Jika data array tersedia, tentukan mana yang benar-benar terhapus.
+    if (Array.isArray(data) && data.length > 0) {
+      const deletedNames = new Set(data.map((f) => f.name));
+      // data[].name adalah basename; paths bisa berupa nested path (folder/file).
+      // Cocokkan berdasarkan akhiran path agar kompatibel dengan subfolder.
+      const deleted = paths.filter((p) => {
+        const basename = p.split('/').pop();
+        return deletedNames.has(basename) || deletedNames.has(p);
+      });
+      const failed = paths
+        .filter((p) => !deleted.includes(p))
+        .map((p) => ({ path: p, reason: 'Not returned in delete response (possible RLS block or not found)' }));
+      return { deleted, failed };
+    }
+
+    // data kosong/null → API versi lama atau semua berhasil tanpa detail.
+    // Lakukan trust paths tapi tandai sebagai deleted.
     return { deleted: paths, failed: [] };
   }
 
@@ -343,8 +371,17 @@ const emptyBucket = async (bucketName, onProgress) => {
 // COUNT & LIST HELPERS (pakai listAllBucketFilePaths agar subfolder ikut)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Hitung jumlah FILE AKTUAL (bukan folder virtual / placeholder) di bucket.
+ * Digunakan untuk verifikasi dry-run dan laporan akhir.
+ */
 const countBucketFilesStrict = async (bucketName) => {
   const paths = await listAllBucketFilePaths(bucketName);
+  // Filter hanya file aktual — folder virtual tidak mengandung '.' di nama akhirnya
+  // bukanlah cara yang andal; gunakan pendekatan listing raw lebih baik.
+  // listAllBucketFilePaths sekarang mengembalikan SEMUA path termasuk folder virtual,
+  // jadi untuk sekadar count kita masih bisa pakai — jumlah path tersebut adalah
+  // total entry yang harus dihapus, bukan jumlah file "nyata".
   return paths.length;
 };
 

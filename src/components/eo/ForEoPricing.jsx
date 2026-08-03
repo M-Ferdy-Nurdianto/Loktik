@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Bot, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Clock3, DollarSign, Info, MessageSquare, ShieldCheck, Sparkles, Users, CalendarDays } from 'lucide-react';
+import { ArrowRight, Bot, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Clock3, DollarSign, Info, MessageSquare, ShieldCheck, Sparkles, Users, CalendarDays, Zap } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
