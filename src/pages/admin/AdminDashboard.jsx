@@ -197,6 +197,8 @@ export const AdminDashboard = () => {
           const updatedEo = {
             ...acc,
             wa_quota: (acc.wa_quota || 0) + quotaToAdd,
+            // Auto-set botAccessBonus = true saat top up pertama kali
+            botAccessBonus: true,
           };
           // Sync ke session aktif jika EO ini sedang login
           try {
@@ -213,6 +215,7 @@ export const AdminDashboard = () => {
                     ...parsedUser,
                     wa_quota: updatedEo.wa_quota,
                     wa_messages_sent: updatedEo.wa_messages_sent || 0,
+                    botAccessBonus: true,
                   })
                 );
               }
@@ -232,88 +235,115 @@ export const AdminDashboard = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-8 text-left bg-[#0a0a0a]">
-      {/* Admin Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-neutral-800 pb-4 gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
+    <div className="min-h-screen bg-[#0a0a0a]">
+      {/* Top Admin Bar */}
+      <div className="border-b border-neutral-800 bg-[#0d0d0d] px-4 md:px-8 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Badge variant="green">PLATFORM OWNER ADMIN</Badge>
-            <span className="text-xs font-mono text-brand-green font-bold">
-              LOGGED IN: BroFerADM (Ferdy)
+            <div className="h-4 w-px bg-neutral-700" />
+            <span className="text-[11px] font-mono text-neutral-400 font-bold">
+              LOGGED IN: <span className="text-brand-green">BroFerADM (Ferdy)</span>
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black uppercase text-white tracking-tight">
-            DASBOR UTAMA PLATFORM LOKTIK
-          </h1>
+          <Button variant="outline" size="sm" onClick={handleLogout} className="border-brand-red/40 text-brand-red hover:bg-brand-red/10 hover:border-brand-red hover:text-brand-red shrink-0">
+            <LogOut className="w-3.5 h-3.5 mr-1.5" /> LOGOUT
+          </Button>
         </div>
+      </div>
 
-        <Button variant="outline" size="sm" onClick={handleLogout} className="self-start sm:self-auto">
-          <LogOut className="w-4 h-4 mr-1 text-brand-red" /> LOGOUT
-        </Button>
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-8 text-left">
+      {/* Page Title */}
+      <div className="space-y-1 pb-6 border-b border-neutral-800">
+        <h1 className="text-2xl sm:text-3xl font-black uppercase text-white tracking-tight">
+          Dasbor Utama
+        </h1>
+        <p className="text-sm text-neutral-500 font-medium">Platform Loktik — Manajemen Akun EO & Statistik</p>
       </div>
 
       {/* Admin Overview Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-        <Card variant="dark" className="p-4 sm:p-5 space-y-1.5 border-neutral-800">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">TOTAL EO TERDAFTAR</p>
-          <p className="text-2xl font-black text-white">{eoAccounts.length} <span className="text-base font-bold text-neutral-500">EO</span></p>
-        </Card>
-        <Card variant="dark" className="p-4 sm:p-5 space-y-1.5 border-neutral-800">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">EO AKTIF</p>
-          <p className="text-2xl font-black text-brand-green">{eoAccounts.filter((a) => a.status === 'active').length} <span className="text-base font-bold text-neutral-500">EO</span></p>
-        </Card>
-        <Card variant="dark" className="p-4 sm:p-5 space-y-1.5 border-neutral-800">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">SOFT-LOCKED</p>
-          <p className="text-2xl font-black text-brand-red">{eoAccounts.filter((a) => a.status === 'suspended').length} <span className="text-base font-bold text-neutral-500">EO</span></p>
-        </Card>
-        <Card variant="dark" className="p-4 sm:p-5 space-y-1.5 border-neutral-800">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">KUOTA WA AKTIF</p>
-          <p className="text-2xl font-black text-brand-blue">{eoAccounts.reduce((sum, a) => sum + (a.wa_quota || 0), 0).toLocaleString('id-ID')}</p>
-        </Card>
-        <Card variant="dark" className="p-4 sm:p-5 space-y-1.5 border-neutral-800">
-          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">PESAN TERKIRIM</p>
-          <p className="text-2xl font-black text-brand-purple">{eoAccounts.reduce((sum, a) => sum + (a.wa_messages_sent || 0), 0).toLocaleString('id-ID')}</p>
-        </Card>
+        {/* Total EO */}
+        <div className="bg-[#121212] border border-neutral-800 rounded-xl p-5 space-y-3 hover:border-neutral-700 transition-colors">
+          <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Total EO</p>
+          <div>
+            <p className="text-3xl font-black text-white leading-none">{eoAccounts.length}</p>
+            <p className="text-xs font-bold text-neutral-500 mt-1">Terdaftar</p>
+          </div>
+        </div>
+        {/* EO Aktif */}
+        <div className="bg-[#121212] border border-brand-green/20 rounded-xl p-5 space-y-3 hover:border-brand-green/40 transition-colors">
+          <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">EO Aktif</p>
+          <div>
+            <p className="text-3xl font-black text-brand-green leading-none">{eoAccounts.filter((a) => a.status === 'active').length}</p>
+            <p className="text-xs font-bold text-neutral-500 mt-1">Berlangganan</p>
+          </div>
+        </div>
+        {/* Soft-Locked */}
+        <div className="bg-[#121212] border border-brand-red/20 rounded-xl p-5 space-y-3 hover:border-brand-red/30 transition-colors">
+          <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Soft-Locked</p>
+          <div>
+            <p className="text-3xl font-black text-brand-red leading-none">{eoAccounts.filter((a) => a.status === 'suspended').length}</p>
+            <p className="text-xs font-bold text-neutral-500 mt-1">Dinonaktifkan</p>
+          </div>
+        </div>
+        {/* Kuota WA */}
+        <div className="bg-[#121212] border border-brand-blue/20 rounded-xl p-5 space-y-3 hover:border-brand-blue/40 transition-colors">
+          <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Kuota WA</p>
+          <div>
+            <p className="text-3xl font-black text-brand-blue leading-none">{eoAccounts.reduce((sum, a) => sum + (a.wa_quota || 0), 0).toLocaleString('id-ID')}</p>
+            <p className="text-xs font-bold text-neutral-500 mt-1">Pesan tersisa</p>
+          </div>
+        </div>
+        {/* Pesan Terkirim */}
+        <div className="bg-[#121212] border border-brand-purple/20 rounded-xl p-5 space-y-3 hover:border-brand-purple/40 transition-colors">
+          <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Terkirim</p>
+          <div>
+            <p className="text-3xl font-black text-brand-purple leading-none">{eoAccounts.reduce((sum, a) => sum + (a.wa_messages_sent || 0), 0).toLocaleString('id-ID')}</p>
+            <p className="text-xs font-bold text-neutral-500 mt-1">Total pesan WA</p>
+          </div>
+        </div>
       </div>
 
       {/* Account Management Section */}
-      <Card variant="dark" className="p-6 space-y-6 text-left border-neutral-800">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-neutral-800 pb-3 gap-3">
+      <div className="bg-[#121212] border border-neutral-800 rounded-xl text-left overflow-hidden">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-neutral-800 px-6 py-5 gap-3">
           <div>
-            <h3 className="text-lg font-black uppercase text-white">MANAJEMEN AKUN EO / PANITIA</h3>
-            <p className="text-xs text-neutral-400">Buat akun EO baru, tentukan durasi langganan &amp; soft lock akun.</p>
+            <h3 className="text-base font-black uppercase text-white tracking-tight">Manajemen Akun EO / Panitia</h3>
+            <p className="text-xs text-neutral-500 mt-0.5">Buat akun EO baru, tentukan durasi langganan &amp; soft lock akun.</p>
           </div>
           <Button variant="green" size="sm" onClick={() => setShowAddModal(!showAddModal)}>
-            <Plus className="w-4 h-4 mr-1" /> {showAddModal ? 'BATAL' : 'TAMBAH EO BARU'}
+            <Plus className="w-4 h-4 mr-1" /> {showAddModal ? 'Batal' : 'Tambah EO Baru'}
           </Button>
         </div>
+        <div className="p-6 space-y-6">
 
         {/* Add EO Form */}
         {showAddModal && (
-          <form onSubmit={handleAddEoSubmit} className="p-5 bg-neutral-900 rounded-md border border-neutral-800 space-y-4">
-            <h4 className="text-xs font-black uppercase text-brand-green tracking-widest flex items-center space-x-1">
+          <form onSubmit={handleAddEoSubmit} className="p-5 bg-neutral-900/60 rounded-xl border border-neutral-700 space-y-5">
+            <h4 className="text-xs font-black uppercase text-brand-green tracking-widest flex items-center gap-2">
               <KeyRound className="w-4 h-4" />
-              <span>BUAT AKUN &amp; PASSWORD EO BARU</span>
+              Buat Akun &amp; Password EO Baru
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <Input
-                label="NAMA EO / PANITIA *"
+                label="Nama EO / Panitia *"
                 required
-                placeholder="Masukkan Username / Nama EO..."
+                placeholder="Username / Nama EO..."
                 value={newEo.name}
                 onChange={(e) => setNewEo({ ...newEo, name: e.target.value })}
               />
               <Input
-                label="NO. WHATSAPP EO *"
+                label="No. WhatsApp EO *"
                 required
                 type="tel"
                 inputMode="numeric"
-                placeholder="Masukkan Nomor WhatsApp..."
+                placeholder="Nomor WhatsApp..."
                 value={newEo.wa}
                 onChange={(e) => setNewEo({ ...newEo, wa: e.target.value.replace(/[^0-9]/g, '') })}
               />
               <Input
-                label="PASSWORD UNTUK EO *"
+                label="Password untuk EO *"
                 type="password"
                 required
                 placeholder="Password login..."
@@ -321,7 +351,7 @@ export const AdminDashboard = () => {
                 onChange={(e) => setNewEo({ ...newEo, password: e.target.value })}
               />
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-300 block mb-1.5">PAKET LANGGANAN *</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-300 block mb-1.5">Paket Langganan *</label>
                 <CustomSelect
                   options={planOptions}
                   value={newEo.plan}
@@ -331,327 +361,205 @@ export const AdminDashboard = () => {
               </div>
             </div>
             <Button type="submit" variant="green" size="sm" className="font-bold uppercase">
-              SIMPAN &amp; BUAT AKUN EO
+              Simpan &amp; Buat Akun EO
             </Button>
           </form>
         )}
 
-        {/* EO Table */}
+        {/* EO List — card layout, no horizontal scroll */}
         {eoAccounts.length === 0 ? (
-          <div className="py-16 text-center space-y-3">
-            <Inbox className="w-12 h-12 text-neutral-600 mx-auto" />
-            <p className="font-extrabold text-sm text-neutral-400 uppercase">BELUM ADA AKUN EO TERDAFTAR</p>
-            <p className="text-xs text-neutral-500 font-medium">Klik tombol "TAMBAH EO BARU" di atas untuk mendaftarkan akun &amp; password EO.</p>
+          <div className="py-20 text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto">
+              <Inbox className="w-8 h-8 text-neutral-600" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-extrabold text-sm text-neutral-300 uppercase">Belum ada akun EO terdaftar</p>
+              <p className="text-xs text-neutral-500 font-medium">Klik tombol "Tambah EO Baru" di atas untuk mendaftarkan akun.</p>
+            </div>
           </div>
         ) : (
-          <>
-            {/* ── MOBILE: card per EO (dedicated, bukan shrink dari tabel) ── */}
-            <div className="block lg:hidden space-y-3">
-              {eoAccounts.map((eo) => {
-                const hasBot = Boolean(eo.botAccessBonus);
-                const quotaLow = (eo.wa_quota || 0) <= 0;
-                const quotaMedium = (eo.wa_quota || 0) > 0 && (eo.wa_quota || 0) <= 100;
-                const planLabel =
-                  eo.subscriptionPlan === '6_months' ? '6 BULAN PRO' :
-                  eo.subscriptionPlan === '3_months' ? '3 BULAN' :
-                  eo.subscriptionPlan === 'test' ? 'TEST' : '1 BULAN';
-                const planColor =
-                  eo.subscriptionPlan === '6_months' ? 'text-brand-blue' :
-                  eo.subscriptionPlan === '3_months' ? 'text-brand-purple' :
-                  eo.subscriptionPlan === 'test' ? 'text-neutral-400' : 'text-brand-yellow';
-                const limitText =
-                  `${eo.subscriptionPlan === '6_months' || eo.subscriptionPlan === '3_months' ? 'Event ∞' : 'Max 1 Event'} · ` +
-                  `${eo.subscriptionPlan === '6_months' ? 'Staf ∞' : eo.subscriptionPlan === '3_months' ? 'Max 5 Staf' : eo.subscriptionPlan === 'test' ? 'Max 1 Staf' : 'Max 2 Staf'}`;
+          <div className="space-y-3">
+            {eoAccounts.map((eo) => {
+              const hasBot = Boolean(eo.botAccessBonus);
+              const planLabel =
+                eo.subscriptionPlan === '6_months' ? '6 BULAN PRO' :
+                eo.subscriptionPlan === '3_months' ? '3 BULAN' :
+                eo.subscriptionPlan === 'test' ? 'TEST' : '1 BULAN';
+              const planColor =
+                eo.subscriptionPlan === '6_months' ? 'text-brand-blue' :
+                eo.subscriptionPlan === '3_months' ? 'text-brand-purple' :
+                eo.subscriptionPlan === 'test' ? 'text-neutral-400' : 'text-brand-yellow';
+              const planBorder =
+                eo.subscriptionPlan === '6_months' ? 'border-brand-blue/30' :
+                eo.subscriptionPlan === '3_months' ? 'border-brand-purple/30' :
+                eo.subscriptionPlan === 'test' ? 'border-neutral-700' : 'border-brand-yellow/30';
 
-                return (
-                  <div key={eo.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3">
-                    {/* Row 1: ID + nama + status */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-mono text-brand-purple font-bold">{eo.id}</p>
-                        <p className="text-sm font-black text-white truncate">{eo.name}</p>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-[11px] font-mono text-brand-yellow font-bold">
-                            {showPasswords[eo.id] ? eo.password : '••••••••'}
-                          </span>
-                          <button type="button" onClick={() => togglePasswordVisibility(eo.id)} className="text-neutral-500 hover:text-white">
-                            {showPasswords[eo.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                          </button>
-                        </div>
+              return (
+                <div key={eo.id} className={`bg-neutral-900/70 border rounded-xl p-4 space-y-3 transition-colors hover:bg-neutral-900 ${planBorder}`}>
+                  {/* Row 1: ID + Nama + Status + Bot badge */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-mono text-brand-purple font-bold shrink-0">{eo.id}</span>
+                        <span className="text-sm font-black text-white truncate">{eo.name}</span>
                       </div>
-                      <Badge variant={eo.status === 'active' ? 'green' : 'red'} className="shrink-0 whitespace-nowrap text-[10px]">
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-[11px] font-mono text-brand-yellow font-bold">
+                          {showPasswords[eo.id] ? eo.password : '••••••••'}
+                        </span>
+                        <button type="button" onClick={() => togglePasswordVisibility(eo.id)} className="text-neutral-500 hover:text-white transition-colors">
+                          {showPasswords[eo.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Badge variant={eo.status === 'active' ? 'green' : 'red'} className="text-[9px] whitespace-nowrap">
                         {eo.status === 'active' ? 'AKTIF' : 'LOCKED'}
                       </Badge>
-                    </div>
-
-                    {/* Row 2: detail info grid */}
-                    <div className="grid grid-cols-2 gap-2 text-[11px]">
-                      <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
-                        <p className="text-neutral-500 font-bold uppercase text-[9px]">Paket</p>
-                        <p className={`font-black uppercase ${planColor}`}>{planLabel}</p>
-                        <p className="text-neutral-500 font-mono text-[9px]">{limitText}</p>
-                      </div>
-                      <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
-                        <p className="text-neutral-500 font-bold uppercase text-[9px]">Expired</p>
-                        <p className="font-mono font-bold text-brand-yellow text-[11px] leading-snug">
-                          {formatDate(eo.subscriptionExpiresAt || getOneMonthExpiry())}
-                        </p>
-                      </div>
-                      <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
-                        <p className="text-neutral-500 font-bold uppercase text-[9px]">Kuota WA</p>
-                        <p className={`font-mono font-black text-sm ${quotaLow ? 'text-brand-red' : quotaMedium ? 'text-brand-yellow' : 'text-brand-blue'}`}>
-                          {(eo.wa_quota || 0).toLocaleString('id-ID')}
-                        </p>
-                        {quotaLow && <span className="text-[9px] text-brand-red font-bold">HABIS</span>}
-                      </div>
-                      <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
-                        <p className="text-neutral-500 font-bold uppercase text-[9px]">WA</p>
-                        <a href={`https://wa.me/${eo.wa}`} target="_blank" rel="noreferrer"
-                          className="text-brand-green font-bold font-mono text-[11px] hover:underline flex items-center gap-1">
-                          <MessageSquare className="w-3 h-3 shrink-0" />{eo.wa}
-                        </a>
-                      </div>
-                    </div>
-
-                    {/* Row 3: tombol aksi */}
-                    <div className="flex flex-wrap gap-2 pt-1 border-t border-neutral-800">
-                      <Button variant={hasBot ? 'green' : 'outline'} size="sm"
-                        onClick={() => handleToggleBotBonus(eo.id)}
-                        className="font-black text-[10px] uppercase whitespace-nowrap flex-1 justify-center">
-                        <Bot className="w-3 h-3 mr-1 shrink-0" />
-                        {hasBot ? '✓ Bot Aktif' : '+ Bot'}
-                      </Button>
-                      <Button variant="blue" size="sm" onClick={() => openTopUpModal(eo)}
-                        className="font-black text-[10px] uppercase whitespace-nowrap">
-                        <Zap className="w-3 h-3 mr-1 shrink-0" /> Top Up
-                      </Button>
-                      <Button variant={eo.status === 'active' ? 'yellow' : 'green'} size="sm"
-                        onClick={() => handleToggleStatus(eo.id)}
-                        className="font-black text-[10px] uppercase whitespace-nowrap">
-                        <Power className="w-3 h-3 mr-1 shrink-0" />
-                        {eo.status === 'active' ? 'Lock' : 'Unlock'}
-                      </Button>
-                      <Button variant="red" size="sm" onClick={() => handleDeleteEo(eo.id)}
-                        className="font-black text-[10px] uppercase whitespace-nowrap">
-                        <Trash2 className="w-3 h-3 shrink-0" />
-                      </Button>
+                      {hasBot && (
+                        <Badge variant="blue" className="text-[9px] whitespace-nowrap">BOT ON</Badge>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
 
-            {/* ── DESKTOP: tabel (lg ke atas) ── */}
-            <div className="hidden lg:block overflow-x-auto rounded-lg border border-neutral-800">
-              <table className="w-full text-left table-fixed" style={{ minWidth: '1160px' }}>
-                <thead className="bg-neutral-900 text-neutral-400 font-bold uppercase border-b border-neutral-800">
-                  <tr>
-                    <th className="px-4 py-3 w-[72px] text-[9px] tracking-wider whitespace-nowrap">ID EO</th>
-                    <th className="px-4 py-3 w-[145px] text-[9px] tracking-wider whitespace-nowrap">NAMA EO</th>
-                    <th className="px-4 py-3 w-[130px] text-[9px] tracking-wider whitespace-nowrap">NO. WA</th>
-                    <th className="px-4 py-3 w-[120px] text-[9px] tracking-wider whitespace-nowrap">PAKET</th>
-                    <th className="px-4 py-3 w-[95px] text-[9px] tracking-wider whitespace-nowrap">KUOTA WA</th>
-                    <th className="px-4 py-3 w-[90px] text-[9px] tracking-wider whitespace-nowrap">TERKIRIM</th>
-                    <th className="px-4 py-3 w-[105px] text-[9px] tracking-wider whitespace-nowrap">EXPIRED</th>
-                    <th className="px-4 py-3 w-[90px] text-[9px] tracking-wider whitespace-nowrap">STATUS</th>
-                    <th className="px-4 py-3 w-[130px] text-[9px] tracking-wider whitespace-nowrap">BOT WA</th>
-                    <th className="px-4 py-3 w-[200px] text-[9px] tracking-wider whitespace-nowrap text-right">KONTROL AKSES</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-800 font-medium text-neutral-200">
-                  {eoAccounts.map((eo) => {
-                    const hasBot = Boolean(eo.botAccessBonus);
-                    const quotaLow = (eo.wa_quota || 0) <= 0;
-                    const quotaMedium = (eo.wa_quota || 0) > 0 && (eo.wa_quota || 0) <= 100;
-                    return (
-                      <tr key={eo.id} className="hover:bg-neutral-900/50 align-middle">
+                  {/* Row 2: info grid 4-kolom */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {/* Paket */}
+                    <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
+                      <p className="text-[9px] font-bold uppercase text-neutral-500">Paket</p>
+                      <p className={`text-xs font-black uppercase ${planColor}`}>{planLabel}</p>
+                      <p className="text-[9px] text-neutral-600 font-mono">
+                        {eo.subscriptionPlan === '6_months' || eo.subscriptionPlan === '3_months' ? 'Event ∞' : 'Max 1 Event'}
+                      </p>
+                    </div>
 
-                        {/* ID */}
-                        <td className="px-4 py-3 font-mono font-bold text-brand-purple text-xs whitespace-nowrap">
-                          {eo.id}
-                        </td>
+                    {/* Kuota WA: terkirim / total */}
+                    <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
+                      <p className="text-[9px] font-bold uppercase text-neutral-500">Kuota WA</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xs font-black font-mono text-brand-blue">
+                          {(eo.wa_messages_sent || 0).toLocaleString('id-ID')}
+                        </span>
+                        <span className="text-[9px] text-neutral-600">/</span>
+                        <span className="text-xs font-black font-mono text-neutral-300">
+                          {((eo.wa_quota || 0) + (eo.wa_messages_sent || 0)).toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-neutral-600">Sisa: {(eo.wa_quota || 0).toLocaleString('id-ID')}</p>
+                    </div>
 
-                        {/* Nama + password */}
-                        <td className="px-4 py-3">
-                          <span className="font-extrabold text-white text-sm block truncate leading-snug">
-                            {eo.name}
-                          </span>
-                          <div className="flex items-center gap-1.5 mt-1.5">
-                            <span className="text-[10px] font-mono text-brand-yellow font-bold">
-                              {showPasswords[eo.id] ? eo.password : '••••••••'}
-                            </span>
-                            <button type="button" onClick={() => togglePasswordVisibility(eo.id)}
-                              className="text-neutral-500 hover:text-white transition-colors shrink-0">
-                              {showPasswords[eo.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                            </button>
-                          </div>
-                        </td>
+                    {/* Expired */}
+                    <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
+                      <p className="text-[9px] font-bold uppercase text-neutral-500">Expired</p>
+                      <p className="text-[11px] font-mono font-bold text-brand-yellow leading-snug">
+                        {formatDate(eo.subscriptionExpiresAt || getOneMonthExpiry())}
+                      </p>
+                    </div>
 
-                        {/* WhatsApp */}
-                        <td className="px-4 py-3">
-                          <a href={`https://wa.me/${eo.wa}`} target="_blank" rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-brand-green font-bold hover:underline text-xs">
-                            <MessageSquare className="w-3 h-3 shrink-0" />
-                            <span className="font-mono truncate">{eo.wa}</span>
-                          </a>
-                        </td>
+                    {/* No. WA */}
+                    <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
+                      <p className="text-[9px] font-bold uppercase text-neutral-500">No. WA</p>
+                      <a href={`https://wa.me/${eo.wa}`} target="_blank" rel="noreferrer"
+                        className="text-brand-green font-bold font-mono text-[11px] hover:underline flex items-center gap-1">
+                        <MessageSquare className="w-3 h-3 shrink-0" />{eo.wa}
+                      </a>
+                    </div>
+                  </div>
 
-                        {/* Paket */}
-                        <td className="px-4 py-3">
-                          <span className={`text-xs font-black uppercase block leading-snug ${
-                            eo.subscriptionPlan === '6_months' ? 'text-brand-blue' :
-                            eo.subscriptionPlan === '3_months' ? 'text-brand-purple' :
-                            eo.subscriptionPlan === 'test' ? 'text-neutral-400' : 'text-brand-yellow'
-                          }`}>
-                            {eo.subscriptionPlan === '6_months' ? '6 BLN PRO' :
-                             eo.subscriptionPlan === '3_months' ? '3 BULAN' :
-                             eo.subscriptionPlan === 'test' ? 'TEST' : '1 BULAN'}
-                          </span>
-                          <span className="text-[9px] text-neutral-500 font-mono block mt-1 leading-tight">
-                            {eo.subscriptionPlan === '6_months' || eo.subscriptionPlan === '3_months' ? 'Event ∞' : 'Max 1 Event'}
-                            {' · '}
-                            {eo.subscriptionPlan === '6_months' ? 'Staf ∞' :
-                             eo.subscriptionPlan === '3_months' ? 'Max 5 Staf' :
-                             eo.subscriptionPlan === 'test' ? 'Max 1 Staf' : 'Max 2 Staf'}
-                          </span>
-                        </td>
-
-                        {/* Kuota WA */}
-                        <td className="px-4 py-3">
-                          <span className={`font-mono font-black text-sm block leading-snug ${
-                            quotaLow ? 'text-brand-red' : quotaMedium ? 'text-brand-yellow' : 'text-brand-blue'
-                          }`}>
-                            {(eo.wa_quota || 0).toLocaleString('id-ID')}
-                          </span>
-                          {quotaLow ? (
-                            <span className="text-[9px] text-brand-red font-black uppercase mt-0.5 block">HABIS</span>
-                          ) : quotaMedium ? (
-                            <span className="text-[9px] text-brand-yellow font-black uppercase mt-0.5 block">SEDIKIT</span>
-                          ) : null}
-                        </td>
-
-                        {/* Pesan terkirim */}
-                        <td className="px-4 py-3">
-                          <span className="font-mono font-bold text-sm text-brand-purple block leading-snug">
-                            {(eo.wa_messages_sent || 0).toLocaleString('id-ID')}
-                          </span>
-                          <span className="text-[9px] font-mono text-neutral-500 uppercase">pesan</span>
-                        </td>
-
-                        {/* Expired */}
-                        <td className="px-4 py-3 font-mono text-brand-yellow font-bold text-[11px] leading-tight">
-                          {formatDate(eo.subscriptionExpiresAt || getOneMonthExpiry())}
-                        </td>
-
-                        {/* Status */}
-                        <td className="px-4 py-3">
-                          <Badge variant={eo.status === 'active' ? 'green' : 'red'} className="whitespace-nowrap px-2.5 py-0.5 text-[10px]">
-                            {eo.status === 'active' ? 'AKTIF' : 'LOCKED'}
-                          </Badge>
-                        </td>
-
-                        {/* Bot WA — lebar cukup, tidak overflow ke kolom berikutnya */}
-                        <td className="px-4 py-3">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleBotBonus(eo.id)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase whitespace-nowrap w-full justify-center transition-colors ${
-                              hasBot
-                                ? 'bg-brand-green/20 border border-brand-green text-brand-green shadow-[0_0_10px_rgba(57,255,20,0.2)]'
-                                : 'bg-neutral-800 border border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                            }`}
-                          >
-                            <Bot className="w-3.5 h-3.5 shrink-0" />
-                            <span>{hasBot ? '✓ Bot Aktif' : '+ Aktifkan'}</span>
-                          </button>
-                        </td>
-
-                        {/* Kontrol Akses — gap konsisten, tidak wrap */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="blue" size="sm" onClick={() => openTopUpModal(eo)}
-                              className="font-black text-[10px] uppercase whitespace-nowrap px-3">
-                              <Zap className="w-3 h-3 mr-1 shrink-0" /> Top Up
-                            </Button>
-                            <Button variant={eo.status === 'active' ? 'yellow' : 'green'} size="sm"
-                              onClick={() => handleToggleStatus(eo.id)}
-                              className="font-black text-[10px] uppercase whitespace-nowrap px-3">
-                              <Power className="w-3 h-3 mr-1 shrink-0" />
-                              {eo.status === 'active' ? 'Lock' : 'Unlock'}
-                            </Button>
-                            <Button variant="red" size="sm" onClick={() => handleDeleteEo(eo.id)}
-                              className="font-black text-[10px] uppercase whitespace-nowrap px-3">
-                              <Trash2 className="w-3 h-3 shrink-0" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
+                  {/* Row 3: tombol aksi */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-neutral-800/60">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleBotBonus(eo.id)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase whitespace-nowrap transition-all ${
+                        hasBot
+                          ? 'bg-brand-green/15 border border-brand-green/60 text-brand-green'
+                          : 'bg-neutral-800/60 border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white'
+                      }`}
+                    >
+                      <Bot className="w-3.5 h-3.5 shrink-0" />
+                      {hasBot ? '✓ Bot Aktif' : '+ Aktifkan Bot'}
+                    </button>
+                    <Button variant="blue" size="sm" onClick={() => openTopUpModal(eo)}
+                      className="font-black text-[10px] uppercase whitespace-nowrap">
+                      <Zap className="w-3 h-3 mr-1 shrink-0" /> Top Up
+                    </Button>
+                    <Button variant={eo.status === 'active' ? 'yellow' : 'green'} size="sm"
+                      onClick={() => handleToggleStatus(eo.id)}
+                      className="font-black text-[10px] uppercase whitespace-nowrap">
+                      <Power className="w-3 h-3 mr-1 shrink-0" />
+                      {eo.status === 'active' ? 'Lock' : 'Unlock'}
+                    </Button>
+                    <Button variant="red" size="sm" onClick={() => handleDeleteEo(eo.id)}
+                      className="font-black text-[10px] uppercase whitespace-nowrap ml-auto">
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
-      </Card>
+        </div>
+      </div>
 
       {topUpModalOpen && selectedEo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-lg bg-[#0a0a0a] border-2 border-brand-blue/60 rounded-md shadow-[0_0_40px_rgba(6,182,212,0.25)] animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-neutral-800 p-5">
-              <div className="flex items-center space-x-2">
-                <div className="p-2 bg-brand-blue/20 border border-brand-blue/50 rounded-md">
+          <div className="w-full max-w-lg bg-[#111111] border border-brand-blue/40 rounded-xl shadow-[0_0_60px_rgba(6,182,212,0.2)] animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-brand-blue/20 border border-brand-blue/40 rounded-lg">
                   <Zap className="w-5 h-5 text-brand-blue" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black uppercase text-white tracking-tight">TOP UP KUOTA BOT WA</h3>
+                  <h3 className="text-sm font-black uppercase text-white tracking-tight">Top Up Kuota Bot WA</h3>
                   <p className="text-[10px] font-mono text-neutral-500 uppercase">Tambah kuota pesan untuk EO</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={closeTopUpModal}
-                className="p-2 text-neutral-500 hover:text-brand-red transition-colors"
+                className="p-2 text-neutral-500 hover:text-brand-red transition-colors rounded-lg hover:bg-brand-red/10"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleTopUpSubmit} className="p-5 space-y-5">
-              <div className="p-4 bg-neutral-900 rounded-md border border-neutral-800 space-y-2">
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase">
-                  <span className="text-neutral-500">NAMA EO / PANITIA</span>
+            <form onSubmit={handleTopUpSubmit} className="p-6 space-y-5">
+              <div className="p-4 bg-neutral-900/60 rounded-xl border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase text-neutral-500 tracking-widest">Nama EO / Panitia</span>
                   <Badge variant="purple" className="text-[8px] px-1.5 py-0">{selectedEo.id}</Badge>
                 </div>
                 <p className="text-base font-black text-white">{selectedEo.name}</p>
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-neutral-800/80">
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-neutral-800">
                   <div>
-                    <p className="text-[9px] font-bold uppercase text-neutral-500">KUOTA SAAT INI</p>
-                    <p className="text-lg font-mono font-black text-brand-blue">
+                    <p className="text-[9px] font-bold uppercase text-neutral-500 mb-1">Kuota Saat Ini</p>
+                    <p className="text-xl font-mono font-black text-brand-blue">
                       {(selectedEo.wa_quota || 0).toLocaleString('id-ID')}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-bold uppercase text-neutral-500">TOTAL TERKIRIM</p>
-                    <p className="text-lg font-mono font-black text-brand-purple">
+                    <p className="text-[9px] font-bold uppercase text-neutral-500 mb-1">Total Terkirim</p>
+                    <p className="text-xl font-mono font-black text-brand-purple">
                       {(selectedEo.wa_messages_sent || 0).toLocaleString('id-ID')}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-300 block">
-                  PILIH PAKET KUOTA BOT WA
+              <div className="space-y-2.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 block">
+                  Pilih Paket Kuota Bot WA
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {waPackages.map((pkg) => (
                     <label
                       key={pkg.value}
-                      className={`cursor-pointer p-4 rounded-md border-2 transition-all duration-200 ${
+                      className={`cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 ${
                         topUpPackage === pkg.value
-                          ? 'bg-brand-blue/10 border-brand-blue shadow-[0_0_20px_rgba(6,182,212,0.15)]'
-                          : 'bg-neutral-900 border-neutral-700 hover:border-neutral-600'
+                          ? 'bg-brand-blue/10 border-brand-blue'
+                          : 'bg-neutral-900/60 border-neutral-700 hover:border-neutral-600'
                       }`}
                     >
                       <input
@@ -662,11 +570,11 @@ export const AdminDashboard = () => {
                         onChange={(e) => setTopUpPackage(e.target.value)}
                         className="sr-only"
                       />
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <Badge variant="blue" className="text-[8px] px-1.5 py-0">ADD-ON</Badge>
                           {topUpPackage === pkg.value && (
-                            <Badge variant="green" className="text-[8px] px-1.5 py-0">DIPILIH</Badge>
+                            <Badge variant="green" className="text-[8px] px-1.5 py-0">Dipilih</Badge>
                           )}
                         </div>
                         <p className="text-xs font-black uppercase text-white tracking-tight">{pkg.label}</p>
@@ -683,10 +591,10 @@ export const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="p-3.5 bg-brand-green/10 border border-brand-green/40 rounded-md">
+              <div className="p-4 bg-brand-green/10 border border-brand-green/30 rounded-xl">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold uppercase text-brand-green">KUOTA SETELAH TOP UP</span>
-                  <span className="font-mono font-black text-brand-green text-lg">
+                  <span className="font-bold uppercase text-brand-green">Kuota Setelah Top Up</span>
+                  <span className="font-mono font-black text-brand-green text-xl">
                     {(
                       (selectedEo.wa_quota || 0) +
                       (waPackages.find(p => p.value === topUpPackage)?.quota || 0)
@@ -695,7 +603,7 @@ export const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-1">
                 <Button
                   type="button"
                   variant="outline"
@@ -703,7 +611,7 @@ export const AdminDashboard = () => {
                   fullWidth
                   onClick={closeTopUpModal}
                 >
-                  BATAL
+                  Batal
                 </Button>
                 <Button
                   type="submit"
@@ -712,13 +620,14 @@ export const AdminDashboard = () => {
                   fullWidth
                   className="justify-center"
                 >
-                  <Zap className="w-4 h-4 mr-1.5" /> KONFIRMASI TOP UP
+                  <Zap className="w-4 h-4 mr-1.5" /> Konfirmasi Top Up
                 </Button>
               </div>
             </form>
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

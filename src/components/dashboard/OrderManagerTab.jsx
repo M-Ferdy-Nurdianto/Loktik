@@ -300,6 +300,23 @@ Terima Kasih!
     return false;
   };
 
+  // Helper: simpan URL gambar tiket ke kolom ticket_image_url di semua tiket dalam order
+  const saveTicketImageUrl = async (orderId, ticketUrl) => {
+    if (!ticketUrl || !orderId) return;
+    try {
+      const orderTickets = orders.find((o) => o.id === orderId)?.tickets || [];
+      const ticketIds = orderTickets.map((t) => t.id).filter(Boolean);
+      if (ticketIds.length > 0) {
+        await supabase
+          .from('tickets')
+          .update({ ticket_image_url: ticketUrl })
+          .in('id', ticketIds);
+      }
+    } catch (err) {
+      console.warn('Gagal menyimpan ticket_image_url ke DB:', err);
+    }
+  };
+
   const handleApprove = async (order, mode = 'bot') => {
     const now = Date.now();
     const cooldown = 5000;
@@ -313,7 +330,7 @@ Terima Kasih!
     try {
       setLoading(true);
       await updateOrderStatus(order.id, 'paid');
-      
+
       const updatedOrder = { ...order, status: 'paid' };
       setOrders((prev) =>
         prev.map((o) => (o.id === order.id ? updatedOrder : o))
@@ -322,6 +339,8 @@ Terima Kasih!
       let ticketUrl = '';
       try {
         ticketUrl = await generateTicketImage(updatedOrder);
+        // Simpan URL ke DB agar user bisa download tanpa generate ulang
+        await saveTicketImageUrl(order.id, ticketUrl);
       } catch (genErr) {
         console.error('Gagal generate e-ticket premium:', genErr);
         showToast('Gagal menghasilkan e-ticket premium. Mengalihkan ke QR code standar...', 'eo');
@@ -354,6 +373,8 @@ Terima Kasih!
       let ticketUrl = '';
       try {
         ticketUrl = await generateTicketImage(order);
+        // Update URL di DB (generate ulang saat resend = update gambar terbaru)
+        await saveTicketImageUrl(order.id, ticketUrl);
       } catch (genErr) {
         console.error('Gagal generate e-ticket premium:', genErr);
         showToast('Gagal menghasilkan e-ticket premium. Mengalihkan ke QR code standar...', 'eo');
@@ -410,6 +431,7 @@ Terima Kasih!
         let ticketUrl = '';
         try {
           ticketUrl = await generateTicketImage(updatedOrder);
+          await saveTicketImageUrl(order.id, ticketUrl);
         } catch (genErr) {
           console.error('Gagal generate e-ticket premium:', genErr);
         }

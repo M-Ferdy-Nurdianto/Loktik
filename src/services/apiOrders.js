@@ -76,7 +76,6 @@ export const searchOrdersByBuyer = async (queryTerm) => {
   if (!queryTerm || queryTerm.trim().length < 2) return [];
   const rawTerm = queryTerm.trim();
   const termLower = rawTerm.toLowerCase();
-  const cleanDigits = rawTerm.replace(/[^0-9]/g, '');
 
   try {
     // 1. Fetch recent orders from Supabase DB
@@ -105,39 +104,39 @@ export const searchOrdersByBuyer = async (queryTerm) => {
       }
     }
 
-    // 3. Filter orders matching: Name, WA, Order UUID, or exact Pretty Code (e.g. GM1727)
+    // 3. Filter orders matching Order UUID or exact Pretty Code (e.g. IS7140)
+    //    NOTE: Pencarian by nama/WA sengaja dihapus dari PUBLIK.
+    //    Pencarian admin internal (getLiveOrdersForEo) tetap mendapat semua field.
     const matchedOrders = rawOrders.filter((o) => {
       const idStr = String(o.id || '').toLowerCase();
-      const nameStr = String(o.guest_name || '').toLowerCase();
-      const waStr = String(o.guest_wa || '').replace(/[^0-9]/g, '');
-
-      // Compute pretty code for this order
       const eventObj = eventsMap[o.event_id];
       const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
       const prettyCode = generatePrettyRedeemCode(eventObj?.name, seed).toLowerCase();
-
-      // Check match conditions
-      const matchesName = nameStr.includes(termLower);
-      const matchesId = idStr.includes(termLower);
-      const matchesPrettyCode = prettyCode.includes(termLower);
-      const matchesWa = cleanDigits.length >= 3 && waStr.includes(cleanDigits);
-
-      return matchesName || matchesId || matchesPrettyCode || matchesWa;
+      return idStr.includes(termLower) || prettyCode.includes(termLower);
     });
 
-    // 4. Check if any order tickets have been scanned at the gate
+    // 4. Fetch scan status + ticket_image_url dari tabel tickets
     const matchedOrderIds = matchedOrders.map((o) => o.id);
     let scannedOrderIdsSet = new Set();
+    let ticketImageUrlMap = {}; // orderId -> ticket_image_url (ambil URL pertama yang tidak null)
+    let ticketIdMap = {};       // orderId -> ticket.id pertama (untuk lazy migration)
 
     if (matchedOrderIds.length > 0) {
       const { data: ticketsData } = await supabase
         .from('tickets')
-        .select('order_id, is_scanned')
-        .in('order_id', matchedOrderIds)
-        .eq('is_scanned', true);
+        .select('id, order_id, is_scanned, ticket_image_url')
+        .in('order_id', matchedOrderIds);
 
       if (ticketsData) {
-        ticketsData.forEach((t) => scannedOrderIdsSet.add(t.order_id));
+        ticketsData.forEach((t) => {
+          if (t.is_scanned) scannedOrderIdsSet.add(t.order_id);
+          if (t.ticket_image_url && !ticketImageUrlMap[t.order_id]) {
+            ticketImageUrlMap[t.order_id] = t.ticket_image_url;
+          }
+          if (!ticketIdMap[t.order_id]) {
+            ticketIdMap[t.order_id] = t.id;
+          }
+        });
       }
     }
 
@@ -145,6 +144,8 @@ export const searchOrdersByBuyer = async (queryTerm) => {
       ...o,
       is_scanned: scannedOrderIdsSet.has(o.id),
       events: eventsMap[o.event_id] || { name: 'Event LokTik' },
+      ticket_image_url: ticketImageUrlMap[o.id] || null,
+      ticket_id: ticketIdMap[o.id] || null,
     }));
   } catch (err) {
     console.warn('Gagal mencari e-tiket:', err);

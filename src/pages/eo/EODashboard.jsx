@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List, Users, Clock, AlertTriangle } from 'lucide-react';
+import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List, Users, AlertTriangle, Menu, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -17,11 +17,13 @@ export const EODashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, logout } = useAuth();
-  
+
   const activeTab = searchParams.get('tab') || 'my-events';
   const setActiveTab = (tab) => {
     setSearchParams({ tab }, { replace: true });
   };
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [stats, setStats] = useState({
     totalEvents: '0 Event',
@@ -39,6 +41,9 @@ export const EODashboard = () => {
   const eoUsername = user?.username || user?.name || 'eo_lokal';
   const eoWa = user?.wa || '081234567890';
 
+  // Flag: Bot WA aktif jika admin set status aktif (botAccessBonus) ATAU punya kuota > 0
+  const hasBotAddon = Boolean(user?.botAccessBonus) || ((user?.wa_quota ?? 0) > 0);
+
   const fetchLiveStats = async () => {
     try {
       const [eventsList, ordersList] = await Promise.all([
@@ -48,10 +53,10 @@ export const EODashboard = () => {
 
       const activeEventsCount = eventsList.length;
       const pendingCount = ordersList.filter((o) => o.status === 'pending').length;
-      
+
       const paidOrders = ordersList.filter((o) => o.status === 'paid');
       const totalRev = paidOrders.reduce((sum, o) => sum + (o.total_price || 0), 0);
-      
+
       const totalTicketsSold = paidOrders.reduce((sum, o) => {
         const tCount = o.tickets ? o.tickets.length : 1;
         return sum + tCount;
@@ -64,22 +69,25 @@ export const EODashboard = () => {
         totalRevenue: totalRev,
       });
 
-      let latestWaQuota = user?.wa_quota ?? 0;
-      let latestWaSent = user?.wa_messages_sent ?? 0;
-      try {
-        const savedAccs = JSON.parse(localStorage.getItem('loktik_eo_accounts') || '[]');
-        const matchedAcc = savedAccs.find(
-          a => (a.id && user?.id && a.id === user.id) || (a.name && user?.username && a.name.toLowerCase() === user.username.toLowerCase())
-        );
-        if (matchedAcc) {
-          latestWaQuota = matchedAcc.wa_quota ?? latestWaQuota;
-          latestWaSent = matchedAcc.wa_messages_sent ?? latestWaSent;
-        }
-      } catch (e) {}
-      setWaStats({
-        wa_quota: latestWaQuota,
-        wa_messages_sent: latestWaSent,
-      });
+      // Hanya fetch waStats jika EO subscribe Bot WA add-on
+      if (hasBotAddon) {
+        let latestWaQuota = user?.wa_quota ?? 0;
+        let latestWaSent = user?.wa_messages_sent ?? 0;
+        try {
+          const savedAccs = JSON.parse(localStorage.getItem('loktik_eo_accounts') || '[]');
+          const matchedAcc = savedAccs.find(
+            a => (a.id && user?.id && a.id === user.id) || (a.name && user?.username && a.name.toLowerCase() === user.username.toLowerCase())
+          );
+          if (matchedAcc) {
+            latestWaQuota = matchedAcc.wa_quota ?? latestWaQuota;
+            latestWaSent = matchedAcc.wa_messages_sent ?? latestWaSent;
+          }
+        } catch (e) {}
+        setWaStats({
+          wa_quota: latestWaQuota,
+          wa_messages_sent: latestWaSent,
+        });
+      }
     } catch (e) {
       console.warn('Gagal memuat ringkasan stats dashboard');
     }
@@ -95,10 +103,8 @@ export const EODashboard = () => {
   };
 
   const getSubExpiryInfo = () => {
-    // Baca dari subscriptionExpiresAt (field standar yang disimpan di session)
     const expDate = user?.subscriptionExpiresAt || user?.expiresAt;
     if (!expDate) {
-      // Fallback: anggap 30 hari dari sekarang jika tidak ada data
       const d = new Date();
       d.setDate(d.getDate() + 30);
       return {
@@ -125,126 +131,128 @@ export const EODashboard = () => {
 
   const { dateStr: subExpiryDate, diffDays: remainingDays } = getSubExpiryInfo();
 
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col md:flex-row text-left">
-      {/* LEFT SIDEBAR (FIXED STICKY FOR DESKTOP) */}
-      <aside className="w-full md:w-64 bg-[#121212] border-r border-neutral-800 p-5 flex flex-col justify-between shrink-0 space-y-6 md:sticky md:top-0 md:h-screen md:overflow-y-auto no-scrollbar">
-        <div className="space-y-6">
-          {/* EO Profile Card */}
-          <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-lg space-y-3">
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-brand-green/20 text-brand-green rounded-md border border-brand-green/40">
-                <User className="w-5 h-5" />
-              </div>
-              <div className="overflow-hidden">
-                <Badge variant="green" className="text-[9px] px-1.5 py-0">AKUN EO / PANITIA</Badge>
-                <h3 className="text-base font-black uppercase text-white truncate">{eoName}</h3>
-              </div>
-            </div>
+  // Nav tabs config
+  const navTabs = [
+    { id: 'my-events', label: 'MY EVENTS', icon: <List className="w-4 h-4" /> },
+    { id: 'create-event', label: 'CREATE', icon: <PlusCircle className="w-4 h-4" /> },
+    { id: 'orders', label: 'ORDERS', icon: <ShoppingBag className="w-4 h-4" /> },
+    { id: 'staff-manager', label: 'STAFF GATE', icon: <Users className="w-4 h-4" /> },
+  ];
 
-            {/* EO WhatsApp Contact */}
-            <div className="p-2 bg-neutral-950 rounded border border-neutral-800 space-y-0.5">
-              <p className="text-[10px] font-bold text-neutral-400 uppercase">NO. WHATSAPP EO:</p>
-              <div className="flex items-center space-x-1.5 text-brand-green font-mono font-bold text-xs">
-                <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                <span>{eoWa}</span>
-              </div>
-            </div>
-
-            {/* Subscription Expiry Timer Card */}
-            <div className="p-2.5 bg-neutral-950 rounded border border-neutral-800 space-y-2 text-left">
-              <div className="flex items-center justify-between gap-1 text-[10px]">
-                <span className="text-neutral-500 font-bold uppercase shrink-0">PAKET:</span>
-                <span className="text-brand-blue font-black uppercase font-mono tracking-tight text-right truncate">
-                  {user?.subscriptionPlan === '6_months'
-                    ? '6 BULAN PRO'
-                    : user?.subscriptionPlan === '3_months'
-                    ? '3 BULAN REGULER'
-                    : user?.subscriptionPlan === 'test'
-                    ? 'TEST 1 HARI'
-                    : '1 BULAN BASIC'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-1 text-[10px] border-t border-neutral-800/80 pt-1.5">
-                <span className="text-neutral-500 font-bold uppercase shrink-0">BOT WA:</span>
-                <span className={`font-black uppercase font-mono text-right ${
-                  user?.botAccessBonus ? 'text-brand-green' : 'text-neutral-400'
-                }`}>
-                  {user?.botAccessBonus ? '✓ AKTIF (ADD-ON)' : 'ADD-ON (TERPISAH)'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-1 text-[10px] border-t border-neutral-800/80 pt-1.5">
-                <span className="text-neutral-500 font-bold uppercase shrink-0">STATUS:</span>
-                <span className="text-brand-green font-black uppercase font-mono text-right">SUBSCRIBED</span>
-              </div>
-              <div className="border-t border-neutral-800/80 pt-1.5 space-y-0.5 text-[10px] font-mono">
-                <div className="flex items-center justify-between text-neutral-500 font-bold uppercase">
-                  <span>EXPIRED:</span>
-                  <span className="text-brand-yellow font-black">{remainingDays} HARI LAGI</span>
-                </div>
-                <div className="text-[9px] text-neutral-400 font-bold text-right">
-                  {subExpiryDate}
-                </div>
-              </div>
-            </div>
+  const SidebarContent = () => (
+    <div className="space-y-6">
+      {/* EO Profile Card */}
+      <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-lg space-y-3">
+        <div className="flex items-center space-x-2">
+          <div className="p-2 bg-brand-green/20 text-brand-green rounded-md border border-brand-green/40">
+            <User className="w-5 h-5" />
           </div>
-
-          {/* Sidebar Menu Items */}
-          <nav className="space-y-1.5">
-            <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-2 mb-2">MENU UTAMA EO</p>
-
-            <button
-              onClick={() => setActiveTab('my-events')}
-              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-black uppercase tracking-wider flex items-center space-x-3 transition-colors ${
-                activeTab === 'my-events'
-                  ? 'bg-brand-green text-black font-black'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
-              }`}
-            >
-              <List className="w-4 h-4 shrink-0" />
-              <span className="truncate">MY EVENTS</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('create-event')}
-              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-black uppercase tracking-wider flex items-center space-x-3 transition-colors ${
-                activeTab === 'create-event'
-                  ? 'bg-brand-green text-black font-black'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
-              }`}
-            >
-              <PlusCircle className="w-4 h-4 shrink-0" />
-              <span className="truncate">CREATE EVENT</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('orders')}
-              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-black uppercase tracking-wider flex items-center space-x-3 transition-colors ${
-                activeTab === 'orders'
-                  ? 'bg-brand-green text-black font-black'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
-              }`}
-            >
-              <ShoppingBag className="w-4 h-4 shrink-0" />
-              <span className="truncate">ORDERS</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('staff-manager')}
-              className={`w-full px-3.5 py-2.5 rounded-md text-xs font-black uppercase tracking-wider flex items-center space-x-3 transition-colors ${
-                activeTab === 'staff-manager'
-                  ? 'bg-brand-green text-black font-black'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
-              }`}
-            >
-              <Users className="w-4 h-4 shrink-0" />
-              <span className="truncate">STAFF GATE</span>
-            </button>
-          </nav>
+          <div className="overflow-hidden">
+            <Badge variant="green" className="text-[9px] px-1.5 py-0">AKUN EO / PANITIA</Badge>
+            <h3 className="text-base font-black uppercase text-white truncate">{eoName}</h3>
+          </div>
         </div>
 
+        {/* EO WhatsApp Contact */}
+        <div className="p-2 bg-neutral-950 rounded border border-neutral-800 space-y-0.5">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase">NO. WHATSAPP EO:</p>
+          <div className="flex items-center space-x-1.5 text-brand-green font-mono font-bold text-xs">
+            <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+            <span>{eoWa}</span>
+          </div>
+        </div>
+
+        {/* Subscription & Bot WA Info */}
+        <div className="p-2.5 bg-neutral-950 rounded border border-neutral-800 space-y-2 text-left">
+          <div className="flex items-center justify-between gap-1 text-[10px]">
+            <span className="text-neutral-500 font-bold uppercase shrink-0">PAKET:</span>
+            <span className="text-brand-blue font-black uppercase font-mono tracking-tight text-right truncate">
+              {user?.subscriptionPlan === '6_months'
+                ? '6 BULAN PRO'
+                : user?.subscriptionPlan === '3_months'
+                ? '3 BULAN REGULER'
+                : user?.subscriptionPlan === 'test'
+                ? 'TEST 1 HARI'
+                : '1 BULAN BASIC'}
+            </span>
+          </div>
+
+          {/* BOT WA — hanya tampil info status, tidak menampilkan warning/error jika tidak aktif */}
+          <div className="flex items-center justify-between gap-1 text-[10px] border-t border-neutral-800/80 pt-1.5">
+            <span className="text-neutral-500 font-bold uppercase shrink-0">BOT WA:</span>
+            <span className={`font-black uppercase font-mono text-right ${
+              hasBotAddon ? 'text-brand-green' : 'text-neutral-500'
+            }`}>
+              {hasBotAddon ? 'AKTIF (ADD-ON)' : 'TIDAK AKTIF'}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-1 text-[10px] border-t border-neutral-800/80 pt-1.5">
+            <span className="text-neutral-500 font-bold uppercase shrink-0">STATUS:</span>
+            <span className="text-brand-green font-black uppercase font-mono text-right">SUBSCRIBED</span>
+          </div>
+          <div className="border-t border-neutral-800/80 pt-1.5 space-y-0.5 text-[10px] font-mono">
+            <div className="flex items-center justify-between text-neutral-500 font-bold uppercase">
+              <span>EXPIRED:</span>
+              <span className="text-brand-yellow font-black">{remainingDays} HARI LAGI</span>
+            </div>
+            <div className="text-[9px] text-neutral-400 font-bold text-right">
+              {subExpiryDate}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar Menu Items */}
+      <nav className="space-y-1.5">
+        <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-2 mb-2">MENU UTAMA EO</p>
+        {navTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
+            className={`w-full px-3.5 py-2.5 rounded-md text-xs font-black uppercase tracking-wider flex items-center space-x-3 transition-colors ${
+              activeTab === tab.id
+                ? 'bg-brand-green text-black font-black'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+            }`}
+          >
+            <span className="shrink-0">{tab.icon}</span>
+            <span className="truncate">{tab.label}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col md:flex-row text-left">
+      {/* MOBILE: overlay sidebar drawer */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/70 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* LEFT SIDEBAR — desktop sticky, mobile drawer */}
+      <aside className={`
+        fixed top-0 left-0 h-full z-50 w-72 bg-[#121212] border-r border-neutral-800 p-5 flex flex-col justify-between
+        transition-transform duration-300 ease-in-out no-scrollbar overflow-y-auto
+        md:relative md:w-64 md:translate-x-0 md:sticky md:top-0 md:h-screen md:shrink-0 md:z-auto
+        ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
+      `}>
+        {/* Mobile close button */}
+        <button
+          className="md:hidden absolute top-4 right-4 p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800"
+          onClick={() => setSidebarOpen(false)}
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <SidebarContent />
+
         {/* Sidebar Footer Logout */}
-        <div className="pt-4 border-t border-neutral-800">
+        <div className="pt-4 border-t border-neutral-800 mt-6">
           <Button variant="outline" size="sm" fullWidth onClick={handleLogout} className="justify-center">
             <LogOut className="w-4 h-4 mr-2 text-brand-red" /> LOGOUT EO
           </Button>
@@ -252,15 +260,22 @@ export const EODashboard = () => {
       </aside>
 
       {/* RIGHT MAIN CONTENT AREA */}
-      <main className="flex-1 p-5 md:p-6 space-y-5 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-6 space-y-4 overflow-y-auto pb-20 md:pb-6">
         {/* COMPACT SLEEK HEADER BAR */}
         <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
           <div className="flex items-center space-x-2">
+            {/* Mobile hamburger */}
+            <button
+              className="md:hidden p-1.5 text-neutral-400 hover:text-brand-green rounded-lg hover:bg-neutral-900 transition-colors mr-1"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             <span className="text-sm font-black uppercase text-white tracking-tight">
               DASBOR KELOLA TIKET
             </span>
-            <span className="text-neutral-600 font-mono text-xs">•</span>
-            <span className="text-xs font-bold text-brand-green font-mono uppercase">
+            <span className="text-neutral-600 font-mono text-xs hidden sm:inline">•</span>
+            <span className="text-xs font-bold text-brand-green font-mono uppercase hidden sm:inline">
               PANITIA: {eoName}
             </span>
           </div>
@@ -276,7 +291,7 @@ export const EODashboard = () => {
             <div className="space-y-2 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="red" className="text-[9px] px-2 py-0.5 font-black tracking-wider">
-                  ⚠️ PERINGATAN KRITIS
+                  PERINGATAN KRITIS
                 </Badge>
                 <h3 className="text-xs sm:text-sm font-black uppercase tracking-wide text-white">
                   PENTING: ATURAN RETENSI DATA EVENT (OTOMATIS HAPUS 7 HARI)
@@ -291,7 +306,11 @@ export const EODashboard = () => {
 
         {/* Overview Stats: Render ONLY on 'my-events' and 'orders' tabs */}
         {(activeTab === 'my-events' || activeTab === 'orders') && (
-          <OverviewStats stats={stats} waStats={waStats} />
+          <OverviewStats
+            stats={stats}
+            waStats={hasBotAddon ? waStats : null}
+            hasBotAddon={hasBotAddon}
+          />
         )}
 
         {/* Dynamic Tab Body */}
@@ -302,6 +321,37 @@ export const EODashboard = () => {
           {activeTab === 'staff-manager' && <StaffManagerTab />}
         </div>
       </main>
+
+      {/* MOBILE BOTTOM TAB BAR (mobile only, md+ tersembunyi) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-[#0f0f0f] border-t border-neutral-800 flex md:hidden">
+        {navTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[9px] font-black uppercase tracking-wider transition-colors ${
+              activeTab === tab.id
+                ? 'text-brand-green'
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}
+          >
+            <span className={`${activeTab === tab.id ? 'text-brand-green' : 'text-neutral-500'}`}>
+              {tab.icon}
+            </span>
+            <span>{tab.label}</span>
+            {activeTab === tab.id && (
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-brand-green rounded-full" />
+            )}
+          </button>
+        ))}
+        {/* Logout tab khusus mobile */}
+        <button
+          onClick={handleLogout}
+          className="flex-none flex flex-col items-center justify-center gap-1 py-2.5 px-3 text-[9px] font-black uppercase tracking-wider text-brand-red transition-colors hover:text-red-400"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>LOGOUT</span>
+        </button>
+      </nav>
     </div>
   );
 };

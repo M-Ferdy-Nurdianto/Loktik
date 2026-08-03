@@ -171,3 +171,68 @@
   }
 }
 
+/* ============================================================
+   DATETIME-LOCAL INPUT — DARK THEME OVERRIDE
+   Kalender popup native browser di-force ke dark mode
+   ============================================================ */
+
+/* Force dark color-scheme agar popup kalender ikut dark mode */
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"] {
+  color-scheme: dark;
+}
+
+/* Icon kalender terlihat di background gelap */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.2);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  opacity: 1;
+  transition: filter 0.15s ease;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  /* hover: neon green tint */
+  filter: invert(0.55) sepia(1) saturate(10) hue-rotate(70deg) brightness(1.3);
+}
+
+/* Field segmen (day, month, year, hour, minute) */
+input[type="datetime-local"]::-webkit-datetime-edit-text {
+  color: #525252;
+  padding: 0 2px;
+}
+
+input[type="datetime-local"]::-webkit-datetime-edit-month-field,
+input[type="datetime-local"]::-webkit-datetime-edit-day-field,
+input[type="datetime-local"]::-webkit-datetime-edit-year-field,
+input[type="datetime-local"]::-webkit-datetime-edit-hour-field,
+input[type="datetime-local"]::-webkit-datetime-edit-minute-field,
+input[type="datetime-local"]::-webkit-datetime-edit-ampm-field,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #e5e5e5;
+  border-radius: 3px;
+  padding: 1px 2px;
+}
+
+/* Segmen aktif (saat diklik/navigasi) */
+input[type="datetime-local"]::-webkit-datetime-edit-month-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-day-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-year-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-hour-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-minute-field:focus,
+input[type="date"]::-webkit-datetime-edit-month-field:focus,
+input[type="date"]::-webkit-datetime-edit-day-field:focus,
+input[type="date"]::-webkit-datetime-edit-year-field:focus {
+  background-color: #39FF14;
+  color: #000000;
+  outline: none;
+}

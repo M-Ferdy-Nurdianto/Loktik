@@ -6,10 +6,12 @@ import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { compressImageToWebP } from '../../utils/imageCompress';
 import { uploadEventPoster, uploadQrisCode, createEventWithTiers, getAllEventsForEo } from '../../services/apiEvents';
+import { useToast } from '../../context/ToastContext';
 import { getPlanLimits, PLAN_LABELS } from '../../utils/planLimits';
 
 export const CreateEventTab = ({ onEventCreated }) => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const eoUsername = user?.username || user?.name || 'eo_lokal';
 
   const [formData, setFormData] = useState({
@@ -30,8 +32,6 @@ export const CreateEventTab = ({ onEventCreated }) => {
   const [qrisFile, setQrisFile] = useState(null);
   const [qrisPreview, setQrisPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [successMsg, setSuccessMsg] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
 
   const [tiers, setTiers] = useState([
     { name: 'Tiket Presale 1', price: 35000, priceOts: '', quota: 100, startPo: '', endPo: '', description: '' },
@@ -54,10 +54,18 @@ export const CreateEventTab = ({ onEventCreated }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.eventDate || !posterFile) {
-      return setErrorMsg('Nama Event, Tanggal Acara & File Poster wajib diisi.');
+      showToast('Nama Event, Tanggal Acara & File Poster wajib diisi.', 'eo');
+      return;
     }
     if (!formData.gatePin || formData.gatePin.length !== 4) {
-      return setErrorMsg('PIN Gate Venue harus 4 digit angka.');
+      showToast('PIN Gate Venue harus 4 digit angka.', 'eo');
+      return;
+    }
+
+    const hasBank = formData.bankName && formData.accountNumber && formData.accountHolder;
+    if (!hasBank && !qrisFile) {
+      showToast('Wajib mengisi Rekening Bank atau mengunggah QRIS.', 'eo');
+      return;
     }
 
     const eventTime = new Date(formData.eventDate).getTime();
@@ -68,20 +76,21 @@ export const CreateEventTab = ({ onEventCreated }) => {
         const startTime = new Date(t.startPo).getTime();
         const endTime = new Date(t.endPo).getTime();
         if (startTime > endTime) {
-          return setErrorMsg(`Tier #${idx + 1}: Waktu Mulai PO tidak boleh setelah Waktu Berakhir PO.`);
+          showToast(`Tier #${idx + 1}: Waktu Mulai PO tidak boleh setelah Waktu Berakhir PO.`, 'eo');
+          return;
         }
       }
       if (t.endPo) {
         const endTime = new Date(t.endPo).getTime();
         if (endTime > eventTime) {
-          return setErrorMsg(`Tier #${idx + 1}: Penjualan PO tidak boleh berakhir setelah acara dimulai.`);
+          showToast(`Tier #${idx + 1}: Penjualan PO tidak boleh berakhir setelah acara dimulai.`, 'eo');
+          return;
         }
       }
     }
 
     try {
       setSubmitting(true);
-      setErrorMsg(null);
 
       // --- LIMIT CHECK: max event aktif per paket ---
       const userPlan = user?.subscriptionPlan || '1_month';
@@ -90,9 +99,9 @@ export const CreateEventTab = ({ onEventCreated }) => {
         const existingEvents = await getAllEventsForEo(eoUsername);
         const activeCount = existingEvents.filter((e) => e.status === 'active').length;
         if (activeCount >= maxEvents) {
-          setErrorMsg(
-            `${PLAN_LABELS[userPlan] || 'Paket Anda'} hanya mengizinkan maksimal ${maxEvents} event aktif bersamaan. ` +
-            `Nonaktifkan atau hapus event lama terlebih dahulu, atau upgrade ke Paket 3/6 Bulan untuk event unlimited.`
+          showToast(
+            `${PLAN_LABELS[userPlan] || 'Paket Anda'} maksimal ${maxEvents} event aktif. Hapus event lama atau upgrade.`,
+            'eo'
           );
           setSubmitting(false);
           return;
@@ -125,15 +134,22 @@ export const CreateEventTab = ({ onEventCreated }) => {
 
       const formattedTiers = tiers.map((t) => ({
         ...t,
+        price: t.price ? parseInt(String(t.price).replace(/\./g, ''), 10) : 0,
+        priceOts: t.priceOts ? parseInt(String(t.priceOts).replace(/\./g, ''), 10) : null,
+        quota: t.quota ? parseInt(String(t.quota).replace(/\./g, ''), 10) : null,
         start_po: t.startPo ? new Date(t.startPo).toISOString() : null,
         end_po: t.endPo ? new Date(t.endPo).toISOString() : null,
       }));
 
       const newEvt = await createEventWithTiers(eventPayload, formattedTiers);
-      setSuccessMsg(`EVENT '${formData.name.toUpperCase()}' BERHASIL DIPUBLIKASIKAN!`);
+      showToast(`EVENT '${formData.name.toUpperCase()}' BERHASIL DIPUBLIKASIKAN!`, 'eo');
       if (onEventCreated) onEventCreated(newEvt);
     } catch (err) {
-      setErrorMsg(err.message || 'Gagal menyimpan event.');
+      let msg = err.message || 'Gagal menyimpan event.';
+      if (msg.includes('EVENTS_SLUG_KEY')) {
+        msg = 'Nama event ini sudah pernah digunakan. Silakan tambahkan angka atau kata lain agar unik.';
+      }
+      showToast(`Gagal Membuat Event: ${msg}`, 'eo');
     } finally {
       setSubmitting(false);
     }
@@ -160,9 +176,6 @@ export const CreateEventTab = ({ onEventCreated }) => {
           <Badge variant="green">0% FEES</Badge>
         </div>
       </div>
-
-      {errorMsg && <p className="text-xs text-brand-red font-bold uppercase bg-red-950/40 p-2.5 rounded border border-brand-red/40">{errorMsg}</p>}
-      {successMsg && <p className="text-xs text-brand-green font-bold uppercase bg-green-950/40 p-2.5 rounded border border-brand-green/40">{successMsg}</p>}
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* LEFT COLUMN: INFORMASI ACARA & METODE BAYAR */}
@@ -203,9 +216,9 @@ export const CreateEventTab = ({ onEventCreated }) => {
           <div className="p-3.5 bg-neutral-900 rounded border border-neutral-800 space-y-3">
             <h4 className="text-xs font-black uppercase text-brand-purple tracking-wider flex items-center gap-1"><Landmark className="w-3.5 h-3.5" /> 2. REKENING &amp; QRIS PANITIA</h4>
             <div className="grid grid-cols-3 gap-2">
-              <input type="text" required placeholder="BANK (BCA)" value={formData.bankName} onChange={(e) => setFormData({ ...formData, bankName: e.target.value })} className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-purple font-bold" />
-              <input type="text" required inputMode="numeric" placeholder="NO REK" value={formData.accountNumber} onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value.replace(/[^0-9]/g, '') })} className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-purple font-mono font-bold" />
-              <input type="text" required placeholder="ATAS NAMA" value={formData.accountHolder} onChange={(e) => setFormData({ ...formData, accountHolder: e.target.value })} className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-purple font-bold" />
+              <input type="text" required={!qrisFile} placeholder="BANK (BCA)" value={formData.bankName} onChange={(e) => setFormData({ ...formData, bankName: e.target.value })} className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-purple font-bold" />
+              <input type="text" required={!qrisFile} inputMode="numeric" placeholder="NO REK" value={formData.accountNumber} onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value.replace(/[^0-9]/g, '') })} className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-purple font-mono font-bold" />
+              <input type="text" required={!qrisFile} placeholder="ATAS NAMA" value={formData.accountHolder} onChange={(e) => setFormData({ ...formData, accountHolder: e.target.value })} className="px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-xs text-white focus:border-brand-purple font-bold" />
             </div>
             <div className="flex gap-3 items-center pt-1 border-t border-neutral-800">
               <div className="flex-1">
@@ -243,12 +256,43 @@ export const CreateEventTab = ({ onEventCreated }) => {
                   <div className="grid grid-cols-3 gap-2">
                     <input type="text" required placeholder="Nama Tiket" value={t.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} className="col-span-3 sm:col-span-1 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-bold" />
                     <div className="flex gap-2">
-  <input type="text" inputMode="numeric" required placeholder="Harga PO (Rp)" value={t.price} onChange={(e) => handleTierChange(idx, 'price', e.target.value.replace(/[^0-9]/g, ''))} className="flex-1 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono font-bold" />
-  <input type="text" inputMode="numeric" placeholder="Harga OTS (Rp)" value={t.priceOts || ''} onChange={(e) => handleTierChange(idx, 'priceOts', e.target.value.replace(/[^0-9]/g, ''))} className="flex-1 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
-</div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        required
+                        placeholder="Harga PO (Rp)"
+                        value={t.price ? Number(t.price).toLocaleString('id-ID') : ''}
+                        onChange={(e) => {
+                          const clean = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, '');
+                          handleTierChange(idx, 'price', clean ? parseInt(clean, 10) : '');
+                        }}
+                        className="flex-1 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono font-bold"
+                      />
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="Harga OTS (Rp)"
+                        value={t.priceOts ? Number(t.priceOts).toLocaleString('id-ID') : ''}
+                        onChange={(e) => {
+                          const clean = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, '');
+                          handleTierChange(idx, 'priceOts', clean ? parseInt(clean, 10) : '');
+                        }}
+                        className="flex-1 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono"
+                      />
+                    </div>
                   </div>
                   <div>
-                    <input type="text" inputMode="numeric" placeholder="Kuota (Unlimited)" value={t.quota} onChange={(e) => handleTierChange(idx, 'quota', e.target.value.replace(/[^0-9]/g, ''))} className="w-1/2 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Kuota (Unlimited)"
+                      value={t.quota ? Number(t.quota).toLocaleString('id-ID') : ''}
+                      onChange={(e) => {
+                        const clean = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, '');
+                        handleTierChange(idx, 'quota', clean ? parseInt(clean, 10) : '');
+                      }}
+                      className="w-1/2 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono"
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[10px]">
                     <div>
