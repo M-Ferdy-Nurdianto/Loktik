@@ -35,28 +35,34 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
       try {
         const { data } = await supabase.from('ticket_categories').select('*').eq('event_id', event.id);
         if (data && data.length > 0) {
-          setTiers(
-            data.map((t) => ({
+          const combinedTiers = [];
+          data.forEach(t => {
+            if (t.name.endsWith(' — OTS')) return; // skip OTS row, it is mapped below
+            const otsTier = data.find(ots => ots.name === `${t.name} — OTS`);
+            combinedTiers.push({
               name: t.name,
               price: t.price,
+              isOtsEnabled: !!otsTier,
+              priceOts: otsTier ? otsTier.price : '',
               quota: t.quota || '',
               description: t.description || '',
               startPo: t.start_po ? new Date(t.start_po).toISOString().slice(0, 16) : '',
               endPo: t.end_po ? new Date(t.end_po).toISOString().slice(0, 16) : '',
-            }))
-          );
+            });
+          });
+          setTiers(combinedTiers);
         } else {
-          setTiers([{ name: 'Tiket Presale 1', price: 35000, quota: 100, description: '' }]);
+          setTiers([{ name: 'Tiket Presale 1', price: 35000, isOtsEnabled: false, priceOts: '', quota: 100, description: '' }]);
         }
       } catch (e) {
-        setTiers([{ name: 'Tiket Presale 1', price: 35000, quota: 100, description: '' }]);
+        setTiers([{ name: 'Tiket Presale 1', price: 35000, isOtsEnabled: false, priceOts: '', quota: 100, description: '' }]);
       }
     };
     fetchTiers();
   }, [event.id]);
 
   const handleAddTier = (name = 'Tiket VIP', price = 75000) => {
-    setTiers([...tiers, { name, price, quota: '', startPo: '', endPo: '', description: '' }]);
+    setTiers([...tiers, { name, price, isOtsEnabled: false, priceOts: '', quota: '', startPo: '', endPo: '', description: '' }]);
   };
 
   const handleRemoveTier = (idx) => {
@@ -127,8 +133,12 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
 
       const formattedTiers = tiers.map((t) => ({
         ...t,
+        price: t.price ? parseInt(String(t.price).replace(/\./g, ''), 10) : 0,
+        quota: t.quota ? parseInt(String(t.quota).replace(/\./g, ''), 10) : null,
         start_po: t.startPo ? new Date(t.startPo).toISOString() : null,
         end_po: t.endPo ? new Date(t.endPo).toISOString() : null,
+        is_ots_enabled: t.isOtsEnabled || false,
+        price_ots: t.isOtsEnabled && t.priceOts ? parseInt(String(t.priceOts).replace(/\./g, ''), 10) : null,
       }));
 
       await updateEventData(event.id, eventPayload, formattedTiers);
@@ -142,7 +152,7 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] w-screen h-screen bg-black/90 backdrop-blur-md flex items-center justify-center p-0 lg:p-4 overflow-hidden">
-      <Card variant="dark" className="w-full h-full lg:h-auto lg:max-h-[92vh] lg:max-w-5xl p-4 sm:p-6 border-0 lg:border border-brand-green/50 bg-[#121212] rounded-none lg:rounded-2xl flex flex-col justify-between text-left shadow-[0_0_50px_rgba(0,0,0,0.9)] overflow-hidden">
+      <Card variant="dark" className="w-full h-full lg:h-[88vh] lg:max-w-5xl p-4 sm:p-6 border-0 lg:border border-brand-green/50 bg-[#121212] rounded-none lg:rounded-2xl flex flex-col justify-between text-left shadow-[0_0_50px_rgba(0,0,0,0.9)] overflow-hidden">
         {/* Modal Header (Fixed) */}
         <div className="flex justify-between items-center border-b border-neutral-800 pb-3 shrink-0 mb-3">
           <h3 className="text-sm sm:text-base font-black uppercase text-brand-green flex items-center gap-2 truncate">
@@ -156,8 +166,8 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
         {errorMsg && <p className="text-xs text-brand-red font-bold uppercase bg-red-950/40 p-2.5 rounded border border-brand-red/40 shrink-0 mb-3">{errorMsg}</p>}
 
         {/* Scrollable Form Content Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto no-scrollbar pr-1 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start pb-2">
-          <div className="space-y-3">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
+          <div className="space-y-3 overflow-y-auto no-scrollbar pr-1">
             <div className="p-3.5 bg-neutral-900 rounded-lg border border-neutral-800 space-y-3">
               <div>
                 <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">NAMA EVENT:</label>
@@ -224,31 +234,79 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="p-3.5 bg-neutral-900 rounded-lg border border-neutral-800 space-y-2.5">
-              <div className="flex justify-between items-center">
+          <div className="flex flex-col h-full min-h-0">
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 p-3.5">
+              <div className="flex justify-between items-center mb-3 shrink-0">
                 <label className="text-[10px] font-black uppercase text-brand-blue block">KATEGORI &amp; TIER TIKET:</label>
                 <button type="button" onClick={() => handleAddTier()} className="px-2.5 py-1 bg-neutral-950 text-brand-green border border-brand-green/40 text-[10px] font-black rounded hover:bg-brand-green/20 transition-colors">+ TAMBAH TIER</button>
               </div>
-              <div className="space-y-2.5 max-h-[300px] lg:max-h-[320px] overflow-y-auto no-scrollbar pr-1">
+              <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pr-1 space-y-2.5">
                 {tiers.map((t, idx) => (
-                  <div key={idx} className="p-2.5 bg-neutral-950 rounded border border-neutral-800 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-brand-green uppercase">TIER TIKET #{idx + 1}</span>
-                      {tiers.length > 1 && <button type="button" onClick={() => handleRemoveTier(idx)} className="text-brand-red text-xs p-1 hover:bg-brand-red/10 rounded"><Trash2 className="w-3.5 h-3.5" /></button>}
+                  <div key={idx} className="p-3 sm:p-4 bg-neutral-950 rounded border border-neutral-800 space-y-4 relative">
+                    {/* Bagian Umum */}
+                    <div>
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-[10px] font-black uppercase text-neutral-400">TIER #{idx + 1}</span>
+                        {tiers.length > 1 && <button type="button" onClick={() => handleRemoveTier(idx)} className="text-brand-red text-xs"><Trash2 className="w-3.5 h-3.5" /></button>}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="col-span-2 sm:col-span-1">
+                          <span className="text-[9px] text-neutral-400 font-bold block mb-1">NAMA TIKET</span>
+                          <input type="text" required placeholder="Nama Tiket" value={t.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-bold" />
+                        </div>
+                        <div className="col-span-2 sm:col-span-1">
+                          <span className="text-[9px] text-neutral-400 font-bold block mb-1">KUOTA (KOSONG = UNLIMITED)</span>
+                          <input type="text" inputMode="numeric" placeholder="Contoh: 100" value={t.quota ? Number(t.quota).toLocaleString('id-ID') : ''} onChange={(e) => { const c = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, ''); handleTierChange(idx, 'quota', c ? parseInt(c, 10) : ''); }} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <span className="text-[9px] text-neutral-400 font-bold block mb-1">NAMA TIER</span>
-                        <input type="text" required placeholder="Regular" value={t.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-bold" />
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-stretch">
+                      {/* Section PO */}
+                      <div className="p-3 bg-white/5 border border-brand-blue/30 rounded-lg flex flex-col justify-start space-y-3">
+                        <h5 className="text-[10px] font-black uppercase text-brand-blue tracking-wide">HARGA &amp; JADWAL PRESALE (PO)</h5>
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <span className="text-[9px] text-neutral-400 font-bold block mb-1">HARGA PRESALE (RP) *</span>
+                            <input type="text" inputMode="numeric" required placeholder="Harga PO (Rp)" value={t.price ? Number(t.price).toLocaleString('id-ID') : ''} onChange={(e) => { const c = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, ''); handleTierChange(idx, 'price', c ? parseInt(c, 10) : ''); }} className="w-full px-2 py-1.5 bg-neutral-900 border border-brand-blue/30 rounded text-xs text-white font-mono font-bold" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <span className="text-[9px] text-neutral-400 font-bold block mb-1">START PO (TGL & JAM)</span>
+                              <input type="datetime-local" value={t.startPo || ''} onChange={(e) => handleTierChange(idx, 'startPo', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-[10px] text-white" />
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-neutral-400 font-bold block mb-1">END PO (TGL & JAM)</span>
+                              <input type="datetime-local" value={t.endPo || ''} onChange={(e) => handleTierChange(idx, 'endPo', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-[10px] text-white" />
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[9px] text-neutral-400 font-bold block mb-1">HARGA (RP)</span>
-                        <input type="text" inputMode="numeric" required placeholder="50000" value={t.price} onChange={(e) => handleTierChange(idx, 'price', e.target.value.replace(/[^0-9]/g, ''))} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono font-bold" />
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-neutral-400 font-bold block mb-1">KUOTA</span>
-                        <input type="text" inputMode="numeric" placeholder="100" value={t.quota} onChange={(e) => handleTierChange(idx, 'quota', e.target.value.replace(/[^0-9]/g, ''))} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
+
+                      {/* Section OTS */}
+                      <div className="p-3 bg-white/5 border border-brand-yellow/30 rounded-lg flex flex-col justify-start space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h5 className="text-[10px] font-black uppercase text-brand-yellow tracking-wide">HARGA OTS (ON THE SPOT)</h5>
+                          <label className="flex items-center cursor-pointer space-x-2">
+                            <span className="text-[9px] font-bold text-neutral-400">AKTIFKAN OTS?</span>
+                            <input type="checkbox" className="hidden" checked={t.isOtsEnabled || false} onChange={(e) => handleTierChange(idx, 'isOtsEnabled', e.target.checked)} />
+                            <div className={`w-8 h-4 rounded-full transition-colors ${t.isOtsEnabled ? 'bg-brand-yellow' : 'bg-neutral-700'} relative`}>
+                              <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${t.isOtsEnabled ? 'translate-x-4' : ''}`}></div>
+                            </div>
+                          </label>
+                        </div>
+                        {t.isOtsEnabled && (
+                          <div className="space-y-3">
+                            <div className="bg-brand-yellow/10 border border-brand-yellow/20 px-2 py-1.5 rounded">
+                              <span className="text-[9px] text-brand-yellow/80 font-medium block">Tiket ini akan tersimpan sebagai:</span>
+                              <span className="text-[10px] text-brand-yellow font-black">{t.name ? `${t.name} — OTS` : '— OTS'}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-neutral-400 font-bold block mb-1">HARGA OTS (RP) *</span>
+                              <input type="text" inputMode="numeric" required={t.isOtsEnabled} placeholder="Harga OTS (Rp)" value={t.priceOts ? Number(t.priceOts).toLocaleString('id-ID') : ''} onChange={(e) => { const c = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, ''); handleTierChange(idx, 'priceOts', c ? parseInt(c, 10) : ''); }} className="w-full px-2 py-1.5 bg-neutral-900 border border-brand-yellow/30 rounded text-xs text-white font-mono font-bold" />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

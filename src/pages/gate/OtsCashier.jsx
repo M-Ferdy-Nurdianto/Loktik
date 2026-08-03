@@ -24,8 +24,9 @@ export const OtsCashier = ({ eventId }) => {
     if (!eventId) return;
     try {
       const { data } = await supabase.from('ticket_categories').select('*').eq('event_id', eventId);
-      setCategories(data || []);
-      if (data && data.length > 0) setSelectedCatId(data[0].id);
+      const otsCategories = (data || []).filter((cat) => cat.is_ots_enabled);
+      setCategories(otsCategories);
+      if (otsCategories && otsCategories.length > 0) setSelectedCatId(otsCategories[0].id);
     } catch (e) {
       console.warn('Gagal memuat kategori tiket:', e);
     }

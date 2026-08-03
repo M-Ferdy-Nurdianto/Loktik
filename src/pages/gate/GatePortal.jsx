@@ -8,6 +8,7 @@ import { GatePinLock } from './GatePinLock';
 import { Scanner } from './Scanner';
 import { GuestList } from './GuestList';
 import { OtsCashier } from './OtsCashier';
+import { StaffGuide } from './StaffGuide';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';
 
@@ -203,32 +204,7 @@ export const GatePortal = () => {
       </div>
 
       {/* EXPANDABLE QUICK GUIDE */}
-      {showGuide && (
-        <div className="mx-4 sm:mx-0 mt-3 bg-[#121212] p-4 rounded-xl border border-brand-purple/40 space-y-2 text-xs text-neutral-300 shadow-[0_0_30px_rgba(139,92,246,0.15)]">
-          <div className="flex items-center space-x-2 border-b border-neutral-800 pb-2">
-            <HelpCircle className="w-4 h-4 text-brand-purple shrink-0" />
-            <h3 className="font-black text-white uppercase tracking-wider text-[11px]">Panduan Cepat Gate</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-medium pt-1">
-            <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
-              <p className="font-black text-brand-purple uppercase text-[10px]">1. Input Manual (Tercepat)</p>
-              <p className="text-neutral-400">Ketik kode tiket (contoh: <span className="font-mono text-white">GM1972</span>) lalu tekan Enter.</p>
-            </div>
-            <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
-              <p className="font-black text-brand-purple uppercase text-[10px]">2. Progres Penukaran (1/3, 2/3)</p>
-              <p className="text-neutral-400">Serahkan 1 tiket fisik tiap kali konfirmasi berhasil.</p>
-            </div>
-            <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
-              <p className="font-black text-brand-purple uppercase text-[10px]">3. HP Mati / Lupa Kode</p>
-              <p className="text-neutral-400">Buka tab <span className="font-bold text-white">GUEST LIST</span> → cari nama → klik <span className="font-bold text-brand-green">CHECK-IN</span>.</p>
-            </div>
-            <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 space-y-1">
-              <p className="font-black text-brand-purple uppercase text-[10px]">4. Beli di Venue</p>
-              <p className="text-neutral-400">Buka tab <span className="font-bold text-white">KASIR OTS</span> untuk pembelian langsung di venue.</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {showGuide && <StaffGuide />}
 
       {/* TAB NAVIGATION */}
       <div className={`grid ${gridColsClass} gap-2 px-4 sm:px-0 mt-3`}>

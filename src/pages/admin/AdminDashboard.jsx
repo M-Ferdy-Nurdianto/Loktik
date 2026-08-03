@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { CustomSelect } from '../../components/ui/CustomSelect';
 import { formatDate } from '../../utils/formatters';
+import { toggleBot } from '../../services/apiEo';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -104,33 +105,38 @@ export const AdminDashboard = () => {
     );
   };
 
-  const handleToggleBotBonus = (eoId) => {
-    setEoAccounts((prev) =>
-      prev.map((acc) => {
-        if (acc.id === eoId) {
-          const nextBonus = !acc.botAccessBonus;
-          // Sync ke session aktif jika EO ini sedang login
-          try {
-            const savedUser = localStorage.getItem('loktik_user_session');
-            if (savedUser) {
-              const parsedUser = JSON.parse(savedUser);
-              const isMatch =
-                parsedUser.id === acc.id ||
-                (parsedUser.username || '').toLowerCase() === (acc.name || '').toLowerCase();
-              if (isMatch) {
-                localStorage.setItem(
-                  'loktik_user_session',
-                  JSON.stringify({ ...parsedUser, botAccessBonus: nextBonus })
-                );
-              }
-            }
-          } catch (e) {}
-          return { ...acc, botAccessBonus: nextBonus };
-        }
-        return acc;
-      })
-    );
-  };
+  const handleToggleBotBonus = async (eoId) => {
+  // Find current EO and toggle flag
+  const acc = eoAccounts.find((a) => a.id === eoId);
+  if (!acc) return;
+  const nextBonus = !acc.botAccessBonus;
+  try {
+    await toggleBot(eoId, nextBonus);
+  } catch (err) {
+    console.error('Failed to toggle bot flag', err);
+    return;
+  }
+  // Update state
+  setEoAccounts((prev) =>
+    prev.map((a) => (a.id === eoId ? { ...a, botAccessBonus: nextBonus } : a))
+  );
+  // Sync to current session if this EO is logged in
+  try {
+    const savedUser = localStorage.getItem('loktik_user_session');
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      const isMatch =
+        parsedUser.id === acc.id ||
+        (parsedUser.username || '').toLowerCase() === (acc.name || '').toLowerCase();
+      if (isMatch) {
+        localStorage.setItem(
+          'loktik_user_session',
+          JSON.stringify({ ...parsedUser, botAccessBonus: nextBonus })
+        );
+      }
+    }
+  } catch (e) {}
+};
 
   const handleDeleteEo = (eoId) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus akun EO ini secara permanen?')) {

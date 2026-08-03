@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List, Users, AlertTriangle, Menu, X } from 'lucide-react';
+import { LogOut, ShoppingBag, User, MessageSquare, PlusCircle, List, Users, AlertTriangle, Menu, X, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -10,6 +10,7 @@ import { MyEventsTab } from '../../components/dashboard/MyEventsTab';
 import { CreateEventTab } from '../../components/dashboard/CreateEventTab';
 import { OrderManagerTab } from '../../components/dashboard/OrderManagerTab';
 import { StaffManagerTab } from '../../components/dashboard/StaffManagerTab';
+import { EoGuideTab } from '../../components/dashboard/EoGuideTab';
 import { getAllEventsForEo } from '../../services/apiEvents';
 import { getLiveOrdersForEo } from '../../services/apiOrders';
 
@@ -137,6 +138,7 @@ export const EODashboard = () => {
     { id: 'create-event', label: 'CREATE', icon: <PlusCircle className="w-4 h-4" /> },
     { id: 'orders', label: 'ORDERS', icon: <ShoppingBag className="w-4 h-4" /> },
     { id: 'staff-manager', label: 'STAFF GATE', icon: <Users className="w-4 h-4" /> },
+    { id: 'guide', label: 'PANDUAN', icon: <HelpCircle className="w-4 h-4" /> },
   ];
 
   const SidebarContent = () => (
@@ -319,6 +321,7 @@ export const EODashboard = () => {
           {activeTab === 'create-event' && <CreateEventTab onEventCreated={() => setActiveTab('my-events')} />}
           {activeTab === 'orders' && <OrderManagerTab />}
           {activeTab === 'staff-manager' && <StaffManagerTab />}
+          {activeTab === 'guide' && <EoGuideTab />}
         </div>
       </main>
 

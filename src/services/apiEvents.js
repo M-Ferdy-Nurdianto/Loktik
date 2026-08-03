@@ -304,15 +304,32 @@ export const createEventWithTiers = async (eventPayload, categoryRows) => {
   if (eventError) throw new Error(`Gagal membuat event: ${eventError.message}`);
 
   if (categoryRows && categoryRows.length > 0) {
-    const formattedCategories = categoryRows.map((cat) => ({
-      event_id: newEvent.id,
-      name: cat.name,
-      price: parseFloat(cat.price) || 0,
-      quota: cat.quota === '' || cat.quota === null ? null : parseInt(cat.quota),
-      description: cat.description || '',
-      start_po: cat.start_po || null,
-      end_po: cat.end_po || null,
-    }));
+    const formattedCategories = [];
+    categoryRows.forEach((cat) => {
+      // 1. Tiket Utama (PO)
+      formattedCategories.push({
+        event_id: newEvent.id,
+        name: cat.name,
+        price: parseFloat(cat.price) || 0,
+        quota: cat.quota === '' || cat.quota === null || isNaN(cat.quota) ? null : parseInt(cat.quota),
+        description: cat.description || '',
+        start_po: cat.start_po || null,
+        end_po: cat.end_po || null,
+      });
+
+      // 2. Tiket OTS (Jika aktif)
+      if (cat.is_ots_enabled && cat.price_ots !== null && cat.price_ots !== undefined && !isNaN(cat.price_ots)) {
+        formattedCategories.push({
+          event_id: newEvent.id,
+          name: `${cat.name} — OTS`,
+          price: parseFloat(cat.price_ots) || 0,
+          quota: cat.quota === '' || cat.quota === null || isNaN(cat.quota) ? null : parseInt(cat.quota),
+          description: cat.description || '',
+          start_po: null,
+          end_po: null,
+        });
+      }
+    });
 
     const { error: tiersError } = await supabase
       .from('ticket_categories')
@@ -372,15 +389,32 @@ export const updateEventData = async (eventId, eventPayload, categoryRows) => {
   if (categoryRows && categoryRows.length > 0) {
     await supabase.from('ticket_categories').delete().eq('event_id', eventId);
 
-    const formattedCategories = categoryRows.map((cat) => ({
-      event_id: eventId,
-      name: cat.name,
-      price: parseFloat(cat.price) || 0,
-      quota: cat.quota === '' || cat.quota === null ? null : parseInt(cat.quota),
-      description: cat.description || '',
-      start_po: cat.start_po || null,
-      end_po: cat.end_po || null,
-    }));
+    const formattedCategories = [];
+    categoryRows.forEach((cat) => {
+      // 1. Tiket Utama (PO)
+      formattedCategories.push({
+        event_id: eventId,
+        name: cat.name,
+        price: parseFloat(cat.price) || 0,
+        quota: cat.quota === '' || cat.quota === null || isNaN(cat.quota) ? null : parseInt(cat.quota),
+        description: cat.description || '',
+        start_po: cat.start_po || null,
+        end_po: cat.end_po || null,
+      });
+
+      // 2. Tiket OTS (Jika aktif)
+      if (cat.is_ots_enabled && cat.price_ots !== null && cat.price_ots !== undefined && !isNaN(cat.price_ots)) {
+        formattedCategories.push({
+          event_id: eventId,
+          name: `${cat.name} — OTS`,
+          price: parseFloat(cat.price_ots) || 0,
+          quota: cat.quota === '' || cat.quota === null || isNaN(cat.quota) ? null : parseInt(cat.quota),
+          description: cat.description || '',
+          start_po: null,
+          end_po: null,
+        });
+      }
+    });
 
     const { error: tiersError } = await supabase
       .from('ticket_categories')

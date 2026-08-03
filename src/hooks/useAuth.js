@@ -20,6 +20,34 @@ export const useAuth = () => {
     setLoading(false);
   }, []);
 
+  // Listen to storage changes for session updates
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'loktik_user_session') {
+        try {
+          setUser(e.newValue ? JSON.parse(e.newValue) : null);
+        } catch (err) {
+          console.error('Failed to parse updated user session', err);
+        }
+      }
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
+
+  const refreshUser = () => {
+    const saved = localStorage.getItem('loktik_user_session');
+    if (saved) {
+      try {
+        setUser(JSON.parse(saved));
+      } catch (e) {
+        setUser(null);
+      }
+    } else {
+      setUser(null);
+    }
+  };
+
   const login = async (username, password) => {
     const cleanUsername = (username || '').trim().toLowerCase();
     const cleanPassword = (password || '').trim();

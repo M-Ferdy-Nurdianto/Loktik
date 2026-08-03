@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS public.ticket_categories (
     description TEXT,
     start_po TIMESTAMPTZ,
     end_po TIMESTAMPTZ,
+    is_ots_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    price_ots DECIMAL(12, 2) DEFAULT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

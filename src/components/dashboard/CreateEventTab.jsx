@@ -34,11 +34,11 @@ export const CreateEventTab = ({ onEventCreated }) => {
   const [submitting, setSubmitting] = useState(false);
 
   const [tiers, setTiers] = useState([
-    { name: 'Tiket Presale 1', price: 35000, priceOts: '', quota: 100, startPo: '', endPo: '', description: '' },
+    { name: 'Tiket Presale 1', price: 35000, isOtsEnabled: false, priceOts: '', quota: 100, startPo: '', endPo: '', description: '' },
   ]);
 
   const handleAddTier = (name = 'Tiket VIP', price = 75000) => {
-    setTiers([...tiers, { name, price, priceOts: '', quota: '', startPo: '', endPo: '', description: '' }]);
+    setTiers([...tiers, { name, price, isOtsEnabled: false, priceOts: '', quota: '', startPo: '', endPo: '', description: '' }]);
   };
 
   const handleRemoveTier = (idx) => {
@@ -135,10 +135,11 @@ export const CreateEventTab = ({ onEventCreated }) => {
       const formattedTiers = tiers.map((t) => ({
         ...t,
         price: t.price ? parseInt(String(t.price).replace(/\./g, ''), 10) : 0,
-        priceOts: t.priceOts ? parseInt(String(t.priceOts).replace(/\./g, ''), 10) : null,
         quota: t.quota ? parseInt(String(t.quota).replace(/\./g, ''), 10) : null,
         start_po: t.startPo ? new Date(t.startPo).toISOString() : null,
         end_po: t.endPo ? new Date(t.endPo).toISOString() : null,
+        is_ots_enabled: t.isOtsEnabled || false,
+        price_ots: t.isOtsEnabled && t.priceOts ? parseInt(String(t.priceOts).replace(/\./g, ''), 10) : null,
       }));
 
       const newEvt = await createEventWithTiers(eventPayload, formattedTiers);
@@ -236,9 +237,9 @@ export const CreateEventTab = ({ onEventCreated }) => {
         </div>
 
         {/* RIGHT COLUMN: KATEGORI TIKET & SUBMIT */}
-        <div className="space-y-4">
-          <div className="p-3.5 bg-neutral-900 rounded border border-neutral-800 space-y-3">
-            <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-4 h-full">
+          <div className="p-3.5 bg-neutral-900 rounded border border-neutral-800 flex flex-col flex-1 min-h-0">
+            <div className="flex justify-between items-center mb-3 shrink-0">
               <h4 className="text-xs font-black uppercase text-brand-blue tracking-wider">3. TIER KATEGORI TIKET</h4>
               <div className="flex gap-1.5">
                 <button type="button" onClick={() => handleAddTier('Presale 2', 45000)} className="px-2 py-0.5 bg-neutral-950 text-brand-green border border-brand-green/30 text-[10px] font-bold rounded">+ Presale</button>
@@ -246,62 +247,73 @@ export const CreateEventTab = ({ onEventCreated }) => {
               </div>
             </div>
 
-            <div className="space-y-2.5 max-h-72 overflow-y-auto no-scrollbar pr-1">
+            <div className="space-y-2.5 overflow-y-auto no-scrollbar pr-1 flex-1 min-h-0">
               {tiers.map((t, idx) => (
-                <div key={idx} className="p-2.5 bg-neutral-950 rounded border border-neutral-800 space-y-2 relative">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase text-neutral-400">TIER #{idx + 1}</span>
-                    {tiers.length > 1 && <button type="button" onClick={() => handleRemoveTier(idx)} className="text-brand-red text-xs"><Trash2 className="w-3.5 h-3.5" /></button>}
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <input type="text" required placeholder="Nama Tiket" value={t.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} className="col-span-3 sm:col-span-1 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-bold" />
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        required
-                        placeholder="Harga PO (Rp)"
-                        value={t.price ? Number(t.price).toLocaleString('id-ID') : ''}
-                        onChange={(e) => {
-                          const clean = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, '');
-                          handleTierChange(idx, 'price', clean ? parseInt(clean, 10) : '');
-                        }}
-                        className="flex-1 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono font-bold"
-                      />
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="Harga OTS (Rp)"
-                        value={t.priceOts ? Number(t.priceOts).toLocaleString('id-ID') : ''}
-                        onChange={(e) => {
-                          const clean = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, '');
-                          handleTierChange(idx, 'priceOts', clean ? parseInt(clean, 10) : '');
-                        }}
-                        className="flex-1 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono"
-                      />
-                    </div>
-                  </div>
+                <div key={idx} className="p-3 sm:p-4 bg-neutral-950 rounded border border-neutral-800 space-y-4 relative">
+                  {/* Bagian Umum */}
                   <div>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="Kuota (Unlimited)"
-                      value={t.quota ? Number(t.quota).toLocaleString('id-ID') : ''}
-                      onChange={(e) => {
-                        const clean = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, '');
-                        handleTierChange(idx, 'quota', clean ? parseInt(clean, 10) : '');
-                      }}
-                      className="w-1/2 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-[10px]">
-                    <div>
-                      <span className="text-neutral-500 block">START PO:</span>
-                      <input type="datetime-local" value={t.startPo || ''} onChange={(e) => handleTierChange(idx, 'startPo', e.target.value)} className="w-full px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-[10px] text-white" />
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-[10px] font-black uppercase text-neutral-400">TIER #{idx + 1}</span>
+                      {tiers.length > 1 && <button type="button" onClick={() => handleRemoveTier(idx)} className="text-brand-red text-xs"><Trash2 className="w-3.5 h-3.5" /></button>}
                     </div>
-                    <div>
-                      <span className="text-neutral-500 block">END PO:</span>
-                      <input type="datetime-local" value={t.endPo || ''} onChange={(e) => handleTierChange(idx, 'endPo', e.target.value)} className="w-full px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-[10px] text-white" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2 sm:col-span-1">
+                        <span className="text-[9px] text-neutral-400 font-bold block mb-1">NAMA TIKET</span>
+                        <input type="text" required placeholder="Nama Tiket" value={t.name} onChange={(e) => handleTierChange(idx, 'name', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-bold" />
+                      </div>
+                      <div className="col-span-2 sm:col-span-1">
+                        <span className="text-[9px] text-neutral-400 font-bold block mb-1">KUOTA (KOSONG = UNLIMITED)</span>
+                        <input type="text" inputMode="numeric" placeholder="Contoh: 100" value={t.quota ? Number(t.quota).toLocaleString('id-ID') : ''} onChange={(e) => { const c = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, ''); handleTierChange(idx, 'quota', c ? parseInt(c, 10) : ''); }} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-xs text-white font-mono" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-stretch">
+                    {/* Section PO */}
+                    <div className="p-3 bg-white/5 border border-brand-blue/30 rounded-lg flex flex-col justify-start space-y-3">
+                      <h5 className="text-[10px] font-black uppercase text-brand-blue tracking-wide">HARGA &amp; JADWAL PRESALE (PO)</h5>
+                      <div className="grid grid-cols-1 gap-3">
+                        <div>
+                          <span className="text-[9px] text-neutral-400 font-bold block mb-1">HARGA PRESALE (RP) *</span>
+                          <input type="text" inputMode="numeric" required placeholder="Harga PO (Rp)" value={t.price ? Number(t.price).toLocaleString('id-ID') : ''} onChange={(e) => { const c = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, ''); handleTierChange(idx, 'price', c ? parseInt(c, 10) : ''); }} className="w-full px-2 py-1.5 bg-neutral-900 border border-brand-blue/30 rounded text-xs text-white font-mono font-bold" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <span className="text-[9px] text-neutral-400 font-bold block mb-1">START PO (TGL & JAM)</span>
+                            <input type="datetime-local" value={t.startPo || ''} onChange={(e) => handleTierChange(idx, 'startPo', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-[10px] text-white" />
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-neutral-400 font-bold block mb-1">END PO (TGL & JAM)</span>
+                            <input type="datetime-local" value={t.endPo || ''} onChange={(e) => handleTierChange(idx, 'endPo', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-[10px] text-white" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section OTS */}
+                    <div className="p-3 bg-white/5 border border-brand-yellow/30 rounded-lg flex flex-col justify-start space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-[10px] font-black uppercase text-brand-yellow tracking-wide">HARGA OTS (ON THE SPOT)</h5>
+                        <label className="flex items-center cursor-pointer space-x-2">
+                          <span className="text-[9px] font-bold text-neutral-400">AKTIFKAN OTS?</span>
+                          <input type="checkbox" className="hidden" checked={t.isOtsEnabled || false} onChange={(e) => handleTierChange(idx, 'isOtsEnabled', e.target.checked)} />
+                          <div className={`w-8 h-4 rounded-full transition-colors ${t.isOtsEnabled ? 'bg-brand-yellow' : 'bg-neutral-700'} relative`}>
+                            <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${t.isOtsEnabled ? 'translate-x-4' : ''}`}></div>
+                          </div>
+                        </label>
+                      </div>
+                      {t.isOtsEnabled && (
+                        <div className="space-y-3">
+                          <div className="bg-brand-yellow/10 border border-brand-yellow/20 px-2 py-1.5 rounded">
+                            <span className="text-[9px] text-brand-yellow/80 font-medium block">Tiket ini akan tersimpan sebagai:</span>
+                            <span className="text-[10px] text-brand-yellow font-black">{t.name ? `${t.name} — OTS` : '— OTS'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-neutral-400 font-bold block mb-1">HARGA OTS (RP) *</span>
+                            <input type="text" inputMode="numeric" required={t.isOtsEnabled} placeholder="Harga OTS (Rp)" value={t.priceOts ? Number(t.priceOts).toLocaleString('id-ID') : ''} onChange={(e) => { const c = e.target.value.toLowerCase().replace(/k/g, '000').replace(/[^0-9]/g, ''); handleTierChange(idx, 'priceOts', c ? parseInt(c, 10) : ''); }} className="w-full px-2 py-1.5 bg-neutral-900 border border-brand-yellow/30 rounded text-xs text-white font-mono font-bold" />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -309,7 +321,7 @@ export const CreateEventTab = ({ onEventCreated }) => {
             </div>
           </div>
 
-          <Button type="submit" variant="green" size="lg" fullWidth disabled={submitting} className="font-black uppercase text-xs py-3">
+          <Button type="submit" variant="green" size="lg" fullWidth disabled={submitting} className="font-black uppercase text-xs py-3 shrink-0 mt-auto">
             {submitting ? 'MEMPROSES...' : 'PUBLIKASIKAN EVENT SEKARANG'}
           </Button>
         </div>
