@@ -338,7 +338,7 @@ export const Scanner = ({ eventId }) => {
                   <strong className="text-brand-purple font-black text-xs">{scanResult.category}</strong>
                 </div>
                 {scanResult.progress && (
-                  <div className="flex justify-between items-center bg-brand-purple/15 border border-brand-purple/40 px-3 py-2.5 rounded-lg border-t border-neutral-800/60 mt-1">
+                  <div className="flex justify-between items-center bg-brand-purple/15 border border-brand-purple/40 px-3 py-2.5 rounded-lg border-t mt-1">
                     <span className="text-[11px] text-neutral-300 font-medium">Progres Penukaran</span>
                     <span className="font-black font-mono text-brand-purple bg-brand-purple/30 px-2.5 py-1 rounded-lg border border-brand-purple/60 text-xs">
                       Tiket ke-{scanResult.progress}
@@ -346,7 +346,7 @@ export const Scanner = ({ eventId }) => {
                   </div>
                 )}
                 {scanResult.scannedAt && (
-                  <div className="flex justify-between items-center border-t border-neutral-800/60 pt-3">
+                  <div className="flex justify-between items-center border-t pt-3">
                     <span className="text-[11px] text-neutral-400 font-medium">Waktu Scan</span>
                     <strong className="text-brand-red text-xs font-black">{scanResult.scannedAt}</strong>
                   </div>

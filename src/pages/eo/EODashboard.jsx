@@ -240,7 +240,7 @@ export const EODashboard = () => {
       <aside className={`
         fixed top-0 left-0 h-full z-50 w-72 bg-[#121212] border-r border-neutral-800 p-5 flex flex-col justify-between
         transition-transform duration-300 ease-in-out no-scrollbar overflow-y-auto
-        md:relative md:w-64 md:translate-x-0 md:sticky md:top-0 md:h-screen md:shrink-0 md:z-auto
+        md:sticky md:w-64 md:translate-x-0 md:top-0 md:h-screen md:shrink-0 md:z-auto
         ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
       `}>
         {/* Mobile close button */}
