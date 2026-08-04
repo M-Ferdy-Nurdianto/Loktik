@@ -342,15 +342,16 @@ export const AdminDashboard = () => {
       const newQuota = result.newQuota ?? (selectedEo.wa_quota || 0) + quotaToAdd;
 
       // Update React state dengan nilai aktual dari DB
+      // PENTING: tidak auto-set botAccessBonus=true agar tidak override keputusan admin
       setEoAccounts((prev) => {
         const updated = prev.map((acc) => {
           if (acc.id !== selectedEo.id) return acc;
           const updatedEo = {
             ...acc,
             wa_quota: newQuota,
-            botAccessBonus: true,
+            // botAccessBonus TIDAK diubah di sini — biarkan state sesuai DB
           };
-          // Sync session EO yang sedang login
+          // Sync session EO yang sedang login — hanya update kuota, bukan botAccessBonus
           try {
             const savedUser = localStorage.getItem('loktik_eo_session');
             if (savedUser) {
@@ -365,7 +366,7 @@ export const AdminDashboard = () => {
                     ...parsedUser,
                     wa_quota: newQuota,
                     wa_messages_sent: updatedEo.wa_messages_sent || 0,
-                    botAccessBonus: true,
+                    // botAccessBonus tidak diubah — ikuti nilai yang sudah ada di session
                   })
                 );
               }
