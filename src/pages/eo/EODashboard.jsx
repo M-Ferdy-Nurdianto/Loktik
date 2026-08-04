@@ -62,7 +62,7 @@ export const EODashboard = () => {
 
   // resolveWhatsAppMode — pakai effectiveUser agar dapat data terbaru dari DB
   const waMode      = resolveWhatsAppMode(effectiveUser);
-  const hasBotAddon = waMode === 'bot' || waMode === 'quota';
+  const hasBotAddon = waMode === 'quota';
 
   const fetchLiveStats = async () => {
     try {
@@ -239,7 +239,7 @@ export const EODashboard = () => {
             <span className={`font-black uppercase font-mono text-right ${
               hasBotAddon ? 'text-brand-green' : 'text-neutral-500'
             }`}>
-              {waMode === 'bot' ? 'AKTIF (∞)' : waMode === 'quota' ? `AKTIF (${(waStats?.wa_quota ?? 0).toLocaleString('id-ID')})` : 'TIDAK AKTIF'}
+              {waMode === 'quota' ? `AKTIF (${(waStats?.wa_quota ?? 0).toLocaleString('id-ID')})` : 'TIDAK AKTIF'}
             </span>
           </div>
 

@@ -29,8 +29,8 @@ export const OrderManagerTab = () => {
       }
     : user;
   // resolveWhatsAppMode — SINGLE SOURCE OF TRUTH untuk mode pengiriman WA
-  const waMode = resolveWhatsAppMode(effectiveUser); // 'bot' | 'quota' | 'manual'
-  const hasBotAccess = waMode === 'bot' || waMode === 'quota';
+  const waMode = resolveWhatsAppMode(effectiveUser); // 'quota' | 'manual'
+  const hasBotAccess = waMode === 'quota';
 
   const formatOrderTicketCategories = (order) => {
     if (!order.tickets || order.tickets.length === 0) return 'Standard Ticket';
@@ -426,7 +426,6 @@ Terima Kasih!
   const sendAutoTicketViaBot = async (order, ticketUrl) => {
     // --- resolveWhatsAppMode: SINGLE SOURCE OF TRUTH ---
     const resolvedMode = resolveWhatsAppMode(effectiveUser);
-    const isUnlimitedBot = resolvedMode === 'bot';
 
     if (resolvedMode === 'manual') {
       showToast('Bot WA tidak aktif & kuota habis. Beralih ke WA manual.', 'eo');
@@ -483,17 +482,14 @@ Terima Kasih!
         return false;
       }
       if (result.success) {
-        // Bot aktif = unlimited, tidak kurangi kuota
-        // Kuota hanya berkurang jika mode kuota (bot tidak aktif)
+        // Selalu kurangi kuota setelah bot berhasil kirim
         const currentSent = effectiveUser?.wa_messages_sent ?? 0;
         const currentQuota = effectiveUser?.wa_quota ?? 0;
         const newSent = currentSent + 1;
-        const newQuota = isUnlimitedBot
-          ? currentQuota
-          : Math.max(0, currentQuota - 1);
+        const newQuota = Math.max(0, currentQuota - 1);
 
-        // Kurangi kuota di Supabase (source of truth) jika mode quota
-        if (!isUnlimitedBot && effectiveUser?.id) {
+        // Kurangi kuota di Supabase (source of truth)
+        if (effectiveUser?.id) {
           deductWaQuota(effectiveUser.id).then((res) => {
             if (!res.success) {
               console.warn('[WA Bot] deductWaQuota gagal:', res.message);
@@ -512,11 +508,6 @@ Terima Kasih!
               detail: { wa_quota: newQuota, wa_messages_sent: newSent }
             }));
           });
-        } else if (isUnlimitedBot) {
-          // Mode unlimited: hanya update sent count di UI
-          window.dispatchEvent(new CustomEvent('wa-quota-updated', {
-            detail: { wa_quota: currentQuota, wa_messages_sent: newSent }
-          }));
         }
 
         setLiveEoData((prev) => ({
@@ -553,8 +544,7 @@ Terima Kasih!
           } catch (_) {}
         }
 
-        const quotaInfo = isUnlimitedBot ? 'BOT AKTIF (Unlimited)' : `Sisa kuota: ${newQuota}`;
-        showToast(`Rincian tiket order ${dispatch.orderLookupCode} otomatis terkirim via WA ke ${order.guest_name}! (${quotaInfo})`, 'eo');
+        showToast(`Rincian tiket order ${dispatch.orderLookupCode} otomatis terkirim via WA ke ${order.guest_name}! (Sisa kuota: ${newQuota})`, 'eo');
         return true;
       } else {
         // GAGAL dari sisi bot (500 Error, dll)
@@ -730,7 +720,6 @@ Terima Kasih!
     // agar tidak baca state React yang stale
     let snapshotQuota = effectiveUser?.wa_quota ?? 0;
     let snapshotSent  = effectiveUser?.wa_messages_sent ?? 0;
-    const isUnlimitedBulk = resolveWhatsAppMode(effectiveUser) === 'bot';
 
     for (let i = 0; i < total; i++) {
       const order = ordersToApprove[i];
@@ -807,15 +796,15 @@ Terima Kasih!
             });
             const result = await response.json();
             if (result.success) {
-              // Kurangi kuota di DB jika mode quota
-              if (!isUnlimitedBulk && effectiveUser?.id) {
+              // Selalu kurangi kuota di DB setelah bot berhasil kirim
+              if (effectiveUser?.id) {
                 deductWaQuota(effectiveUser.id).catch((err) => {
                   console.warn('[Bulk WA] deductWaQuota error:', err);
                 });
               }
               // Track snapshot lokal agar progress bar & event akurat
               snapshotSent  += 1;
-              if (!isUnlimitedBulk) snapshotQuota = Math.max(0, snapshotQuota - 1);
+              snapshotQuota = Math.max(0, snapshotQuota - 1);
               // Update UI realtime per pesan
               setLiveEoData(() => ({
                 wa_quota:         snapshotQuota,

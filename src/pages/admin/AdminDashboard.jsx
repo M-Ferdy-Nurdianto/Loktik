@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Trash2, Power, MessageSquare, Plus, Inbox, Eye, EyeOff, KeyRound, Bot, CreditCard, X, Zap, Database, Loader2, AlertCircle } from 'lucide-react';
+import { LogOut, Trash2, Power, MessageSquare, Plus, Inbox, Eye, EyeOff, KeyRound, CreditCard, X, Zap, Database, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -12,7 +12,6 @@ import {
   getAllEoAccounts,
   createEoAccount,
   updateEoStatus,
-  toggleEoBotBonus,
   deleteEoAccount,
   resetEoWaQuota,
 } from '../../services/apiEo';
@@ -126,48 +125,6 @@ export const AdminDashboard = () => {
         prev.map((a) => (a.id === eoId ? { ...a, status: acc.status } : a))
       );
       alert(`Gagal mengubah status EO: ${err.message}`);
-    }
-  };
-
-  const handleToggleBotBonus = async (eoId) => {
-    const acc = eoAccounts.find((a) => a.id === eoId);
-    if (!acc) return;
-    const nextBonus = !acc.botAccessBonus;
-    console.log('[AdminDashboard] handleToggleBotBonus:', eoId, '->', nextBonus);
-
-    // Optimistic UI update
-    setEoAccounts((prev) =>
-      prev.map((a) => (a.id === eoId ? { ...a, botAccessBonus: nextBonus } : a))
-    );
-
-    // Sync ke session EO yang sedang login
-    try {
-      const savedUser = localStorage.getItem('loktik_eo_session');
-      if (savedUser) {
-        const parsedUser = JSON.parse(savedUser);
-        if (parsedUser.role === 'eo') {
-          const sessionName = (parsedUser.username || parsedUser.name || '').toLowerCase();
-          const accName = (acc.name || '').toLowerCase();
-          if (sessionName && accName && sessionName === accName) {
-            localStorage.setItem(
-              'loktik_eo_session',
-              JSON.stringify({ ...parsedUser, botAccessBonus: nextBonus })
-            );
-          }
-        }
-      }
-    } catch (e) {}
-
-    try {
-      await toggleEoBotBonus(eoId, nextBonus);
-      console.log('[AdminDashboard] handleToggleBotBonus: berhasil update Supabase');
-    } catch (err) {
-      console.error('[AdminDashboard] handleToggleBotBonus ERROR:', err);
-      // Rollback
-      setEoAccounts((prev) =>
-        prev.map((a) => (a.id === eoId ? { ...a, botAccessBonus: acc.botAccessBonus } : a))
-      );
-      alert(`Gagal mengubah status bot EO: ${err.message}`);
     }
   };
 
@@ -722,7 +679,7 @@ export const AdminDashboard = () => {
         ) : (
           <div className="space-y-3">
             {eoAccounts.map((eo) => {
-              const hasBot = Boolean(eo.botAccessBonus);
+              const hasQuota = (eo.wa_quota || 0) > 0;
               const planLabel =
                 eo.subscriptionPlan === '6_months' ? '6 BULAN PRO' :
                 eo.subscriptionPlan === '3_months' ? '3 BULAN' :
@@ -761,8 +718,8 @@ export const AdminDashboard = () => {
                       <Badge variant={eo.status === 'active' ? 'green' : 'red'} className="text-[9px] whitespace-nowrap">
                         {eo.status === 'active' ? 'AKTIF' : 'LOCKED'}
                       </Badge>
-                      {hasBot && (
-                        <Badge variant="blue" className="text-[9px] whitespace-nowrap">BOT ON</Badge>
+                      {hasQuota && (
+                        <Badge variant="blue" className="text-[9px] whitespace-nowrap">BOT AKTIF</Badge>
                       )}
                     </div>
                   </div>
@@ -813,21 +770,9 @@ export const AdminDashboard = () => {
 
                   {/* Row 3: tombol aksi */}
                   <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-neutral-800/60">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleBotBonus(eo.id)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase whitespace-nowrap transition-all ${
-                        hasBot
-                          ? 'bg-brand-green/15 border border-brand-green/60 text-brand-green'
-                          : 'bg-neutral-800/60 border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white'
-                      }`}
-                    >
-                      <Bot className="w-3.5 h-3.5 shrink-0" />
-                      {hasBot ? '✓ Bot Aktif' : '+ Aktifkan Bot'}
-                    </button>
                     <Button variant="blue" size="sm" onClick={() => openTopUpModal(eo)}
                       className="font-black text-[10px] uppercase whitespace-nowrap">
-                      <Zap className="w-3 h-3 mr-1 shrink-0" /> Top Up
+                      <Zap className="w-3 h-3 mr-1 shrink-0" /> Top Up Kuota
                     </Button>
                     {(eo.wa_quota || 0) > 0 && (
                       <Button variant="yellow" size="sm" onClick={() => handleResetQuota(eo.id)}

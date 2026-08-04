@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
-import { MessageSquare, Infinity } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { formatRupiah } from '../../utils/formatters';
 
 export const OverviewStats = ({
@@ -14,7 +14,6 @@ export const OverviewStats = ({
   const waMessagesSent = waStats?.wa_messages_sent ?? 0;
   const waQuota        = waStats?.wa_quota ?? 0;
   const waTotalEver    = waQuota + waMessagesSent;
-  const isUnlimited    = waMode === 'bot';
   const isQuotaMode    = waMode === 'quota';
 
   const items = [
@@ -41,36 +40,19 @@ export const OverviewStats = ({
       {!isLoadingBot && hasBotAddon && (
         <Card
           variant="dark"
-          className={`p-5 border ${
-            isUnlimited
-              ? 'border-brand-green/40 bg-gradient-to-br from-[#09160d] to-[#121212] shadow-[0_0_15px_rgba(57,255,20,0.08)]'
-              : 'border-brand-blue/40 bg-gradient-to-br from-[#0c1920] to-[#121212] shadow-[0_0_15px_rgba(6,182,212,0.08)]'
-          }`}
+          className="p-5 border border-brand-blue/40 bg-gradient-to-br from-[#0c1920] to-[#121212] shadow-[0_0_15px_rgba(6,182,212,0.08)]"
         >
           <div className="flex items-center justify-between gap-4">
             {/* Kiri: icon + label + counter */}
             <div className="flex items-center gap-3 min-w-0">
-              <div className={`p-1.5 rounded-md border shrink-0 ${
-                isUnlimited
-                  ? 'bg-brand-green/20 border-brand-green/50'
-                  : 'bg-brand-blue/20 border-brand-blue/50'
-              }`}>
-                <MessageSquare className={`w-4 h-4 ${isUnlimited ? 'text-brand-green' : 'text-brand-blue'}`} />
+              <div className="p-1.5 rounded-md border shrink-0 bg-brand-blue/20 border-brand-blue/50">
+                <MessageSquare className="w-4 h-4 text-brand-blue" />
               </div>
 
               <div className="min-w-0">
                 <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
                   KUOTA BOT WHATSAPP
                 </p>
-
-                {isUnlimited && (
-                  <div className="flex items-baseline gap-1.5 mt-0.5 flex-wrap">
-                    <span className="text-2xl font-black font-mono text-brand-green">
-                      {waMessagesSent.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-[10px] font-bold text-neutral-500 uppercase">PESAN TERKIRIM</span>
-                  </div>
-                )}
 
                 {isQuotaMode && (
                   <div className="flex items-baseline gap-1.5 mt-0.5">
@@ -89,22 +71,10 @@ export const OverviewStats = ({
 
             {/* Kanan: badge + sisa */}
             <div className="text-right shrink-0 space-y-1">
-              {isUnlimited ? (
-                <>
-                  <Badge variant="green" className="text-[9px] px-2 py-0.5 font-black">BOT UNLIMITED</Badge>
-                  <div className="flex items-center justify-end gap-1 text-[10px] font-mono text-neutral-400">
-                    <Infinity className="w-3 h-3 text-brand-green" />
-                    <span className="font-black text-brand-green">Tanpa Batas</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Badge variant="blue" className="text-[9px] px-2 py-0.5 font-black">BOT AKTIF</Badge>
-                  <div className="text-[10px] font-mono text-neutral-400">
-                    Sisa: <span className="font-black text-brand-blue">{waQuota.toLocaleString('id-ID')}</span>
-                  </div>
-                </>
-              )}
+              <Badge variant="blue" className="text-[9px] px-2 py-0.5 font-black">BOT AKTIF</Badge>
+              <div className="text-[10px] font-mono text-neutral-400">
+                Sisa: <span className={`font-black ${waQuota > 0 ? 'text-brand-blue' : 'text-brand-red'}`}>{waQuota.toLocaleString('id-ID')}</span>
+              </div>
             </div>
           </div>
 
@@ -126,19 +96,6 @@ export const OverviewStats = ({
                       : '0%',
                   }}
                 />
-              </div>
-            </div>
-          )}
-
-          {/* Progress bar — mode unlimited */}
-          {isUnlimited && (
-            <div className="mt-3 space-y-1">
-              <div className="flex items-center justify-between text-[9px] font-mono text-neutral-500 font-bold uppercase">
-                <span>STATUS BOT</span>
-                <span className="text-brand-green font-black">AKTIF PENUH</span>
-              </div>
-              <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
-                <div className="h-full w-full rounded-full bg-gradient-to-r from-brand-green to-brand-green/60 shadow-[0_0_8px_rgba(57,255,20,0.3)]" />
               </div>
             </div>
           )}
