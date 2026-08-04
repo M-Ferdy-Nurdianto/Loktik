@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Ticket, CheckCircle2, AlertCircle, Edit3, X, Key, RefreshCw, Lock, Clock, Download } from 'lucide-react';
 import { searchOrdersByBuyer, updateOrderWaNumber } from '../../services/apiOrders';
@@ -22,27 +22,43 @@ export const TicketLookupModal = ({ isOpen, onClose }) => {
   const [downloadingId, setDownloadingId] = useState(null);
   const [lazyTicket, setLazyTicket] = useState(null); // untuk lazy migration render
 
-  const ticketRef = useRef(null);
+  const ticketRef   = useRef(null);
+  const abortRef    = useRef(null);   // AbortController untuk batalkan request sebelumnya
+  const lastQueryRef = useRef('');    // keyword request terakhir yang dikirim
 
   if (!isOpen) return null;
 
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
-    if (!query || query.trim().length < 2) {
+    const trimmed = query.trim();
+
+    if (!trimmed || trimmed.length < 2) {
       showToast('Masukkan minimal 2 karakter Kode Tiket', 'buyer');
       return;
     }
+
+    // Skip jika keyword tidak berubah dan sudah ada hasil
+    if (trimmed === lastQueryRef.current && results !== null) return;
+
+    // Batalkan request sebelumnya
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    lastQueryRef.current = trimmed;
+
     try {
       setLoading(true);
-      const data = await searchOrdersByBuyer(query);
+      const data = await searchOrdersByBuyer(trimmed, controller.signal);
+      if (controller.signal.aborted) return;
       setResults(data);
       if (data && data.length === 0) {
         showToast('Kode tiket tidak ditemukan. Pastikan kode sudah benar.', 'buyer');
       }
     } catch (err) {
+      if (err.name === 'AbortError') return;
       showToast('Gagal mencari tiket. Coba beberapa saat lagi.', 'buyer');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   };
 

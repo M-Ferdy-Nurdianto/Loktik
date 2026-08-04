@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Calendar, MapPin, Ticket, ArrowRight, Sparkles, Flame, Tag } from 'lucide-react';
 import { useActiveEvents } from '../../hooks/useEvents';
+import { useDebounce } from '../../hooks/useDebounce';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -16,11 +17,15 @@ export const LandingPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLookupOpen, setIsLookupOpen] = useState(false);
 
-  // Filter events based on search query
+  // Debounce 400 ms — filter hanya dijalankan setelah user berhenti mengetik
+  const debouncedQuery = useDebounce(searchQuery, 400);
+
   const filteredEvents = events.filter((evt) => {
+    if (!debouncedQuery) return true;
+    const q = debouncedQuery.toLowerCase();
     return (
-      evt.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (evt.description && evt.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      evt.name.toLowerCase().includes(q) ||
+      (evt.description && evt.description.toLowerCase().includes(q))
     );
   });
 

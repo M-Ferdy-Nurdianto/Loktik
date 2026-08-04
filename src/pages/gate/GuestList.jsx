@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Search, UserCheck, CheckCircle2, XCircle, RefreshCw, Phone } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { redeemTicket } from '../../services/apiTickets';
+import { useDebounce } from '../../hooks/useDebounce';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 
 export const GuestList = ({ eventId }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  // Debounce 400 ms — filter list dijalankan setelah user berhenti mengetik
+  const debouncedQuery = useDebounce(searchQuery, 400);
   const [guests, setGuests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState(null);
@@ -53,7 +56,8 @@ export const GuestList = ({ eventId }) => {
   };
 
   const filteredGuests = guests.filter((order) => {
-    const q = searchQuery.toLowerCase();
+    if (!debouncedQuery) return true;
+    const q = debouncedQuery.toLowerCase();
     const guestTickets = order.tickets || [];
     const matchesTicketCode = guestTickets.some((t) =>
       (t.barcode_uuid || '').toLowerCase().includes(q) ||
