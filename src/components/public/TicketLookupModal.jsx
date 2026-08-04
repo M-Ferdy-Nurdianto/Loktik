@@ -89,12 +89,16 @@ export const TicketLookupModal = ({ isOpen, onClose }) => {
     return new Promise((resolve, reject) => {
       const eventName = order.events?.name || 'Event LokTik';
       const isPaid = order.status === 'paid';
-      const ticketCode = formatTicketUnitCode(ticket?.barcode_uuid, ticket?.id);
+      // displayUid = short code untuk ditampilkan di tiket grafis
+      const displayUid = formatTicketUnitCode(ticket?.barcode_uuid, ticket?.id);
+      // ticketCode = full barcode_uuid untuk di-encode di QR (agar scan akurat di gate)
+      const ticketCode = ticket?.barcode_uuid || displayUid;
 
       setLazyTicket({
         eventName,
         guestName: order.guest_name,
-        ticketCode,
+        ticketCode,   // full UUID → QR
+        displayUid,   // short code → tampilan
         isPaid,
         categoryName: ticket?.category_name || ticket?.ticket_categories?.name || 'Tiket Regular',
         ticketLabel,
@@ -214,10 +218,12 @@ export const TicketLookupModal = ({ isOpen, onClose }) => {
           eventName={lazyTicket.eventName}
           guestName={lazyTicket.guestName}
           ticketCode={lazyTicket.ticketCode}
+          displayUid={lazyTicket.displayUid}
           isPaid={lazyTicket.isPaid}
           categoryName={lazyTicket.categoryName}
           ticketLabel={lazyTicket.ticketLabel}
           orderLookupCode={lazyTicket.orderLookupCode}
+          isReady={true}
         />
       )}
 

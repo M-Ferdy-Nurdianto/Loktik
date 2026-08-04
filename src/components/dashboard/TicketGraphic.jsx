@@ -3,7 +3,8 @@ import React, { forwardRef } from 'react';
 export const TicketGraphic = forwardRef(({
   eventName,
   guestName,
-  ticketCode,
+  ticketCode,    // Data yang di-encode di QR (full barcode_uuid)
+  displayUid,   // TICKET UID yang ditampilkan di tiket (short code, readable)
   isPaid,
   isReady,
   categoryName,
@@ -11,10 +12,13 @@ export const TicketGraphic = forwardRef(({
   orderLookupCode,
 }, ref) => {
   // Gunakan img PNG dari qrserver agar html2canvas bisa render dengan benar.
-  // react-qr-code menggunakan SVG yang sering gagal di-capture html2canvas.
+  // ticketCode = full barcode_uuid → QR unik & exact-match saat scan di gate
   const qrImageUrl = ticketCode
     ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(ticketCode)}&ecc=H`
     : null;
+
+  // Tampilkan short UID jika ada, fallback ke ticketCode
+  const shownUid = displayUid || ticketCode;
 
   return (
     <div
@@ -84,7 +88,7 @@ export const TicketGraphic = forwardRef(({
               TICKET UID
             </td>
             <td className="py-3.5 text-xl font-black text-brand-purple uppercase font-mono text-right align-middle" style={{ lineHeight: '1.6' }}>
-              {ticketCode}
+              {shownUid}
             </td>
           </tr>
 

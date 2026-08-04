@@ -68,10 +68,22 @@ export const Scanner = ({ eventId }) => {
     }
   };
 
+  const lastScannedCodeRef = useRef('');
+  const lastScannedTimeRef = useRef(0);
+
   const processCode = async (rawCode) => {
     if (!rawCode || scanning || redeeming) return;
+    // Jangan proses scan baru selama popup masih terbuka
+    if (scanResult) return;
+
     const cleanCode = rawCode.trim();
     if (!cleanCode) return;
+
+    // Cooldown 3 detik per kode yang sama — cegah scan berulang dari kamera
+    const now = Date.now();
+    if (cleanCode === lastScannedCodeRef.current && now - lastScannedTimeRef.current < 3000) return;
+    lastScannedCodeRef.current = cleanCode;
+    lastScannedTimeRef.current = now;
 
     try {
       setScanning(true);
@@ -180,6 +192,12 @@ export const Scanner = ({ eventId }) => {
         });
         showToast(msgText, 'staff');
         fetchAttendance();
+        // Reset cooldown agar kode yang sama bisa di-scan lagi untuk tiket berikutnya
+        // (tapi beri jeda 3 detik supaya tidak langsung terpicu kamera)
+        setTimeout(() => {
+          lastScannedCodeRef.current = '';
+          lastScannedTimeRef.current = 0;
+        }, 3000);
       } else {
         const errText = redeem.message || 'Gagal meredem tiket.';
         setScanResult({

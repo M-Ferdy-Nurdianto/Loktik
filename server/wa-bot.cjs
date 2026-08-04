@@ -100,34 +100,37 @@ app.post('/api/send-ticket-wa', async (req, res) => {
     const ticketLinks = req.body.ticketLinks || [];
     const isMixed = req.body.isMixed === true;
     const count = Number(ticketCount) || 1;
+    const hasMultipleTickets = ticketLinks.length > 0;
+    const cekTiketUrl = req.body.cekTiketUrl || 'https://loktik.web.id';
 
-    // Bangun section LINK SEMUA TIKET (hanya jika ada banyak tiket berbeda-beda)
-    const ticketLinksText = ticketLinks.length > 1
-      ? `*LINK SEMUA TIKET ANDA:*\n${ticketLinks.map((t, idx) => `Tiket ${idx + 1} (${t.name}):\n${t.url}`).join('\n\n')}\n\n`
+    // Bangun section LINK SEMUA TIKET — tampil untuk semua order multi-tiket
+    const ticketLinksText = hasMultipleTickets
+      ? `*LINK TIKET ANDA (masing-masing):*\n${ticketLinks.map((t, idx) => `Tiket ${idx + 1} (${t.name}):\n${t.url}`).join('\n\n')}\n\n`
       : '';
 
+    // Jika link tiket tidak tersedia, arahkan ke halaman cek tiket website
+    const downloadReminderText = !hasMultipleTickets
+      ? `📲 *Download & lihat tiket lengkap Anda di:*\n${cekTiketUrl}\n\n`
+      : `📲 *Lihat & download semua tiket Anda di:*\n${cekTiketUrl}\n\n`;
+
     // Ringkasan jumlah tiket di DETAIL
-    // - Mixed categories (mis. 1x Day 1, 2x Day 2): tampilkan rincian per kategori
-    // - Semua tiket satu kategori: tampilkan "5 Tiket (5x Day 1) — QR bisa scan 5x"
     let qtyText;
-    if (isMixed && ticketDetails) {
-      qtyText = `- Jumlah Tiket: *${count} Tiket* (${ticketDetails})`;
-    } else if (count > 1) {
-      qtyText = `- Jumlah Tiket: *${count} Tiket* (${ticketDetails || 'Tiket'})\n⚠️ *PENTING:* Kode / QR Code ini dapat di-scan sebanyak ${count}x di gate venue (bisa sekaligus atau bertahap).`;
+    if (hasMultipleTickets) {
+      qtyText = `- Jumlah Tiket: *${count} Tiket* (${ticketDetails || 'Tiket'})\n⚠️ *PENTING:* Setiap tiket memiliki QR Code unik. Tunjukkan QR sesuai tiket masing-masing.`;
     } else {
       qtyText = `- Kategori Tiket: *${ticketDetails || 'Tiket Standard'}*`;
     }
 
-    // Footer berbeda untuk mixed vs same category
-    const footerText = isMixed
-      ? `Gunakan masing-masing QR Code sesuai kategori tiket saat masuk venue.`
+    // Footer
+    const footerText = hasMultipleTickets
+      ? `Gunakan masing-masing QR Code sesuai tiket saat masuk venue.`
       : `Gunakan gambar QR Code terlampir di pintu masuk venue saat penukaran gelang.`;
 
     const captionText = `Halo Kak *${guestName}*,
 
 Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!*
 
-${ticketLinksText}📋 *DETAIL TIKET:*
+${ticketLinksText}${downloadReminderText}📋 *DETAIL TIKET:*
 - Kode Pesanan: \`${orderId || 'LOKTIK'}\`
 ${qtyText}
 - Total Bayar: Rp ${totalPrice ? Number(totalPrice).toLocaleString('id-ID') : 0}
@@ -138,11 +141,17 @@ ${footerText}
 Terima Kasih!
 - Panitia ${eventName} via LokTik.web.id`;
 
-    // Untuk mixed category: tidak perlu attach gambar karena link sudah ada di teks
-    // Untuk single/same category: attach gambar QR sebagai caption
-    if (ticketQrUrl && !isMixed) {
-      const media = await MessageMedia.fromUrl(ticketQrUrl, { unsafeMime: true });
-      await client.sendMessage(chatId, media, { caption: captionText });
+    // Untuk multi-tiket: attach gambar tiket pertama sebagai preview, link semua ada di teks
+    // Untuk single tiket: attach gambar tiket (grafis atau QR fallback)
+    if (ticketQrUrl) {
+      try {
+        const media = await MessageMedia.fromUrl(ticketQrUrl, { unsafeMime: true });
+        await client.sendMessage(chatId, media, { caption: captionText });
+      } catch (mediaErr) {
+        // Fallback: kirim teks saja jika gambar gagal di-fetch
+        console.warn('[BOT] Gagal fetch gambar tiket, kirim teks saja:', mediaErr.message);
+        await client.sendMessage(chatId, captionText);
+      }
     } else {
       await client.sendMessage(chatId, captionText);
     }
