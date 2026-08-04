@@ -389,158 +389,152 @@ export const AdminDashboard = () => {
     navigate('/');
   };
 
-  // ── Delete confirmation modal render ────────────────────────────────────
-  const DeleteConfirmModal = () => {
-    if (!deleteModal.open) return null;
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div className="w-full max-w-md bg-[#111111] border border-brand-red/40 rounded-xl shadow-[0_0_60px_rgba(239,68,68,0.2)]">
-          <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-brand-red/20 border border-brand-red/40 rounded-lg">
-                <Trash2 className="w-4 h-4 text-brand-red" />
-              </div>
-              <h3 className="text-sm font-black uppercase text-white tracking-tight">Hapus Akun EO</h3>
+  // Modal JSX helpers — didefinisikan sebagai variabel bukan nested component
+  // agar tidak menyebabkan React unmount/remount setiap render (stale closure bug di production)
+  const deleteConfirmModalJsx = deleteModal.open ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-[#111111] border border-brand-red/40 rounded-xl shadow-[0_0_60px_rgba(239,68,68,0.2)]">
+        <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-brand-red/20 border border-brand-red/40 rounded-lg">
+              <Trash2 className="w-4 h-4 text-brand-red" />
             </div>
-            {!deleteModal.isDeleting && (
-              <button
-                type="button"
-                onClick={() => setDeleteModal({ open: false, eoId: null, eoName: '', isDeleting: false, error: null })}
-                className="p-1.5 text-neutral-500 hover:text-brand-red transition-colors rounded-lg hover:bg-brand-red/10"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+            <h3 className="text-sm font-black uppercase text-white tracking-tight">Hapus Akun EO</h3>
           </div>
-          <div className="px-6 py-5 space-y-4">
-            <p className="text-sm text-neutral-300 leading-relaxed">
-              Apakah Anda yakin ingin menghapus akun EO{' '}
-              <span className="font-black text-white">"{deleteModal.eoName}"</span> secara permanen?
-            </p>
-            <p className="text-xs text-neutral-500 leading-relaxed">
-              Akun akan dihapus dari database. Data event, order, staff, dan tiket yang dimiliki EO ini mungkin perlu dihapus secara terpisah via Factory Reset.
-            </p>
-            {deleteModal.error && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-brand-red/10 border border-brand-red/30">
-                <AlertCircle className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
-                <p className="text-xs text-brand-red font-medium">{deleteModal.error}</p>
-              </div>
-            )}
-            <div className="flex gap-3 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                fullWidth
-                onClick={() => setDeleteModal({ open: false, eoId: null, eoName: '', isDeleting: false, error: null })}
-                disabled={deleteModal.isDeleting}
-              >
-                Batal
-              </Button>
-              <Button
-                type="button"
-                variant="red"
-                size="md"
-                fullWidth
-                onClick={confirmDeleteEo}
-                disabled={deleteModal.isDeleting}
-                className="font-black justify-center"
-              >
-                {deleteModal.isDeleting ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menghapus...</>
-                ) : (
-                  <><Trash2 className="w-4 h-4 mr-2" /> Ya, Hapus Permanen</>
-                )}
-              </Button>
+          {!deleteModal.isDeleting && (
+            <button
+              type="button"
+              onClick={() => setDeleteModal({ open: false, eoId: null, eoName: '', isDeleting: false, error: null })}
+              className="p-1.5 text-neutral-500 hover:text-brand-red transition-colors rounded-lg hover:bg-brand-red/10"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <p className="text-sm text-neutral-300 leading-relaxed">
+            Apakah Anda yakin ingin menghapus akun EO{' '}
+            <span className="font-black text-white">"{deleteModal.eoName}"</span> secara permanen?
+          </p>
+          <p className="text-xs text-neutral-500 leading-relaxed">
+            Akun akan dihapus dari database. Data event, order, staff, dan tiket yang dimiliki EO ini mungkin perlu dihapus secara terpisah via Factory Reset.
+          </p>
+          {deleteModal.error && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-brand-red/10 border border-brand-red/30">
+              <AlertCircle className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
+              <p className="text-xs text-brand-red font-medium">{deleteModal.error}</p>
             </div>
+          )}
+          <div className="flex gap-3 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              fullWidth
+              onClick={() => setDeleteModal({ open: false, eoId: null, eoName: '', isDeleting: false, error: null })}
+              disabled={deleteModal.isDeleting}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              variant="red"
+              size="md"
+              fullWidth
+              onClick={confirmDeleteEo}
+              disabled={deleteModal.isDeleting}
+              className="font-black justify-center"
+            >
+              {deleteModal.isDeleting ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menghapus...</>
+              ) : (
+                <><Trash2 className="w-4 h-4 mr-2" /> Ya, Hapus Permanen</>
+              )}
+            </Button>
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  ) : null;
 
-  // ── Reset Quota confirmation modal ──────────────────────────────────────
-  const ResetQuotaModal = () => {
-    if (!resetQuotaModal.open) return null;
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div className="w-full max-w-md bg-[#111111] border border-brand-yellow/40 rounded-xl shadow-[0_0_60px_rgba(234,179,8,0.15)]">
-          <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-brand-yellow/20 border border-brand-yellow/40 rounded-lg">
-                <Zap className="w-4 h-4 text-brand-yellow" />
-              </div>
-              <h3 className="text-sm font-black uppercase text-white tracking-tight">Reset Kuota WA</h3>
+  const resetQuotaModalJsx = resetQuotaModal.open ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-[#111111] border border-brand-yellow/40 rounded-xl shadow-[0_0_60px_rgba(234,179,8,0.15)]">
+        <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-brand-yellow/20 border border-brand-yellow/40 rounded-lg">
+              <Zap className="w-4 h-4 text-brand-yellow" />
             </div>
-            {!resetQuotaModal.isResetting && (
-              <button
-                type="button"
-                onClick={() => setResetQuotaModal({ open: false, eoId: null, eoName: '', currentQuota: 0, isResetting: false, error: null })}
-                className="p-1.5 text-neutral-500 hover:text-white transition-colors rounded-lg hover:bg-neutral-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+            <h3 className="text-sm font-black uppercase text-white tracking-tight">Reset Kuota WA</h3>
           </div>
-          <div className="px-6 py-5 space-y-4">
-            <p className="text-sm text-neutral-300 leading-relaxed">
-              Reset kuota WA untuk EO{' '}
-              <span className="font-black text-white">"{resetQuotaModal.eoName}"</span>?
-            </p>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-900 border border-neutral-800">
-              <div className="text-center flex-1">
-                <p className="text-[9px] font-bold uppercase text-neutral-500 mb-1">Kuota saat ini</p>
-                <p className="text-xl font-black font-mono text-brand-blue">
-                  {(resetQuotaModal.currentQuota || 0).toLocaleString('id-ID')}
-                </p>
-              </div>
-              <div className="text-neutral-600 font-black text-lg">→</div>
-              <div className="text-center flex-1">
-                <p className="text-[9px] font-bold uppercase text-neutral-500 mb-1">Setelah reset</p>
-                <p className="text-xl font-black font-mono text-brand-red">0</p>
-              </div>
+          {!resetQuotaModal.isResetting && (
+            <button
+              type="button"
+              onClick={() => setResetQuotaModal({ open: false, eoId: null, eoName: '', currentQuota: 0, isResetting: false, error: null })}
+              className="p-1.5 text-neutral-500 hover:text-white transition-colors rounded-lg hover:bg-neutral-800"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <p className="text-sm text-neutral-300 leading-relaxed">
+            Reset kuota WA untuk EO{' '}
+            <span className="font-black text-white">"{resetQuotaModal.eoName}"</span>?
+          </p>
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-900 border border-neutral-800">
+            <div className="text-center flex-1">
+              <p className="text-[9px] font-bold uppercase text-neutral-500 mb-1">Kuota saat ini</p>
+              <p className="text-xl font-black font-mono text-brand-blue">
+                {(resetQuotaModal.currentQuota || 0).toLocaleString('id-ID')}
+              </p>
             </div>
-            <p className="text-xs text-neutral-500 leading-relaxed">
-              Kuota akan diset ke 0. Histori pesan terkirim tidak berubah. Gunakan jika top-up kepencet atau EO batal bayar.
-            </p>
-            {resetQuotaModal.error && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-brand-red/10 border border-brand-red/30">
-                <AlertCircle className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
-                <p className="text-xs text-brand-red font-medium">{resetQuotaModal.error}</p>
-              </div>
-            )}
-            <div className="flex gap-3 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                fullWidth
-                onClick={() => setResetQuotaModal({ open: false, eoId: null, eoName: '', currentQuota: 0, isResetting: false, error: null })}
-                disabled={resetQuotaModal.isResetting}
-              >
-                Batal
-              </Button>
-              <Button
-                type="button"
-                variant="yellow"
-                size="md"
-                fullWidth
-                onClick={confirmResetQuota}
-                disabled={resetQuotaModal.isResetting}
-                className="font-black justify-center"
-              >
-                {resetQuotaModal.isResetting ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Mereset...</>
-                ) : (
-                  <><Zap className="w-4 h-4 mr-2" /> Reset ke 0</>
-                )}
-              </Button>
+            <div className="text-neutral-600 font-black text-lg">→</div>
+            <div className="text-center flex-1">
+              <p className="text-[9px] font-bold uppercase text-neutral-500 mb-1">Setelah reset</p>
+              <p className="text-xl font-black font-mono text-brand-red">0</p>
             </div>
+          </div>
+          <p className="text-xs text-neutral-500 leading-relaxed">
+            Kuota akan diset ke 0. Histori pesan terkirim tidak berubah. Gunakan jika top-up kepencet atau EO batal bayar.
+          </p>
+          {resetQuotaModal.error && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-brand-red/10 border border-brand-red/30">
+              <AlertCircle className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
+              <p className="text-xs text-brand-red font-medium">{resetQuotaModal.error}</p>
+            </div>
+          )}
+          <div className="flex gap-3 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              fullWidth
+              onClick={() => setResetQuotaModal({ open: false, eoId: null, eoName: '', currentQuota: 0, isResetting: false, error: null })}
+              disabled={resetQuotaModal.isResetting}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              variant="yellow"
+              size="md"
+              fullWidth
+              onClick={confirmResetQuota}
+              disabled={resetQuotaModal.isResetting}
+              className="font-black justify-center"
+            >
+              {resetQuotaModal.isResetting ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Mereset...</>
+              ) : (
+                <><Zap className="w-4 h-4 mr-2" /> Reset ke 0</>
+              )}
+            </Button>
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  ) : null;
 
   if (showResetModal) {
     return (
@@ -859,8 +853,8 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      <DeleteConfirmModal />
-      <ResetQuotaModal />
+      {deleteConfirmModalJsx}
+      {resetQuotaModalJsx}
 
       {topUpModalOpen && selectedEo && (        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-lg bg-[#111111] border border-brand-blue/40 rounded-xl shadow-[0_0_60px_rgba(6,182,212,0.2)] animate-in zoom-in-95 duration-200">
