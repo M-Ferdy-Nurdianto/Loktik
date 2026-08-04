@@ -183,6 +183,11 @@ export const OrderManagerTab = () => {
 
   const selectedEventObj = events.find((e) => e.id === selectedEventId);
 
+  /**
+   * Generate gambar tiket untuk SATU tiket tertentu (targetTicket wajib untuk multi-tiket).
+   * Selalu menggunakan barcode_uuid tiket itu sendiri sebagai QR data agar setiap tiket
+   * punya QR unik yang bisa di-scan secara independen di gate.
+   */
   const generateTicketImage = (order, targetTicket = null) => {
     return new Promise((resolve, reject) => {
       const eventName = order.events?.name || 'Event LokTik';
@@ -198,13 +203,20 @@ export const OrderManagerTab = () => {
       const dispatch = buildTicketDispatchPayload(order);
       const isMixed = dispatch.isMixed;
 
+      // Setiap tiket HARUS punya QR code unik yang berisi barcode_uuid-nya sendiri.
+      // Untuk mixed order: tetap pakai unitCode tiket individual (bukan orderLookupCode),
+      // agar gate bisa scan tiket satu per satu secara independen.
+      const activeUnitCode = activeTicket?.unitCode || orderLookupCode;
+
       const ticketData = {
         eventName,
         guestName: order.guest_name,
-        ticketCode: isMixed ? orderLookupCode : (activeTicket?.unitCode || orderLookupCode),
+        ticketCode: activeUnitCode,
         isPaid: order.status === 'paid' || true,
-        categoryName: isMixed ? null : (activeTicket?.categoryName || formatOrderTicketCategories(order)),
-        ticketLabel: isMixed ? 'TIKET PESANAN' : (activeTicket?.ticketLabel || 'Tiket Masuk'),
+        categoryName: activeTicket?.categoryName || formatOrderTicketCategories(order),
+        ticketLabel: isMixed
+          ? (activeTicket?.ticketLabel || `Tiket ${activeTicket?.categoryName || ''}`)
+          : (activeTicket?.ticketLabel || 'Tiket Masuk'),
         orderLookupCode,
       };
 
@@ -213,7 +225,7 @@ export const OrderManagerTab = () => {
       // Tunggu React commit + font/image render selesai sebelum capture
       // Gunakan requestAnimationFrame ganda untuk memastikan DOM sudah terupdate
       const doCapture = () => {
-        // Timeout 2500ms: cukup untuk QR PNG dari api.qrserver.com selesai dimuat
+        // Timeout 1500ms: cukup untuk QR PNG dari api.qrserver.com selesai dimuat
         setTimeout(async () => {
           try {
             const element = ticketRef.current;
@@ -267,7 +279,8 @@ export const OrderManagerTab = () => {
           }
 
           try {
-            const fileName = `${ticketCode}-${Date.now()}.png`;
+            // FIX: gunakan ticketData.ticketCode (activeUnitCode) bukan `ticketCode` yang tidak ada di scope
+            const fileName = `${ticketData.ticketCode}-${Date.now()}.png`;
             const { error: uploadError } = await supabase.storage
               .from('tickets')
               .upload(fileName, blob, {
@@ -298,15 +311,41 @@ export const OrderManagerTab = () => {
     });
   };
 
+  /**
+   * Generate gambar untuk SEMUA tiket dalam order secara berurutan.
+   * Setiap tiket dapat gambar sendiri dengan QR code unik (barcode_uuid-nya masing-masing).
+   * Returns: array of { ticketId, imageUrl }
+   */
+  const generateAllTicketImages = async (order) => {
+    const ticketUnits = getOrderTicketUnits(order);
+    const results = [];
+    for (const ticket of ticketUnits) {
+      try {
+        const imageUrl = await generateTicketImage(order, ticket);
+        results.push({ ticketId: ticket.id, imageUrl });
+        // Simpan URL langsung ke DB untuk tiket ini
+        if (imageUrl && ticket.id) {
+          await supabase.from('tickets').update({ ticket_image_url: imageUrl }).eq('id', ticket.id);
+        }
+      } catch (e) {
+        console.warn(`Gagal generate gambar tiket ${ticket.unitCode}:`, e);
+        results.push({ ticketId: ticket.id, imageUrl: null });
+      }
+    }
+    return results;
+  };
+
   const sendManualWhatsAppMessage = (order, ticketUrl) => {
     const waNumber = order.guest_wa.replace(/[^0-9]/g, '');
     const cleanNumber = waNumber.startsWith('0') ? `62${waNumber.substring(1)}` : waNumber;
     const eventName = order.events?.name || 'Event LokTik';
-    const dispatch = buildTicketDispatchPayload(order);
+    // Gunakan _updatedDispatch jika tersedia (sudah include ticket_image_url per tiket)
+    const dispatch = order._updatedDispatch || buildTicketDispatchPayload(order);
 
     // Bangun section LINK SEMUA TIKET — tampil di atas DETAIL agar langsung terlihat
-    // Hanya untuk mixed category — same category cukup 1 QR + keterangan scan berkali-kali
-    const ticketLinksSection = dispatch.isMixed
+    // Untuk multi-tiket (sama atau beda kategori): tampilkan link per tiket agar setiap tiket bisa di-scan sendiri
+    const hasMultipleTickets = dispatch.tickets.length > 1;
+    const ticketLinksSection = hasMultipleTickets
       ? `*LINK SEMUA TIKET ANDA:*\n${dispatch.tickets.map((t, idx) => {
           const url = t.ticket_image_url || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(t.unitCode)}&ecc=H&margin=10`;
           return `Tiket ${idx + 1} (${t.categoryName}):\n${url}`;
@@ -315,18 +354,16 @@ export const OrderManagerTab = () => {
         ? `*LINK E-TIKET ANDA:*\n${ticketUrl}\n\n`
         : '';
 
-    // Ringkasan jumlah tiket — bedakan mixed category vs same category
+    // Ringkasan jumlah tiket — bedakan multi-tiket vs single tiket
     let detailQty;
-    if (dispatch.isMixed) {
-      detailQty = `- Jumlah Tiket: *${dispatch.ticketCount} Tiket* (${dispatch.categoryDetails})`;
-    } else if (dispatch.ticketCount > 1) {
-      detailQty = `- Jumlah Tiket: *${dispatch.ticketCount} Tiket* (${dispatch.categoryDetails})\n⚠️ *PENTING:* Kode / QR Code ini dapat di-scan sebanyak ${dispatch.ticketCount}x di gate venue (bisa sekaligus atau bertahap).`;
+    if (hasMultipleTickets) {
+      detailQty = `- Jumlah Tiket: *${dispatch.ticketCount} Tiket* (${dispatch.categoryDetails})\n⚠️ *PENTING:* Setiap tiket memiliki QR Code unik masing-masing. Gunakan QR sesuai tiket yang tertera di link di atas.`;
     } else {
       detailQty = `- Kategori Tiket: *${dispatch.categoryDetails}*`;
     }
 
-    const footerText = dispatch.isMixed
-      ? `Gunakan masing-masing QR Code sesuai kategori tiket saat masuk venue.`
+    const footerText = hasMultipleTickets
+      ? `Gunakan masing-masing QR Code sesuai tiket saat masuk venue.`
       : `Gunakan gambar QR Code terlampir di pintu masuk venue saat penukaran gelang.`;
 
     const messageText = `Halo Kak *${order.guest_name}*,
@@ -360,7 +397,10 @@ Terima Kasih!
 
     const waNumber = order.guest_wa.replace(/[^0-9]/g, '');
     const eventName = order.events?.name || 'Event LokTik';
-    const dispatch = buildTicketDispatchPayload(order);
+    // Gunakan _updatedDispatch jika tersedia (sudah include ticket_image_url per tiket)
+    const dispatch = order._updatedDispatch || buildTicketDispatchPayload(order);
+
+    const hasMultipleTickets = dispatch.tickets.length > 1;
 
     // 1 QR URL: pakai tiket pertama, atau QR dari order lookup code
     const qrImageUrl = ticketUrl
@@ -387,8 +427,8 @@ Terima Kasih!
           ticketQrUrl: qrImageUrl,
           isMixed: dispatch.isMixed,
           cekTiketUrl,
-          // Kirim link per tiket HANYA untuk mixed category — same category cukup 1 QR scan berkali-kali
-          ticketLinks: dispatch.isMixed ? dispatch.tickets.map(t => ({
+          // Kirim link per tiket untuk semua order multi-tiket (sama atau beda kategori)
+          ticketLinks: hasMultipleTickets ? dispatch.tickets.map(t => ({
             name: t.categoryName,
             url: t.ticket_image_url || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(t.unitCode)}&ecc=H&margin=10`
           })) : []
@@ -492,18 +532,14 @@ Terima Kasih!
     return false;
   };
 
-  // Helper: simpan URL gambar tiket ke kolom ticket_image_url di semua tiket dalam order
-  const saveTicketImageUrl = async (orderId, ticketUrl) => {
-    if (!ticketUrl || !orderId) return;
+  // Helper: simpan URL gambar tiket ke SATU tiket spesifik berdasarkan ticketId
+  const saveTicketImageUrl = async (ticketId, ticketUrl) => {
+    if (!ticketUrl || !ticketId) return;
     try {
-      const orderTickets = orders.find((o) => o.id === orderId)?.tickets || [];
-      const ticketIds = orderTickets.map((t) => t.id).filter(Boolean);
-      if (ticketIds.length > 0) {
-        await supabase
-          .from('tickets')
-          .update({ ticket_image_url: ticketUrl })
-          .in('id', ticketIds);
-      }
+      await supabase
+        .from('tickets')
+        .update({ ticket_image_url: ticketUrl })
+        .eq('id', ticketId);
     } catch (err) {
       console.warn('Gagal menyimpan ticket_image_url ke DB:', err);
     }
@@ -526,31 +562,48 @@ Terima Kasih!
       setOrders((prev) => prev.map((o) => (o.id === order.id ? updatedOrder : o)));
 
       const dispatch = buildTicketDispatchPayload(updatedOrder);
-      
-      showToast('Menyiapkan E-Ticket...', 'info');
+      const ticketUnits = getOrderTicketUnits(updatedOrder);
 
-      // Cek dulu apakah tiket sudah punya gambar tersimpan di DB (dari fitur Cari Tiket)
-      // Kalau sudah ada, pakai langsung — tidak perlu generate ulang
-      let graphicUrl = null;
-      const primaryTicketImageUrl = updatedOrder.tickets?.[0]?.ticket_image_url || null;
-      
-      if (primaryTicketImageUrl) {
-        graphicUrl = primaryTicketImageUrl;
-      } else {
-        showToast('Membuat E-Ticket grafis...', 'info');
-        try {
-          graphicUrl = await generateTicketImage(updatedOrder);
-        } catch (e) {
-          console.warn('Gagal generate grafis:', e);
+      showToast('Menyiapkan E-Ticket grafis...', 'info');
+
+      // Generate gambar grafis per tiket (sequential karena pakai 1 DOM ref).
+      // Setiap tiket dapat gambar unik dengan QR-nya sendiri.
+      // Jika sudah ada di DB, pakai langsung tanpa generate ulang.
+      const ticketImageResults = []; // [{ ticketId, imageUrl }]
+
+      for (const t of ticketUnits) {
+        if (t.ticket_image_url) {
+          ticketImageResults.push({ ticketId: t.id, imageUrl: t.ticket_image_url });
+        } else {
+          try {
+            const imageUrl = await generateTicketImage(updatedOrder, t);
+            ticketImageResults.push({ ticketId: t.id, imageUrl });
+            if (imageUrl && t.id) {
+              supabase.from('tickets').update({ ticket_image_url: imageUrl }).eq('id', t.id).then(() => {});
+            }
+          } catch (e) {
+            console.warn(`Gagal generate grafis tiket ${t.unitCode}:`, e);
+            // Fallback ke QR URL agar bot tetap bisa kirim
+            const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(t.unitCode)}&ecc=H&margin=10`;
+            ticketImageResults.push({ ticketId: t.id, imageUrl: fallbackUrl });
+          }
         }
       }
 
-      const qrUrl = graphicUrl || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(dispatch.primaryTicket?.unitCode || dispatch.orderLookupCode)}&ecc=H&margin=10`;
+      // Update dispatch.tickets dengan imageUrl per tiket
+      const updatedTickets = dispatch.tickets.map((t) => {
+        const found = ticketImageResults.find((r) => r.ticketId === t.id);
+        return found ? { ...t, ticket_image_url: found.imageUrl } : t;
+      });
+      const updatedDispatch = { ...dispatch, tickets: updatedTickets };
+
+      const primaryImageUrl = ticketImageResults[0]?.imageUrl
+        || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(updatedDispatch.primaryTicket?.unitCode || updatedDispatch.orderLookupCode)}&ecc=H&margin=10`;
 
       if (mode === 'bot') {
-        await sendAutoTicketViaBot(updatedOrder, qrUrl);
+        await sendAutoTicketViaBot({ ...updatedOrder, _updatedDispatch: updatedDispatch }, primaryImageUrl);
       } else {
-        sendManualWhatsAppMessage(updatedOrder, qrUrl);
+        sendManualWhatsAppMessage({ ...updatedOrder, _updatedDispatch: updatedDispatch }, primaryImageUrl);
       }
     } catch (err) {
       showToast(err.message || 'Gagal memproses persetujuan.', 'eo');
@@ -572,28 +625,43 @@ Terima Kasih!
     try {
       setLoading(true);
       const dispatch = buildTicketDispatchPayload(order);
-      
-      // Cek dulu apakah tiket sudah punya gambar tersimpan di DB
-      let graphicUrl = null;
-      const primaryTicketImageUrl = order.tickets?.[0]?.ticket_image_url || null;
+      const ticketUnits = getOrderTicketUnits(order);
 
-      if (primaryTicketImageUrl) {
-        graphicUrl = primaryTicketImageUrl;
-      } else {
-        showToast('Membuat E-Ticket grafis...', 'info');
-        try {
-          graphicUrl = await generateTicketImage(order);
-        } catch (e) {
-          console.warn('Gagal generate grafis:', e);
+      showToast('Menyiapkan E-Ticket grafis...', 'info');
+
+      const ticketImageResults = [];
+
+      for (const t of ticketUnits) {
+        if (t.ticket_image_url) {
+          ticketImageResults.push({ ticketId: t.id, imageUrl: t.ticket_image_url });
+        } else {
+          try {
+            const imageUrl = await generateTicketImage(order, t);
+            ticketImageResults.push({ ticketId: t.id, imageUrl });
+            if (imageUrl && t.id) {
+              supabase.from('tickets').update({ ticket_image_url: imageUrl }).eq('id', t.id).then(() => {});
+            }
+          } catch (e) {
+            console.warn(`Gagal generate grafis tiket ${t.unitCode}:`, e);
+            const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(t.unitCode)}&ecc=H&margin=10`;
+            ticketImageResults.push({ ticketId: t.id, imageUrl: fallbackUrl });
+          }
         }
       }
 
-      const qrUrl = graphicUrl || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(dispatch.primaryTicket?.unitCode || dispatch.orderLookupCode)}&ecc=H&margin=10`;
+      const updatedTickets = dispatch.tickets.map((t) => {
+        const found = ticketImageResults.find((r) => r.ticketId === t.id);
+        return found ? { ...t, ticket_image_url: found.imageUrl } : t;
+      });
+      const updatedDispatch = { ...dispatch, tickets: updatedTickets };
+
+      const primaryImageUrl = ticketImageResults[0]?.imageUrl
+        || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(updatedDispatch.primaryTicket?.unitCode || updatedDispatch.orderLookupCode)}&ecc=H&margin=10`;
 
       if (mode === 'bot') {
-        await sendAutoTicketViaBot(order, qrUrl);
+        await sendAutoTicketViaBot({ ...order, _updatedDispatch: updatedDispatch }, primaryImageUrl);
       } else {
-        sendManualWhatsAppMessage(order, qrUrl);
+        sendManualWhatsAppMessage({ ...order, _updatedDispatch: updatedDispatch }, primaryImageUrl);
       }
     } catch (err) {
       showToast(err.message || 'Gagal mengirim ulang e-ticket.', 'eo');
