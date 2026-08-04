@@ -163,6 +163,24 @@ export const deleteEoAccount = async (eoId) => {
 };
 
 /**
+ * Reset kuota WA EO ke 0 (wa_quota = 0, wa_messages_sent tidak diubah).
+ * Dipakai admin jika top-up kepencet atau EO batal bayar.
+ * @param {string} eoId
+ * @returns {Promise<Object>} row yang diupdate
+ */
+export const resetEoWaQuota = async (eoId) => {
+  const { data, error } = await supabase
+    .from('eo_accounts')
+    .update({ wa_quota: 0 })
+    .eq('id', eoId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message || 'Gagal mereset kuota WA EO.');
+  return data;
+};
+
+/**
  * Autentikasi EO dari Supabase berdasarkan username + password.
  * @param {string} username
  * @param {string} password

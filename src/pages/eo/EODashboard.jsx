@@ -14,6 +14,7 @@ import { EoGuideTab } from '../../components/dashboard/EoGuideTab';
 import { getAllEventsForEo } from '../../services/apiEvents';
 import { getLiveOrdersForEo } from '../../services/apiOrders';
 import { resolveWhatsAppMode } from '../../utils/resolveWhatsAppMode';
+import { supabase } from '../../services/supabase';
 
 export const EODashboard = () => {
   const navigate = useNavigate();
@@ -39,13 +40,29 @@ export const EODashboard = () => {
     wa_messages_sent: 0,
   });
 
-  const eoName = user?.name || user?.username || 'Panitia EO';
-  const eoUsername = user?.username || user?.name || 'eo_lokal';
-  const eoWa = user?.wa || '081234567890';
+  // liveEoData: data terbaru dari DB (bukan session cache)
+  // Dipakai untuk resolveWhatsAppMode agar tidak stale
+  const [liveEoData, setLiveEoData]   = useState(null);
+  const [liveEoLoading, setLiveEoLoading] = useState(true);
 
-  // resolveWhatsAppMode — SINGLE SOURCE OF TRUTH untuk mode pengiriman WA
-  const waMode = resolveWhatsAppMode(user); // 'bot' | 'quota' | 'manual'
-  const hasBotAddon = waMode === 'bot';
+  const eoName     = user?.name || user?.username || 'Panitia EO';
+  const eoUsername = user?.username || user?.name || 'eo_lokal';
+  const eoWa       = user?.wa || '';
+
+  // Merge user session dengan data live dari DB
+  // liveEoData menang atas session untuk field wa_quota dan bot_access_bonus
+  const effectiveUser = liveEoData
+    ? {
+        ...user,
+        wa_quota:         liveEoData.wa_quota         ?? user?.wa_quota         ?? 0,
+        wa_messages_sent: liveEoData.wa_messages_sent ?? user?.wa_messages_sent ?? 0,
+        botAccessBonus:   liveEoData.bot_access_bonus ?? user?.botAccessBonus   ?? false,
+      }
+    : user;
+
+  // resolveWhatsAppMode — pakai effectiveUser agar dapat data terbaru dari DB
+  const waMode      = resolveWhatsAppMode(effectiveUser);
+  const hasBotAddon = waMode === 'bot' || waMode === 'quota';
 
   const fetchLiveStats = async () => {
     try {
@@ -72,27 +89,41 @@ export const EODashboard = () => {
         totalRevenue: totalRev,
       });
 
-      // Hanya fetch waStats jika EO subscribe Bot WA add-on
-      if (hasBotAddon) {
-        let latestWaQuota = user?.wa_quota ?? 0;
-        let latestWaSent = user?.wa_messages_sent ?? 0;
+      // Fetch data EO terbaru dari Supabase — override session yang mungkin stale
+      if (user?.id) {
         try {
-          const savedAccs = JSON.parse(localStorage.getItem('loktik_eo_accounts') || '[]');
-          const matchedAcc = savedAccs.find(
-            a => (a.id && user?.id && a.id === user.id) || (a.name && user?.username && a.name.toLowerCase() === user.username.toLowerCase())
-          );
-          if (matchedAcc) {
-            latestWaQuota = matchedAcc.wa_quota ?? latestWaQuota;
-            latestWaSent = matchedAcc.wa_messages_sent ?? latestWaSent;
+          const { data: eoRow } = await supabase
+            .from('eo_accounts')
+            .select('wa_quota, wa_messages_sent, bot_access_bonus')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (eoRow) {
+            setLiveEoData(eoRow);
+            setWaStats({
+              wa_quota:         eoRow.wa_quota         ?? 0,
+              wa_messages_sent: eoRow.wa_messages_sent ?? 0,
+            });
+          } else {
+            setWaStats({
+              wa_quota:         user?.wa_quota         ?? 0,
+              wa_messages_sent: user?.wa_messages_sent ?? 0,
+            });
           }
-        } catch (e) {}
-        setWaStats({
-          wa_quota: latestWaQuota,
-          wa_messages_sent: latestWaSent,
-        });
+        } catch (_) {
+          setWaStats({
+            wa_quota:         user?.wa_quota         ?? 0,
+            wa_messages_sent: user?.wa_messages_sent ?? 0,
+          });
+        } finally {
+          setLiveEoLoading(false);
+        }
+      } else {
+        setLiveEoLoading(false);
       }
     } catch (e) {
       console.warn('Gagal memuat ringkasan stats dashboard');
+      setLiveEoLoading(false);
     }
   };
 
@@ -189,7 +220,7 @@ export const EODashboard = () => {
             <span className={`font-black uppercase font-mono text-right ${
               hasBotAddon ? 'text-brand-green' : 'text-neutral-500'
             }`}>
-              {hasBotAddon ? 'AKTIF (ADD-ON)' : 'TIDAK AKTIF'}
+              {waMode === 'bot' ? 'AKTIF (∞)' : waMode === 'quota' ? `AKTIF (${(waStats?.wa_quota ?? 0).toLocaleString('id-ID')})` : 'TIDAK AKTIF'}
             </span>
           </div>
 
@@ -314,8 +345,10 @@ export const EODashboard = () => {
         {(activeTab === 'my-events' || activeTab === 'orders') && (
           <OverviewStats
             stats={stats}
-            waStats={hasBotAddon ? waStats : null}
+            waStats={waStats}
             hasBotAddon={hasBotAddon}
+            waMode={waMode}
+            isLoadingBot={liveEoLoading}
           />
         )}
 

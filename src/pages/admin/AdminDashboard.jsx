@@ -14,6 +14,7 @@ import {
   updateEoStatus,
   toggleEoBotBonus,
   deleteEoAccount,
+  resetEoWaQuota,
 } from '../../services/apiEo';
 import { FactoryResetView } from '../../components/admin/FactoryResetView';
 
@@ -74,9 +75,12 @@ export const AdminDashboard = () => {
   // ── State: delete confirmation modal ────────────────────────────────────
   const [deleteModal, setDeleteModal] = useState({ open: false, eoId: null, eoName: '', isDeleting: false, error: null });
 
+  // ── State: reset kuota modal ─────────────────────────────────────────────
+  const [resetQuotaModal, setResetQuotaModal] = useState({ open: false, eoId: null, eoName: '', currentQuota: 0, isResetting: false, error: null });
+
   const waPackages = [
-    { value: '1000', label: 'PAKET 1.000 PESAN', quota: 1000, price: 'Rp50.000' },
-    { value: '10000', label: 'PAKET 10.000 PESAN', quota: 10000, price: 'Rp70.000' },
+    { value: '900',  label: 'PAKET UP TO 900 PESAN',   quota: 900,  price: 'Rp50.000' },
+    { value: '9000', label: 'PAKET UP TO 9.000 PESAN',  quota: 9000, price: 'Rp70.000' },
   ];
 
   // Factory Reset Page View State
@@ -225,6 +229,45 @@ export const AdminDashboard = () => {
     }
   };
 
+  // ── Buka modal reset kuota ───────────────────────────────────────────────
+  const handleResetQuota = (eoId) => {
+    const acc = eoAccounts.find((a) => a.id === eoId);
+    if (!acc) return;
+    setResetQuotaModal({ open: true, eoId, eoName: acc.name, currentQuota: acc.wa_quota || 0, isResetting: false, error: null });
+  };
+
+  // ── Eksekusi reset kuota ─────────────────────────────────────────────────
+  const confirmResetQuota = async () => {
+    const { eoId, eoName } = resetQuotaModal;
+    setResetQuotaModal((prev) => ({ ...prev, isResetting: true, error: null }));
+    try {
+      await resetEoWaQuota(eoId);
+      // Update state lokal
+      setEoAccounts((prev) => {
+        const updated = prev.map((acc) =>
+          acc.id === eoId ? { ...acc, wa_quota: 0 } : acc
+        );
+        localStorage.setItem('loktik_eo_accounts', JSON.stringify(updated));
+        return updated;
+      });
+      // Invalidate session EO jika sedang login agar kuota di EO dashboard ikut terupdate
+      try {
+        const savedSession = localStorage.getItem('loktik_eo_session');
+        if (savedSession) {
+          const parsed = JSON.parse(savedSession);
+          const isMatch = parsed.id === eoId ||
+            (parsed.username || parsed.name || '').toLowerCase() === eoName.toLowerCase();
+          if (isMatch) {
+            localStorage.setItem('loktik_eo_session', JSON.stringify({ ...parsed, wa_quota: 0 }));
+          }
+        }
+      } catch (_) {}
+      setResetQuotaModal({ open: false, eoId: null, eoName: '', currentQuota: 0, isResetting: false, error: null });
+    } catch (err) {
+      setResetQuotaModal((prev) => ({ ...prev, isResetting: false, error: err.message || 'Gagal mereset kuota.' }));
+    }
+  };
+
   const handleAddEoSubmit = async (e) => {
     e.preventDefault();
     if (!newEo.name || !newEo.wa || !newEo.password) return;
@@ -272,7 +315,7 @@ export const AdminDashboard = () => {
 
   const openTopUpModal = (eo) => {
     setSelectedEo(eo);
-    setTopUpPackage('1000');
+    setTopUpPackage('900');
     setTopUpModalOpen(true);
   };
 
@@ -288,21 +331,26 @@ export const AdminDashboard = () => {
     const selectedPackage = waPackages.find(p => p.value === topUpPackage);
     const quotaToAdd = selectedPackage ? selectedPackage.quota : parseInt(topUpPackage);
 
-    // Sync to Supabase DB via RPC
-    topUpEoWaQuotaInDb(selectedEo.id, quotaToAdd).catch((err) =>
-      console.warn('topUpEoWaQuotaInDb warning:', err)
-    );
+    try {
+      // Jalankan RPC top-up ke Supabase — await agar tahu berhasil/gagal
+      const result = await topUpEoWaQuotaInDb(selectedEo.id, quotaToAdd);
+      if (!result.success) {
+        alert(`Gagal top up: ${result.message}`);
+        return;
+      }
 
-    setEoAccounts((prev) =>
-      prev.map((acc) => {
-        if (acc.id === selectedEo.id) {
+      const newQuota = result.newQuota ?? (selectedEo.wa_quota || 0) + quotaToAdd;
+
+      // Update React state dengan nilai aktual dari DB
+      setEoAccounts((prev) => {
+        const updated = prev.map((acc) => {
+          if (acc.id !== selectedEo.id) return acc;
           const updatedEo = {
             ...acc,
-            wa_quota: (acc.wa_quota || 0) + quotaToAdd,
-            // Auto-set botAccessBonus = true saat top up pertama kali
+            wa_quota: newQuota,
             botAccessBonus: true,
           };
-          // Sync ke session aktif jika EO ini sedang login
+          // Sync session EO yang sedang login
           try {
             const savedUser = localStorage.getItem('loktik_eo_session');
             if (savedUser) {
@@ -315,20 +363,25 @@ export const AdminDashboard = () => {
                   'loktik_eo_session',
                   JSON.stringify({
                     ...parsedUser,
-                    wa_quota: updatedEo.wa_quota,
+                    wa_quota: newQuota,
                     wa_messages_sent: updatedEo.wa_messages_sent || 0,
                     botAccessBonus: true,
                   })
                 );
               }
             }
-          } catch (err) {}
+          } catch (_) {}
           return updatedEo;
-        }
-        return acc;
-      })
-    );
-    closeTopUpModal();
+        });
+        localStorage.setItem('loktik_eo_accounts', JSON.stringify(updated));
+        return updated;
+      });
+
+      closeTopUpModal();
+    } catch (err) {
+      console.error('[AdminDashboard] handleTopUpSubmit ERROR:', err);
+      alert(`Gagal top up kuota: ${err.message}`);
+    }
   };
 
   const handleLogout = () => {
@@ -397,6 +450,89 @@ export const AdminDashboard = () => {
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menghapus...</>
                 ) : (
                   <><Trash2 className="w-4 h-4 mr-2" /> Ya, Hapus Permanen</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Reset Quota confirmation modal ──────────────────────────────────────
+  const ResetQuotaModal = () => {
+    if (!resetQuotaModal.open) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="w-full max-w-md bg-[#111111] border border-brand-yellow/40 rounded-xl shadow-[0_0_60px_rgba(234,179,8,0.15)]">
+          <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-brand-yellow/20 border border-brand-yellow/40 rounded-lg">
+                <Zap className="w-4 h-4 text-brand-yellow" />
+              </div>
+              <h3 className="text-sm font-black uppercase text-white tracking-tight">Reset Kuota WA</h3>
+            </div>
+            {!resetQuotaModal.isResetting && (
+              <button
+                type="button"
+                onClick={() => setResetQuotaModal({ open: false, eoId: null, eoName: '', currentQuota: 0, isResetting: false, error: null })}
+                className="p-1.5 text-neutral-500 hover:text-white transition-colors rounded-lg hover:bg-neutral-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <div className="px-6 py-5 space-y-4">
+            <p className="text-sm text-neutral-300 leading-relaxed">
+              Reset kuota WA untuk EO{' '}
+              <span className="font-black text-white">"{resetQuotaModal.eoName}"</span>?
+            </p>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-900 border border-neutral-800">
+              <div className="text-center flex-1">
+                <p className="text-[9px] font-bold uppercase text-neutral-500 mb-1">Kuota saat ini</p>
+                <p className="text-xl font-black font-mono text-brand-blue">
+                  {(resetQuotaModal.currentQuota || 0).toLocaleString('id-ID')}
+                </p>
+              </div>
+              <div className="text-neutral-600 font-black text-lg">→</div>
+              <div className="text-center flex-1">
+                <p className="text-[9px] font-bold uppercase text-neutral-500 mb-1">Setelah reset</p>
+                <p className="text-xl font-black font-mono text-brand-red">0</p>
+              </div>
+            </div>
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              Kuota akan diset ke 0. Histori pesan terkirim tidak berubah. Gunakan jika top-up kepencet atau EO batal bayar.
+            </p>
+            {resetQuotaModal.error && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-brand-red/10 border border-brand-red/30">
+                <AlertCircle className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
+                <p className="text-xs text-brand-red font-medium">{resetQuotaModal.error}</p>
+              </div>
+            )}
+            <div className="flex gap-3 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                fullWidth
+                onClick={() => setResetQuotaModal({ open: false, eoId: null, eoName: '', currentQuota: 0, isResetting: false, error: null })}
+                disabled={resetQuotaModal.isResetting}
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                variant="yellow"
+                size="md"
+                fullWidth
+                onClick={confirmResetQuota}
+                disabled={resetQuotaModal.isResetting}
+                className="font-black justify-center"
+              >
+                {resetQuotaModal.isResetting ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Mereset...</>
+                ) : (
+                  <><Zap className="w-4 h-4 mr-2" /> Reset ke 0</>
                 )}
               </Button>
             </div>
@@ -698,6 +834,12 @@ export const AdminDashboard = () => {
                       className="font-black text-[10px] uppercase whitespace-nowrap">
                       <Zap className="w-3 h-3 mr-1 shrink-0" /> Top Up
                     </Button>
+                    {(eo.wa_quota || 0) > 0 && (
+                      <Button variant="yellow" size="sm" onClick={() => handleResetQuota(eo.id)}
+                        className="font-black text-[10px] uppercase whitespace-nowrap">
+                        <X className="w-3 h-3 mr-1 shrink-0" /> Reset Kuota
+                      </Button>
+                    )}
                     <Button variant={eo.status === 'active' ? 'yellow' : 'green'} size="sm"
                       onClick={() => handleToggleStatus(eo.id)}
                       className="font-black text-[10px] uppercase whitespace-nowrap">
@@ -718,6 +860,7 @@ export const AdminDashboard = () => {
       </div>
 
       <DeleteConfirmModal />
+      <ResetQuotaModal />
 
       {topUpModalOpen && selectedEo && (        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-lg bg-[#111111] border border-brand-blue/40 rounded-xl shadow-[0_0_60px_rgba(6,182,212,0.2)] animate-in zoom-in-95 duration-200">
