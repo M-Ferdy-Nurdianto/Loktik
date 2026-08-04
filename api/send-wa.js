@@ -24,17 +24,42 @@ export default async function handler(req, res) {
     const safeGuestName = String(guestName || 'Pelanggan').replace(/[^\w\s\.\-]/gi, '').trim();
     const safeEventName = String(eventName || 'Event LokTik').replace(/[^\w\s\.\-]/gi, '').trim();
 
+    const ticketLinks = req.body.ticketLinks || [];
+    const isMixed = req.body.isMixed === true;
+    const count = Number(req.body.ticketCount) || 1;
+    const ticketDetails = String(req.body.ticketDetails || 'Tiket Standard');
+
+    // Section LINK SEMUA TIKET — tampil di atas DETAIL
+    const ticketLinksText = ticketLinks.length > 1
+      ? `*LINK SEMUA TIKET ANDA:*\n${ticketLinks.map((t, idx) => `Tiket ${idx + 1} (${t.name}):\n${t.url}`).join('\n\n')}\n\n`
+      : ticketQrUrl
+        ? `*LINK E-TIKET ANDA:*\n${ticketQrUrl}\n\n`
+        : '';
+
+    let qtyText;
+    if (isMixed && ticketDetails) {
+      qtyText = `- Jumlah Tiket: *${count} Tiket* (${ticketDetails})`;
+    } else if (count > 1) {
+      qtyText = `- Jumlah Tiket: *${count} Tiket* (${ticketDetails})\n⚠️ *PENTING:* Kode / QR Code ini dapat di-scan sebanyak ${count}x di gate venue.`;
+    } else {
+      qtyText = `- Kategori Tiket: *${ticketDetails}*`;
+    }
+
+    const footerText = isMixed
+      ? `Gunakan masing-masing QR Code sesuai kategori tiket saat masuk venue.`
+      : `Gunakan gambar QR Code terlampir di pintu masuk venue saat penukaran gelang.`;
+
     const messageText = `Halo Kak *${safeGuestName}*,
 
-Tiket pesanan Anda untuk event *${safeEventName}* telah *PAID & DIVERIFIKASI!*
+Tiket pesanan Anda untuk event *${safeEventName}* telah *LUNAS & DIVERIFIKASI!*
 
-*DETAIL TIKET:*
-- ID Pesanan: \`${orderId ? String(orderId).substring(0, 8) : 'LOKTIK'}\`
+${ticketLinksText}📋 *DETAIL TIKET:*
+- Kode Pesanan: \`${orderId ? String(orderId).substring(0, 8) : 'LOKTIK'}\`
+${qtyText}
 - Total Bayar: Rp ${totalPrice ? Number(totalPrice).toLocaleString('id-ID') : 0}
-- Status: PAID (Verified)
+- Status: LUNAS (Verified)
 
-Gunakan gambar QR Code terlampir di pintu masuk venue saat penukaran gelang:
-${ticketQrUrl || ''}
+${footerText}
 
 Terima Kasih!
 - Panitia ${safeEventName} via LokTik.web.id`;
@@ -51,7 +76,8 @@ Terima Kasih!
         body: JSON.stringify({
           target: targetWa,
           message: messageText,
-          url: ticketQrUrl || '',
+          // Kirim gambar QR hanya jika bukan mixed category (mixed sudah ada linknya di teks)
+          url: (!isMixed && ticketQrUrl) ? ticketQrUrl : '',
         }),
       });
 

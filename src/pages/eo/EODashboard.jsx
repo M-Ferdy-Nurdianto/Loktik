@@ -131,6 +131,25 @@ export const EODashboard = () => {
     fetchLiveStats();
   }, [activeTab, eoUsername, user]);
 
+  // ── Realtime kuota WA: listen event dari OrderManagerTab setelah kirim pesan ──
+  useEffect(() => {
+    const handleQuotaUpdate = (e) => {
+      const { wa_quota, wa_messages_sent } = e.detail || {};
+      if (wa_quota === undefined && wa_messages_sent === undefined) return;
+      setWaStats((prev) => ({
+        wa_quota:         wa_quota         ?? prev.wa_quota,
+        wa_messages_sent: wa_messages_sent ?? prev.wa_messages_sent,
+      }));
+      setLiveEoData((prev) => prev ? {
+        ...prev,
+        wa_quota:         wa_quota         ?? prev.wa_quota,
+        wa_messages_sent: wa_messages_sent ?? prev.wa_messages_sent,
+      } : prev);
+    };
+    window.addEventListener('wa-quota-updated', handleQuotaUpdate);
+    return () => window.removeEventListener('wa-quota-updated', handleQuotaUpdate);
+  }, []);
+
   const handleLogout = () => {
     logout();
     navigate('/');

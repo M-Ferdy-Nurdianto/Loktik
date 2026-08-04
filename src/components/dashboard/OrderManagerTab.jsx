@@ -6,21 +6,31 @@ import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { getLiveOrdersForEo, updateOrderStatus } from '../../services/apiOrders';
 import { getAllEventsForEo } from '../../services/apiEvents';
-import { formatRupiah, formatDateTime, generatePrettyRedeemCode } from '../../utils/formatters';
+import { formatRupiah, formatDateTime, generatePrettyRedeemCode, formatTicketUnitCode } from '../../utils/formatters';
 import html2canvas from 'html2canvas';
 import { TicketGraphic } from './TicketGraphic';
 import { supabase } from '../../services/supabase';
 import { useToast } from '../../context/ToastContext';
 import { resolveWhatsAppMode } from '../../utils/resolveWhatsAppMode';
+import { deductWaQuota } from '../../services/apiEo';
 
 export const OrderManagerTab = () => {
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const eoUsername = user?.username || user?.name || '';
   const userPlan = user?.subscriptionPlan || '1_month';
+  const [liveEoData, setLiveEoData] = useState(null);
+  const effectiveUser = liveEoData
+    ? {
+        ...user,
+        wa_quota: liveEoData.wa_quota ?? user?.wa_quota ?? 0,
+        wa_messages_sent: liveEoData.wa_messages_sent ?? user?.wa_messages_sent ?? 0,
+        botAccessBonus: liveEoData.bot_access_bonus ?? user?.botAccessBonus ?? false,
+      }
+    : user;
   // resolveWhatsAppMode — SINGLE SOURCE OF TRUTH untuk mode pengiriman WA
-  const waMode = resolveWhatsAppMode(user); // 'bot' | 'quota' | 'manual'
-  const hasBotAccess = waMode === 'bot';
+  const waMode = resolveWhatsAppMode(effectiveUser); // 'bot' | 'quota' | 'manual'
+  const hasBotAccess = waMode === 'bot' || waMode === 'quota';
 
   const formatOrderTicketCategories = (order) => {
     if (!order.tickets || order.tickets.length === 0) return 'Standard Ticket';
@@ -32,6 +42,47 @@ export const OrderManagerTab = () => {
     return Object.entries(counts)
       .map(([catName, qty]) => `${qty}x ${catName}`)
       .join(', ');
+  };
+
+  const getOrderLookupCode = (order) => {
+    const eventName = order?.events?.name || 'Event LokTik';
+    const seed = parseInt(String(order?.id || '').replace(/[^0-9]/g, '').substring(0, 4) || '1312');
+    return generatePrettyRedeemCode(eventName, seed);
+  };
+
+  const getOrderTicketUnits = (order) => {
+    const total = order?.tickets?.length || 0;
+    return (order?.tickets || []).map((ticket, idx) => ({
+      ...ticket,
+      categoryName: ticket.ticket_categories?.name || 'Tiket Regular',
+      unitCode: formatTicketUnitCode(ticket.barcode_uuid, ticket.id),
+      ticketLabel: total > 1 ? `Tiket ${idx + 1} dari ${total}` : 'Tiket Masuk',
+    }));
+  };
+
+  const buildTicketDispatchPayload = (order) => {
+    const tickets = getOrderTicketUnits(order);
+    const orderLookupCode = getOrderLookupCode(order);
+    const ticketCount = tickets.length || order.quantity || 1;
+    const categoryDetails = formatOrderTicketCategories(order);
+    const ticketLines = tickets.map((ticket) => `- ${ticket.unitCode} | ${ticket.categoryName}`);
+    const ticketSummaryText = ticketLines.length > 0
+      ? ticketLines.join('\n')
+      : `- ${orderLookupCode} | ${categoryDetails}`;
+
+    const categories = new Set(tickets.map(t => t.categoryName));
+    const isMixed = categories.size > 1;
+
+    return {
+      orderLookupCode,
+      ticketCount,
+      categoryDetails,
+      ticketSummaryText,
+      tickets,
+      shouldAttachImage: !isMixed || tickets.length === 1, // Jika tidak campuran, 1 gambar cukup
+      isMixed,
+      primaryTicket: tickets[0] || null,
+    };
   };
 
   const [orders, setOrders] = useState([]);
@@ -87,6 +138,21 @@ export const OrderManagerTab = () => {
     }
   };
 
+  const fetchLiveEoData = async (eoId) => {
+    if (!eoId) return;
+    try {
+      const { data: eoRow } = await supabase
+        .from('eo_accounts')
+        .select('wa_quota, wa_messages_sent, bot_access_bonus')
+        .eq('id', eoId)
+        .maybeSingle();
+
+      if (eoRow) {
+        setLiveEoData(eoRow);
+      }
+    } catch (_) {}
+  };
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -103,6 +169,7 @@ export const OrderManagerTab = () => {
     if (!username) return;
     fetchData(username);
     checkBotStatus();
+    fetchLiveEoData(user?.id);
   }, [authLoading, user]);
 
   const filteredOrders = selectedEventId === 'ALL'
@@ -116,69 +183,118 @@ export const OrderManagerTab = () => {
 
   const selectedEventObj = events.find((e) => e.id === selectedEventId);
 
-  const generateTicketImage = (order) => {
+  const generateTicketImage = (order, targetTicket = null) => {
     return new Promise((resolve, reject) => {
       const eventName = order.events?.name || 'Event LokTik';
-      const seed = parseInt(order.id.replace(/[^0-9]/g, '').substring(0, 4) || '1029');
-      const prettyCode = generatePrettyRedeemCode(eventName, seed);
+      const orderLookupCode = getOrderLookupCode(order);
+      const ticketUnits = getOrderTicketUnits(order);
+      const activeTicket = targetTicket
+        ? {
+            ...targetTicket,
+            categoryName: targetTicket.categoryName || targetTicket.ticket_categories?.name || 'Tiket Regular',
+            unitCode: targetTicket.unitCode || formatTicketUnitCode(targetTicket.barcode_uuid, targetTicket.id),
+          }
+        : (ticketUnits[0] || null);
+      const dispatch = buildTicketDispatchPayload(order);
+      const isMixed = dispatch.isMixed;
 
-      setGeneratingTicket({
+      const ticketData = {
         eventName,
         guestName: order.guest_name,
-        ticketCode: prettyCode,
+        ticketCode: isMixed ? orderLookupCode : (activeTicket?.unitCode || orderLookupCode),
         isPaid: order.status === 'paid' || true,
-      });
+        categoryName: isMixed ? null : (activeTicket?.categoryName || formatOrderTicketCategories(order)),
+        ticketLabel: isMixed ? 'TIKET PESANAN' : (activeTicket?.ticketLabel || 'Tiket Masuk'),
+        orderLookupCode,
+      };
 
-      setTimeout(async () => {
-        try {
-          const element = ticketRef.current;
-          if (!element) {
-            throw new Error('Elemen e-ticket tidak ditemukan di DOM.');
-          }
+      setGeneratingTicket(ticketData);
 
-          const canvas = await html2canvas(element, {
-            useCORS: true,
-            scale: 2,
-            backgroundColor: '#0a0a0a',
-            logging: false,
-          });
-
-          canvas.toBlob(async (blob) => {
-            if (!blob) {
-              reject(new Error('Gagal mengonversi e-ticket ke gambar.'));
+      // Tunggu React commit + font/image render selesai sebelum capture
+      // Gunakan requestAnimationFrame ganda untuk memastikan DOM sudah terupdate
+      const doCapture = () => {
+        // Timeout 2500ms: cukup untuk QR PNG dari api.qrserver.com selesai dimuat
+        setTimeout(async () => {
+          try {
+            const element = ticketRef.current;
+            if (!element) {
+              reject(new Error('Elemen e-ticket tidak ditemukan di DOM.'));
               return;
             }
 
-            try {
-              const fileName = `${prettyCode}-${Date.now()}.png`;
-              const { error: uploadError } = await supabase.storage
-                .from('tickets')
-                .upload(fileName, blob, {
-                  contentType: 'image/png',
-                  cacheControl: '3600',
-                  upsert: false,
-                });
-
-              if (uploadError) {
-                throw new Error(`Gagal mengunggah tiket ke storage: ${uploadError.message}`);
-              }
-
-              const { data } = supabase.storage
-                .from('tickets')
-                .getPublicUrl(fileName);
-
-              setGeneratingTicket(null);
-              resolve(data.publicUrl);
-            } catch (err) {
-              setGeneratingTicket(null);
-              reject(err);
+            const isReady = element.getAttribute('data-ticket-ready') === 'true';
+            if (!isReady) {
+              // DOM belum terupdate, coba lagi setelah 1 detik
+              setTimeout(async () => {
+                try {
+                  const canvas = await html2canvas(element, {
+                    useCORS: true,
+                    allowTaint: false,
+                    scale: 2,
+                    backgroundColor: '#0a0a0a',
+                    logging: false,
+                  });
+                  processCanvas(canvas);
+                } catch (err) {
+                  setGeneratingTicket(null);
+                  reject(err);
+                }
+              }, 1000);
+              return;
             }
-          }, 'image/png');
-        } catch (err) {
-          setGeneratingTicket(null);
-          reject(err);
-        }
-      }, 300);
+
+            const canvas = await html2canvas(element, {
+              useCORS: true,
+              allowTaint: false,
+              scale: 2,
+              backgroundColor: '#0a0a0a',
+              logging: false,
+            });
+            processCanvas(canvas);
+          } catch (err) {
+            setGeneratingTicket(null);
+            reject(err);
+          }
+        }, 2500);
+      };
+
+      const processCanvas = (canvas) => {
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            setGeneratingTicket(null);
+            reject(new Error('Gagal mengonversi e-ticket ke gambar.'));
+            return;
+          }
+
+          try {
+            const fileName = `${ticketCode}-${Date.now()}.png`;
+            const { error: uploadError } = await supabase.storage
+              .from('tickets')
+              .upload(fileName, blob, {
+                contentType: 'image/png',
+                cacheControl: '3600',
+                upsert: false,
+              });
+
+            if (uploadError) {
+              throw new Error(`Gagal mengunggah tiket ke storage: ${uploadError.message}`);
+            }
+
+            const { data } = supabase.storage
+              .from('tickets')
+              .getPublicUrl(fileName);
+
+            setGeneratingTicket(null);
+            resolve(data.publicUrl);
+          } catch (err) {
+            setGeneratingTicket(null);
+            reject(err);
+          }
+        }, 'image/png');
+      };
+
+      // Tunggu 2 frame animasi untuk React commit selesai
+      requestAnimationFrame(() => requestAnimationFrame(doCapture));
     });
   };
 
@@ -186,30 +302,44 @@ export const OrderManagerTab = () => {
     const waNumber = order.guest_wa.replace(/[^0-9]/g, '');
     const cleanNumber = waNumber.startsWith('0') ? `62${waNumber.substring(1)}` : waNumber;
     const eventName = order.events?.name || 'Event LokTik';
-    const seed = parseInt(order.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
-    const prettyCode = generatePrettyRedeemCode(eventName, seed);
-    const qrImageUrl = ticketUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${prettyCode}`;
+    const dispatch = buildTicketDispatchPayload(order);
 
-    const ticketQty = order.tickets && order.tickets.length > 0 ? order.tickets.length : (order.quantity || 1);
-    const categoryDetails = formatOrderTicketCategories(order);
-    const qtyText = ticketQty > 1
-      ? `- Jumlah Tiket: *${ticketQty} Tiket* (${categoryDetails})\n⚠️ *PENTING:* Kode / QR Code ini dapat di-scan sebanyak *${ticketQty}x* di gate venue (bisa bersamaan atau bertahap).`
-      : `- Kategori Tiket: *${categoryDetails}*`;
+    // Bangun section LINK SEMUA TIKET — tampil di atas DETAIL agar langsung terlihat
+    // Hanya untuk mixed category — same category cukup 1 QR + keterangan scan berkali-kali
+    const ticketLinksSection = dispatch.isMixed
+      ? `*LINK SEMUA TIKET ANDA:*\n${dispatch.tickets.map((t, idx) => {
+          const url = t.ticket_image_url || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(t.unitCode)}&ecc=H&margin=10`;
+          return `Tiket ${idx + 1} (${t.categoryName}):\n${url}`;
+        }).join('\n\n')}\n\n`
+      : ticketUrl
+        ? `*LINK E-TIKET ANDA:*\n${ticketUrl}\n\n`
+        : '';
+
+    // Ringkasan jumlah tiket — bedakan mixed category vs same category
+    let detailQty;
+    if (dispatch.isMixed) {
+      detailQty = `- Jumlah Tiket: *${dispatch.ticketCount} Tiket* (${dispatch.categoryDetails})`;
+    } else if (dispatch.ticketCount > 1) {
+      detailQty = `- Jumlah Tiket: *${dispatch.ticketCount} Tiket* (${dispatch.categoryDetails})\n⚠️ *PENTING:* Kode / QR Code ini dapat di-scan sebanyak ${dispatch.ticketCount}x di gate venue (bisa sekaligus atau bertahap).`;
+    } else {
+      detailQty = `- Kategori Tiket: *${dispatch.categoryDetails}*`;
+    }
+
+    const footerText = dispatch.isMixed
+      ? `Gunakan masing-masing QR Code sesuai kategori tiket saat masuk venue.`
+      : `Gunakan gambar QR Code terlampir di pintu masuk venue saat penukaran gelang.`;
 
     const messageText = `Halo Kak *${order.guest_name}*,
 
 Tiket pesanan Anda untuk event *${eventName}* telah *LUNAS & DIVERIFIKASI!*
 
-*DETAIL TIKET:*
-- Kode Tiket / Barcode: *${prettyCode}*
-${qtyText}
+${ticketLinksSection}📋 *DETAIL TIKET:*
+- Kode Pesanan: *${dispatch.orderLookupCode}*
+${detailQty}
 - Total Bayar: ${formatRupiah(order.total_price)}
 - Status: LUNAS (Verified)
 
-*LINK E-TIKET RESMI ANDA:*
-${qrImageUrl}
-
-Silakan sebutkan Kode *${prettyCode}* atau tunjukkan gambar QR Code di atas pada pintu masuk venue saat penukaran gelang.
+${footerText}
 
 Terima Kasih!
 - Panitia ${eventName} via LokTik.web.id`;
@@ -219,27 +349,28 @@ Terima Kasih!
 
   const sendAutoTicketViaBot = async (order, ticketUrl) => {
     // --- resolveWhatsAppMode: SINGLE SOURCE OF TRUTH ---
-    const resolvedMode = resolveWhatsAppMode(user);
-    const isBotActive = resolvedMode === 'bot';
+    const resolvedMode = resolveWhatsAppMode(effectiveUser);
+    const isUnlimitedBot = resolvedMode === 'bot';
 
     if (resolvedMode === 'manual') {
-      // Bot tidak aktif DAN kuota habis → fallback ke WA manual
       showToast('Bot WA tidak aktif & kuota habis. Beralih ke WA manual.', 'eo');
       sendManualWhatsAppMessage(order, ticketUrl);
       return false;
     }
-    // resolvedMode === 'bot' → unlimited, tidak cek kuota
-    // resolvedMode === 'quota' → lanjut, kuota akan dikurangi setelah kirim
-    // --- END MODE CHECK ---
 
     const waNumber = order.guest_wa.replace(/[^0-9]/g, '');
     const eventName = order.events?.name || 'Event LokTik';
-    const seed = parseInt(order.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
-    const prettyCode = generatePrettyRedeemCode(eventName, seed);
-    const qrImageUrl = ticketUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${prettyCode}`;
+    const dispatch = buildTicketDispatchPayload(order);
 
-    const ticketQty = order.tickets ? order.tickets.length : (order.quantity || 1);
-    const categoryDetails = formatOrderTicketCategories(order);
+    // 1 QR URL: pakai tiket pertama, atau QR dari order lookup code
+    const qrImageUrl = ticketUrl
+      || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(dispatch.primaryTicket?.unitCode || dispatch.orderLookupCode)}&ecc=H&margin=10`;
+
+    // Link ke halaman Cek Tiket (gunakan domain production atau localhost)
+    const siteUrl = window.location.hostname === 'localhost'
+      ? `http://localhost:${window.location.port || 3000}`
+      : 'https://loktik.web.id';
+    const cekTiketUrl = `${siteUrl}/?cek=${dispatch.orderLookupCode}`;
 
     try {
       const response = await fetch(`${botServerUrl}/api/send-ticket-wa`, {
@@ -249,22 +380,72 @@ Terima Kasih!
           waNumber,
           guestName: order.guest_name,
           eventName,
-          orderId: prettyCode,
-          ticketCount: ticketQty,
-          ticketDetails: categoryDetails,
+          orderId: dispatch.orderLookupCode,
+          ticketCount: dispatch.ticketCount,
+          ticketDetails: dispatch.categoryDetails,
           totalPrice: order.total_price,
           ticketQrUrl: qrImageUrl,
+          isMixed: dispatch.isMixed,
+          cekTiketUrl,
+          // Kirim link per tiket HANYA untuk mixed category — same category cukup 1 QR scan berkali-kali
+          ticketLinks: dispatch.isMixed ? dispatch.tickets.map(t => ({
+            name: t.categoryName,
+            url: t.ticket_image_url || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(t.unitCode)}&ecc=H&margin=10`
+          })) : []
         }),
       });
 
       const result = await response.json();
+      // Bot not ready yet (503) → treat as offline and fall through to manual
+      if (!response.ok && !result.success) {
+        const errMsg = result.error || result.message || `HTTP ${response.status}`;
+        console.warn('[WA Bot] endpoint error:', errMsg);
+        showToast(`Bot WA tidak siap: ${errMsg}. Beralih ke WA manual.`, 'eo');
+        sendManualWhatsAppMessage(order, ticketUrl);
+        return false;
+      }
       if (result.success) {
         // Bot aktif = unlimited, tidak kurangi kuota
         // Kuota hanya berkurang jika mode kuota (bot tidak aktif)
-        const newSent = (user?.wa_messages_sent ?? 0) + 1;
-        const newQuota = isBotActive
-          ? (user?.wa_quota ?? 0)                      // bot aktif: kuota tidak berubah
-          : Math.max(0, (user?.wa_quota ?? 0) - 1);    // kuota mode: kurangi 1
+        const currentSent = effectiveUser?.wa_messages_sent ?? 0;
+        const currentQuota = effectiveUser?.wa_quota ?? 0;
+        const newSent = currentSent + 1;
+        const newQuota = isUnlimitedBot
+          ? currentQuota
+          : Math.max(0, currentQuota - 1);
+
+        // Kurangi kuota di Supabase (source of truth) jika mode quota
+        if (!isUnlimitedBot && effectiveUser?.id) {
+          deductWaQuota(effectiveUser.id).then((res) => {
+            if (!res.success) {
+              console.warn('[WA Bot] deductWaQuota gagal:', res.message);
+            }
+            // Beritahu EODashboard agar update waStats tanpa hard refresh
+            window.dispatchEvent(new CustomEvent('wa-quota-updated', {
+              detail: {
+                wa_quota: res.success ? res.remainingQuota : newQuota,
+                wa_messages_sent: res.success ? res.totalSent : newSent,
+              }
+            }));
+          }).catch((err) => {
+            console.warn('[WA Bot] deductWaQuota error:', err);
+            // Tetap dispatch dengan nilai optimistic agar UI update
+            window.dispatchEvent(new CustomEvent('wa-quota-updated', {
+              detail: { wa_quota: newQuota, wa_messages_sent: newSent }
+            }));
+          });
+        } else if (isUnlimitedBot) {
+          // Mode unlimited: hanya update sent count di UI
+          window.dispatchEvent(new CustomEvent('wa-quota-updated', {
+            detail: { wa_quota: currentQuota, wa_messages_sent: newSent }
+          }));
+        }
+
+        setLiveEoData((prev) => ({
+          wa_quota: newQuota,
+          wa_messages_sent: newSent,
+          bot_access_bonus: prev?.bot_access_bonus ?? effectiveUser?.botAccessBonus ?? false,
+        }));
 
         // Update session user
         const savedSession = localStorage.getItem('loktik_eo_session');
@@ -294,12 +475,17 @@ Terima Kasih!
           } catch (_) {}
         }
 
-        const quotaInfo = isBotActive ? 'BOT AKTIF (Unlimited)' : `Sisa kuota: ${newQuota}`;
-        showToast(`Tiket Kode ${prettyCode} & QR Code otomatis terkirim via WA ke ${order.guest_name}! (${quotaInfo})`, 'eo');
+        const quotaInfo = isUnlimitedBot ? 'BOT AKTIF (Unlimited)' : `Sisa kuota: ${newQuota}`;
+        showToast(`Rincian tiket order ${dispatch.orderLookupCode} otomatis terkirim via WA ke ${order.guest_name}! (${quotaInfo})`, 'eo');
         return true;
+      } else {
+        // GAGAL dari sisi bot (500 Error, dll)
+        console.error('Error dari bot:', result);
+        showToast(`Error Bot WA: ${result.error || result.message || '500 Internal Server Error'}`, 'eo');
+        return false;
       }
     } catch (e) {
-      console.warn('Bot WA offline, mengalihkan ke WA Manual...');
+      console.warn('Bot WA offline, mengalihkan ke WA Manual...', e);
     }
 
     sendManualWhatsAppMessage(order, ticketUrl);
@@ -336,26 +522,35 @@ Terima Kasih!
     try {
       setLoading(true);
       await updateOrderStatus(order.id, 'paid');
-
       const updatedOrder = { ...order, status: 'paid' };
-      setOrders((prev) =>
-        prev.map((o) => (o.id === order.id ? updatedOrder : o))
-      );
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? updatedOrder : o)));
 
-      let ticketUrl = '';
-      try {
-        ticketUrl = await generateTicketImage(updatedOrder);
-        // Simpan URL ke DB agar user bisa download tanpa generate ulang
-        await saveTicketImageUrl(order.id, ticketUrl);
-      } catch (genErr) {
-        console.error('Gagal generate e-ticket premium:', genErr);
-        showToast('Gagal menghasilkan e-ticket premium. Mengalihkan ke QR code standar...', 'eo');
+      const dispatch = buildTicketDispatchPayload(updatedOrder);
+      
+      showToast('Menyiapkan E-Ticket...', 'info');
+
+      // Cek dulu apakah tiket sudah punya gambar tersimpan di DB (dari fitur Cari Tiket)
+      // Kalau sudah ada, pakai langsung — tidak perlu generate ulang
+      let graphicUrl = null;
+      const primaryTicketImageUrl = updatedOrder.tickets?.[0]?.ticket_image_url || null;
+      
+      if (primaryTicketImageUrl) {
+        graphicUrl = primaryTicketImageUrl;
+      } else {
+        showToast('Membuat E-Ticket grafis...', 'info');
+        try {
+          graphicUrl = await generateTicketImage(updatedOrder);
+        } catch (e) {
+          console.warn('Gagal generate grafis:', e);
+        }
       }
 
+      const qrUrl = graphicUrl || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(dispatch.primaryTicket?.unitCode || dispatch.orderLookupCode)}&ecc=H&margin=10`;
+
       if (mode === 'bot') {
-        await sendAutoTicketViaBot(updatedOrder, ticketUrl);
+        await sendAutoTicketViaBot(updatedOrder, qrUrl);
       } else {
-        sendManualWhatsAppMessage(updatedOrder, ticketUrl);
+        sendManualWhatsAppMessage(updatedOrder, qrUrl);
       }
     } catch (err) {
       showToast(err.message || 'Gagal memproses persetujuan.', 'eo');
@@ -376,20 +571,29 @@ Terima Kasih!
 
     try {
       setLoading(true);
-      let ticketUrl = '';
-      try {
-        ticketUrl = await generateTicketImage(order);
-        // Update URL di DB (generate ulang saat resend = update gambar terbaru)
-        await saveTicketImageUrl(order.id, ticketUrl);
-      } catch (genErr) {
-        console.error('Gagal generate e-ticket premium:', genErr);
-        showToast('Gagal menghasilkan e-ticket premium. Mengalihkan ke QR code standar...', 'eo');
+      const dispatch = buildTicketDispatchPayload(order);
+      
+      // Cek dulu apakah tiket sudah punya gambar tersimpan di DB
+      let graphicUrl = null;
+      const primaryTicketImageUrl = order.tickets?.[0]?.ticket_image_url || null;
+
+      if (primaryTicketImageUrl) {
+        graphicUrl = primaryTicketImageUrl;
+      } else {
+        showToast('Membuat E-Ticket grafis...', 'info');
+        try {
+          graphicUrl = await generateTicketImage(order);
+        } catch (e) {
+          console.warn('Gagal generate grafis:', e);
+        }
       }
 
+      const qrUrl = graphicUrl || `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(dispatch.primaryTicket?.unitCode || dispatch.orderLookupCode)}&ecc=H&margin=10`;
+
       if (mode === 'bot') {
-        await sendAutoTicketViaBot(order, ticketUrl);
+        await sendAutoTicketViaBot(order, qrUrl);
       } else {
-        sendManualWhatsAppMessage(order, ticketUrl);
+        sendManualWhatsAppMessage(order, qrUrl);
       }
     } catch (err) {
       showToast(err.message || 'Gagal mengirim ulang e-ticket.', 'eo');
@@ -421,6 +625,13 @@ Terima Kasih!
 
     const ordersToApprove = selectedOrders.map(id => orders.find(o => o.id === id)).filter(Boolean);
     const total = ordersToApprove.length;
+    const failedOrders = [];
+
+    // Snapshot kuota saat mulai bulk — akan di-decrement manual per iterasi
+    // agar tidak baca state React yang stale
+    let snapshotQuota = effectiveUser?.wa_quota ?? 0;
+    let snapshotSent  = effectiveUser?.wa_messages_sent ?? 0;
+    const isUnlimitedBulk = resolveWhatsAppMode(effectiveUser) === 'bot';
 
     for (let i = 0; i < total; i++) {
       const order = ordersToApprove[i];
@@ -429,22 +640,79 @@ Terima Kasih!
       try {
         await updateOrderStatus(order.id, 'paid');
         const updatedOrder = { ...order, status: 'paid' };
-        
+
         setOrders((prev) =>
           prev.map((o) => (o.id === order.id ? updatedOrder : o))
         );
 
         let ticketUrl = '';
-        try {
-          ticketUrl = await generateTicketImage(updatedOrder);
-          await saveTicketImageUrl(order.id, ticketUrl);
-        } catch (genErr) {
-          console.error('Gagal generate e-ticket premium:', genErr);
+        const dispatch = buildTicketDispatchPayload(updatedOrder);
+
+        // Buat array URL QR langsung dari unitCode tiap tiket (tidak pakai html2canvas)
+        const ticketUrlsArray = dispatch.tickets.map((t) =>
+          `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(t.unitCode)}&ecc=H&margin=10`
+        );
+        ticketUrl = ticketUrlsArray[0] || '';
+
+        // Simpan URL QR ke DB per tiket
+        for (let j = 0; j < dispatch.tickets.length; j++) {
+          if (ticketUrlsArray[j]) {
+            await supabase.from('tickets').update({ ticket_image_url: ticketUrlsArray[j] }).eq('id', dispatch.tickets[j].id);
+          }
         }
 
-        await sendAutoTicketViaBot(updatedOrder, ticketUrl);
+        // Kirim via bot
+        const resolvedMode = resolveWhatsAppMode(effectiveUser);
+        if (resolvedMode !== 'manual') {
+          const waNumber = updatedOrder.guest_wa.replace(/[^0-9]/g, '');
+          const eventName = updatedOrder.events?.name || 'Event LokTik';
+
+          try {
+            const response = await fetch(`${botServerUrl}/api/send-ticket-wa`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                waNumber,
+                guestName: updatedOrder.guest_name,
+                eventName,
+                orderId: dispatch.orderLookupCode,
+                ticketCount: dispatch.ticketCount,
+                ticketDetails: dispatch.categoryDetails,
+                ticketSummaryText: dispatch.ticketSummaryText,
+                totalPrice: updatedOrder.total_price,
+                ticketQrUrl: ticketUrl,
+                ticketQrUrls: ticketUrlsArray,
+              }),
+            });
+            const result = await response.json();
+            if (result.success) {
+              // Kurangi kuota di DB jika mode quota
+              if (!isUnlimitedBulk && effectiveUser?.id) {
+                deductWaQuota(effectiveUser.id).catch((err) => {
+                  console.warn('[Bulk WA] deductWaQuota error:', err);
+                });
+              }
+              // Track snapshot lokal agar progress bar & event akurat
+              snapshotSent  += 1;
+              if (!isUnlimitedBulk) snapshotQuota = Math.max(0, snapshotQuota - 1);
+              // Update UI realtime per pesan
+              setLiveEoData(() => ({
+                wa_quota:         snapshotQuota,
+                wa_messages_sent: snapshotSent,
+                bot_access_bonus: effectiveUser?.botAccessBonus ?? false,
+              }));
+              window.dispatchEvent(new CustomEvent('wa-quota-updated', {
+                detail: { wa_quota: snapshotQuota, wa_messages_sent: snapshotSent }
+              }));
+            }
+          } catch (_) {
+            // Bot offline — catat sebagai gagal tapi jangan stop seluruh batch
+            failedOrders.push(updatedOrder.guest_name);
+          }
+        }
       } catch (err) {
         console.error(`Gagal memproses order ${order.id}:`, err);
+        failedOrders.push(order.guest_name);
       }
 
       if (i < total - 1) {
@@ -455,7 +723,16 @@ Terima Kasih!
     setSelectedOrders([]);
     setBulkProcessing(false);
     setLoading(false);
-    showToast(`Selesai memproses ${total} pesanan secara massal!`, 'eo');
+
+    const successCount = total - failedOrders.length;
+    if (failedOrders.length > 0) {
+      showToast(
+        `Selesai: ${successCount} berhasil, ${failedOrders.length} gagal (${failedOrders.join(', ')})`,
+        'eo'
+      );
+    } else {
+      showToast(`Selesai! ${total} pesanan disetujui & tiket terkirim via WA Bot.`, 'eo');
+    }
   };
 
   const getOrderQty = (o) => o.tickets?.length || o.quantity || 1;
@@ -917,6 +1194,10 @@ Terima Kasih!
         guestName={generatingTicket?.guestName || 'Nama Tamu'}
         ticketCode={generatingTicket?.ticketCode || 'LT1029'}
         isPaid={generatingTicket?.isPaid !== false}
+        categoryName={generatingTicket?.categoryName}
+        ticketLabel={generatingTicket?.ticketLabel}
+        orderLookupCode={generatingTicket?.orderLookupCode}
+        isReady={Boolean(generatingTicket)}
       />
 
       {previewProofUrl && (
@@ -1019,9 +1300,9 @@ Terima Kasih!
             </Badge>
           )}
           {waMode === 'quota' && (
-            <Badge variant={(user?.wa_quota ?? 0) <= 0 ? 'red' : (user?.wa_quota ?? 0) <= 50 ? 'yellow' : 'blue'}>
+            <Badge variant={(effectiveUser?.wa_quota ?? 0) <= 0 ? 'red' : (effectiveUser?.wa_quota ?? 0) <= 50 ? 'yellow' : 'blue'}>
               <MessageSquare className="w-3 h-3 mr-1 inline" />
-              KUOTA WA: {(user?.wa_quota ?? 0).toLocaleString('id-ID')}
+              KUOTA WA: {(effectiveUser?.wa_quota ?? 0).toLocaleString('id-ID')}
             </Badge>
           )}
           {waMode === 'manual' && (
@@ -1036,7 +1317,15 @@ Terima Kasih!
           <Button variant="purple" size="sm" onClick={exportToPDF} className="font-bold">
             <FileText className="w-3.5 h-3.5 mr-1" /> EXPORT PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={() => fetchData(eoUsername || user?.username || user?.name)} disabled={loading}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              fetchData(eoUsername || user?.username || user?.name);
+              fetchLiveEoData(user?.id);
+            }}
+            disabled={loading}
+          >
             <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> REFRESH
           </Button>
         </div>

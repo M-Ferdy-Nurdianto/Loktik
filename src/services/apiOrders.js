@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { generatePrettyRedeemCode } from '../utils/formatters';
+import { generatePrettyRedeemCode, formatTicketUnitCode } from '../utils/formatters';
 
 /**
  * Upload compressed WebP payment proof to Supabase Storage.
@@ -104,49 +104,60 @@ export const searchOrdersByBuyer = async (queryTerm) => {
       }
     }
 
-    // 3. Filter orders matching Order UUID or exact Pretty Code (e.g. IS7140)
-    //    NOTE: Pencarian by nama/WA sengaja dihapus dari PUBLIK.
-    //    Pencarian admin internal (getLiveOrdersForEo) tetap mendapat semua field.
-    const matchedOrders = rawOrders.filter((o) => {
-      const idStr = String(o.id || '').toLowerCase();
-      const eventObj = eventsMap[o.event_id];
-      const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
-      const prettyCode = generatePrettyRedeemCode(eventObj?.name, seed).toLowerCase();
-      return idStr.includes(termLower) || prettyCode.includes(termLower);
-    });
+    // 3. Fetch ticket units to support per-ticket lookup and mixed-category orders
+    const orderIds = rawOrders.map((o) => o.id);
+    const ticketsByOrderId = new Map();
 
-    // 4. Fetch scan status + ticket_image_url dari tabel tickets
-    const matchedOrderIds = matchedOrders.map((o) => o.id);
-    let scannedOrderIdsSet = new Set();
-    let ticketImageUrlMap = {}; // orderId -> ticket_image_url (ambil URL pertama yang tidak null)
-    let ticketIdMap = {};       // orderId -> ticket.id pertama (untuk lazy migration)
-
-    if (matchedOrderIds.length > 0) {
+    if (orderIds.length > 0) {
       const { data: ticketsData } = await supabase
         .from('tickets')
-        .select('id, order_id, is_scanned, ticket_image_url')
-        .in('order_id', matchedOrderIds);
+        .select('id, order_id, barcode_uuid, is_scanned, scanned_at, ticket_image_url, ticket_categories(name)')
+        .in('order_id', orderIds);
 
       if (ticketsData) {
-        ticketsData.forEach((t) => {
-          if (t.is_scanned) scannedOrderIdsSet.add(t.order_id);
-          if (t.ticket_image_url && !ticketImageUrlMap[t.order_id]) {
-            ticketImageUrlMap[t.order_id] = t.ticket_image_url;
-          }
-          if (!ticketIdMap[t.order_id]) {
-            ticketIdMap[t.order_id] = t.id;
-          }
+        ticketsData.forEach((ticket) => {
+          const normalizedTicket = {
+            ...ticket,
+            unit_code: formatTicketUnitCode(ticket.barcode_uuid, ticket.id),
+            category_name: ticket.ticket_categories?.name || 'Tiket Regular',
+          };
+          const current = ticketsByOrderId.get(ticket.order_id) || [];
+          current.push(normalizedTicket);
+          ticketsByOrderId.set(ticket.order_id, current);
         });
       }
     }
 
-    return matchedOrders.slice(0, 15).map((o) => ({
-      ...o,
-      is_scanned: scannedOrderIdsSet.has(o.id),
-      events: eventsMap[o.event_id] || { name: 'Event LokTik' },
-      ticket_image_url: ticketImageUrlMap[o.id] || null,
-      ticket_id: ticketIdMap[o.id] || null,
-    }));
+    // 4. Filter orders matching Order UUID, Order Lookup Code, or Ticket Unit Code
+    //    NOTE: Pencarian by nama/WA sengaja dihapus dari PUBLIK.
+    const matchedOrders = rawOrders.filter((o) => {
+      const idStr = String(o.id || '').toLowerCase();
+      const eventObj = eventsMap[o.event_id];
+      const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
+      const orderLookupCode = generatePrettyRedeemCode(eventObj?.name, seed).toLowerCase();
+      const orderTickets = ticketsByOrderId.get(o.id) || [];
+      const matchesTicketUnit = orderTickets.some((ticket) => {
+        const unitCode = String(ticket.unit_code || '').toLowerCase();
+        const barcodeUuid = String(ticket.barcode_uuid || '').toLowerCase();
+        return unitCode.includes(termLower) || barcodeUuid.includes(termLower);
+      });
+
+      return idStr.includes(termLower) || orderLookupCode.includes(termLower) || matchesTicketUnit;
+    });
+
+    return matchedOrders.slice(0, 15).map((o) => {
+      const orderTickets = ticketsByOrderId.get(o.id) || [];
+      const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
+
+      return {
+        ...o,
+        is_scanned: orderTickets.some((ticket) => ticket.is_scanned),
+        events: eventsMap[o.event_id] || { name: 'Event LokTik' },
+        order_lookup_code: generatePrettyRedeemCode((eventsMap[o.event_id] || {}).name, seed),
+        ticket_count: orderTickets.length,
+        tickets: orderTickets,
+      };
+    });
   } catch (err) {
     console.warn('Gagal mencari e-tiket:', err);
     return [];
@@ -215,7 +226,7 @@ export const getLiveOrdersForEo = async (eoUsername = null) => {
 
   let query = supabase
     .from('orders')
-    .select('id, event_id, guest_name, guest_wa, guest_ig, total_price, payment_proof_url, status, created_at, events(name), tickets(id, is_scanned, ticket_categories(name))')
+    .select('id, event_id, guest_name, guest_wa, guest_ig, total_price, payment_proof_url, status, created_at, events(name), tickets(id, barcode_uuid, is_scanned, ticket_image_url, ticket_categories(name))')
     .order('created_at', { ascending: false });
 
   if (targetEventIds && targetEventIds.length > 0) {

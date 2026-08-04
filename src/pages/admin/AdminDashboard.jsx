@@ -783,19 +783,19 @@ export const AdminDashboard = () => {
                       </p>
                     </div>
 
-                    {/* Kuota WA: terkirim / total */}
+                    {/* Kuota WA: terkirim / up-to total */}
                     <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
                       <p className="text-[9px] font-bold uppercase text-neutral-500">Kuota WA</p>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-xs font-black font-mono text-brand-blue">
-                          {(eo.wa_messages_sent || 0).toLocaleString('id-ID')}
-                        </span>
-                        <span className="text-[9px] text-neutral-600">/</span>
+                        <span className="text-[8px] font-bold text-neutral-600 uppercase mr-0.5">Up To</span>
                         <span className="text-xs font-black font-mono text-neutral-300">
                           {((eo.wa_quota || 0) + (eo.wa_messages_sent || 0)).toLocaleString('id-ID')}
                         </span>
                       </div>
-                      <p className="text-[9px] text-neutral-600">Sisa: {(eo.wa_quota || 0).toLocaleString('id-ID')}</p>
+                      <p className="text-[9px] text-neutral-600">
+                        Terpakai: <span className="text-brand-blue font-bold">{(eo.wa_messages_sent || 0).toLocaleString('id-ID')}</span>
+                        {' · '}Sisa: <span className="text-brand-green font-bold">{(eo.wa_quota || 0).toLocaleString('id-ID')}</span>
+                      </p>
                     </div>
 
                     {/* Expired */}

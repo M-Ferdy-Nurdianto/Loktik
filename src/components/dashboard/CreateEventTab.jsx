@@ -36,6 +36,7 @@ export const CreateEventTab = ({ onEventCreated }) => {
   const [tiers, setTiers] = useState([
     { name: 'Tiket Presale 1', price: 35000, isOtsEnabled: false, priceOts: '', quota: 100, startPo: '', endPo: '', description: '' },
   ]);
+  const tierListScrollable = tiers.length > 2;
 
   const handleAddTier = (name = 'Tiket VIP', price = 75000) => {
     setTiers([...tiers, { name, price, isOtsEnabled: false, priceOts: '', quota: '', startPo: '', endPo: '', description: '' }]);
@@ -238,7 +239,7 @@ export const CreateEventTab = ({ onEventCreated }) => {
 
         {/* RIGHT COLUMN: KATEGORI TIKET & SUBMIT */}
         <div className="flex flex-col gap-4 h-full">
-          <div className="p-3.5 bg-neutral-900 rounded border border-neutral-800 flex flex-col flex-1 min-h-0">
+          <div className="p-3.5 bg-neutral-900 rounded border border-neutral-800 flex flex-col">
             <div className="flex justify-between items-center mb-3 shrink-0">
               <h4 className="text-xs font-black uppercase text-brand-blue tracking-wider">3. TIER KATEGORI TIKET</h4>
               <div className="flex gap-1.5">
@@ -247,7 +248,13 @@ export const CreateEventTab = ({ onEventCreated }) => {
               </div>
             </div>
 
-            <div className="space-y-2.5 overflow-y-auto no-scrollbar pr-1 flex-1 min-h-0">
+            <div
+              className={`space-y-2.5 ${
+                tierListScrollable
+                  ? 'max-h-[38rem] overflow-y-auto pr-2'
+                  : 'overflow-visible'
+              }`}
+            >
               {tiers.map((t, idx) => (
                 <div key={idx} className="p-3 sm:p-4 bg-neutral-950 rounded border border-neutral-800 space-y-4 relative">
                   {/* Bagian Umum */}

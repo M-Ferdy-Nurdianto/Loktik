@@ -77,6 +77,21 @@ export const Scanner = ({ eventId }) => {
       setScanning(true);
       await verifyStaffActive();
 
+      // Cek apakah ini adalah kode order dan apakah order tersebut campuran
+      const { data: maybeOrder } = await supabase
+        .from('orders')
+        .select('id, tickets(ticket_categories(name))')
+        .eq('order_lookup_code', cleanCode)
+        .maybeSingle();
+
+      if (maybeOrder) {
+        const categories = new Set((maybeOrder.tickets || []).map(t => t.ticket_categories?.name));
+        if (categories.size > 1) {
+          setScanResult({ status: 'FAILED', msg: 'PESANAN INI BERISI TIKET CAMPURAN. HARAP SCAN QR TIKET SECARA INDIVIDUAL!' });
+          return;
+        }
+      }
+
       const check = await checkTicketValidity(cleanCode);
       if (!check.success) {
         setScanResult({ status: 'FAILED', msg: check.message || 'TIKET TIDAK DITEMUKAN DALAM DATABASE SISTEM.' });
@@ -343,9 +358,15 @@ export const Scanner = ({ eventId }) => {
                   <span className="text-[11px] text-neutral-400 font-medium">Nama Pembeli</span>
                   <strong className="text-brand-yellow font-black text-sm">{scanResult.guest}</strong>
                 </div>
-                <div className="flex justify-between items-center border-t border-neutral-800/60 pt-3">
+                <div className="flex justify-between items-center border-t border-neutral-800/60 pt-3 pb-3">
                   <span className="text-[11px] text-neutral-400 font-medium">Kategori Tiket</span>
-                  <strong className="text-brand-purple font-black text-xs">{scanResult.category}</strong>
+                  <strong className="text-brand-purple font-black text-xs uppercase">{scanResult.category}</strong>
+                </div>
+                <div className="flex justify-between items-center bg-brand-purple/20 border border-brand-purple/50 px-3 py-3 rounded-lg mt-1 mb-2">
+                  <span className="text-[12px] text-white font-bold">SERAHKAN:</span>
+                  <span className="font-black font-mono text-brand-yellow text-sm uppercase">
+                    TIKET {scanResult.category}
+                  </span>
                 </div>
                 {scanResult.progress && (
                   <div className="flex justify-between items-center bg-brand-purple/15 border border-brand-purple/40 px-3 py-2.5 rounded-lg border-t mt-1">

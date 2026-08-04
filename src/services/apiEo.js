@@ -163,6 +163,34 @@ export const deleteEoAccount = async (eoId) => {
 };
 
 /**
+ * Potong kuota WA EO secara atomik di Supabase setelah bot berhasil kirim pesan.
+ * Menggunakan tabel eo_accounts (bukan eo_profiles).
+ * @param {string} eoId  — UUID dari eo_accounts.id
+ * @param {number} count — jumlah pesan yang dikirim (default 1)
+ * @returns {Promise<{success: boolean, remainingQuota: number, totalSent: number, message: string}>}
+ */
+export const deductWaQuota = async (eoId, count = 1) => {
+  if (!eoId) return { success: false, message: 'EO ID required' };
+  try {
+    const { data, error } = await supabase.rpc('deduct_wa_quota_accounts', {
+      target_eo_id: eoId,
+      messages_count: count,
+    });
+    if (error) throw error;
+    const res = Array.isArray(data) ? data[0] : data;
+    return {
+      success: res?.success ?? false,
+      remainingQuota: res?.remaining_quota ?? 0,
+      totalSent: res?.total_sent ?? 0,
+      message: res?.message || '',
+    };
+  } catch (err) {
+    console.error('deductWaQuota error:', err);
+    return { success: false, message: err.message };
+  }
+};
+
+/**
  * Reset kuota WA EO ke 0 (wa_quota = 0, wa_messages_sent tidak diubah).
  * Dipakai admin jika top-up kepencet atau EO batal bayar.
  * @param {string} eoId

@@ -74,3 +74,18 @@ export const generatePrettyRedeemCode = (eventName, seed = null) => {
   const num = seed ? Math.abs(seed) % 9000 + 1000 : Math.floor(1000 + Math.random() * 9000);
   return `${cleanPrefix}${num}`;
 };
+
+/**
+ * Formats per-ticket barcode UUID into a short gate-friendly code.
+ */
+export const formatTicketUnitCode = (barcodeUuid, fallbackId = null) => {
+  if (barcodeUuid) {
+    return String(barcodeUuid).replace(/-/g, '').substring(0, 7).toUpperCase();
+  }
+
+  if (fallbackId) {
+    return `TK-${String(fallbackId).replace(/-/g, '').slice(-4).toUpperCase()}`;
+  }
+
+  return 'TIKET';
+};
