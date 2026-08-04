@@ -71,13 +71,14 @@ export const OtsCashier = ({ eventId }) => {
       const timestamp = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
       const orderPayload = {
         event_id: eventId,
-        guest_name: `OTS (${paymentMethod === 'QRIS' ? 'QRIS/TF' : 'CASH'})`,
+        guest_name: `OTS (${paymentMethod === 'QRIS' ? 'QRIS' : 'CASH'})`,
         guest_wa: '080000000000',
         guest_ig: 'OTS Venue',
         total_price: totalPrice,
         payment_proof_url: 'OTS_CASHIER_DIRECT',
         status: 'paid',
         is_ots: true,
+        payment_method: paymentMethod === 'QRIS' ? 'QRIS' : 'CASH',
       };
 
       const orderItems = [

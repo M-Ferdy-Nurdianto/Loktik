@@ -6,7 +6,7 @@ import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { getLiveOrdersForEo, updateOrderStatus } from '../../services/apiOrders';
 import { getAllEventsForEo } from '../../services/apiEvents';
-import { formatRupiah, formatDateTime, generatePrettyRedeemCode, formatTicketUnitCode } from '../../utils/formatters';
+import { formatRupiah, formatDateTime, generatePrettyRedeemCode, formatTicketUnitCode, normalizePaymentMethod } from '../../utils/formatters';
 import html2canvas from 'html2canvas';
 import { TicketGraphic } from './TicketGraphic';
 import { supabase } from '../../services/supabase';
@@ -58,6 +58,41 @@ export const OrderManagerTab = () => {
       unitCode: formatTicketUnitCode(ticket.barcode_uuid, ticket.id),
       ticketLabel: total > 1 ? `Tiket ${idx + 1} dari ${total}` : 'Tiket Masuk',
     }));
+  };
+
+  const getNormalizedPaymentMethod = (order, fallback = null) => normalizePaymentMethod(order?.payment_method, {
+    isOts: isOtsOrder(order),
+    fallback,
+  });
+
+  const getPaymentMethodColors = (paymentMethod) => {
+    if (paymentMethod === 'QRIS') {
+      return { bg: '#fef9c3', color: '#b45309' };
+    }
+    if (paymentMethod === 'Transfer Bank') {
+      return { bg: '#e0f2fe', color: '#0369a1' };
+    }
+    if (paymentMethod === 'CASH') {
+      return { bg: '#f0fdf4', color: '#15803d' };
+    }
+    return { bg: '#f8fafc', color: '#64748b' };
+  };
+
+  const sortPaymentMethodRows = (rows) => {
+    const sortOrder = {
+      QRIS: 0,
+      'Transfer Bank': 1,
+      CASH: 2,
+      'OTS (Tunai/QRIS)': 3,
+      'Tidak Tercatat': 9,
+    };
+
+    return [...rows].sort((a, b) => {
+      const aRank = sortOrder[a.method] ?? 99;
+      const bRank = sortOrder[b.method] ?? 99;
+      if (aRank !== bRank) return aRank - bRank;
+      return a.method.localeCompare(b.method);
+    });
   };
 
   const buildTicketDispatchPayload = (order) => {
@@ -870,11 +905,57 @@ Terima Kasih!
     const otsTickets = otsPaid.reduce((sum, o) => sum + getOrderQty(o), 0);
     const totalTicketsSold = poTickets + otsTickets;
 
+    // Helper: build ticket sales map dari satu list orders
+    const buildTicketSalesMap = (orderList) => {
+      const map = {};
+      for (const o of orderList) {
+        if (o.tickets && o.tickets.length > 0) {
+          for (const t of o.tickets) {
+            const catName = t.ticket_categories?.name || 'Tiket Standard';
+            const catPrice = Number(t.ticket_categories?.price) || 0;
+            if (!map[catName]) map[catName] = { name: catName, price: catPrice, qty: 0, total: 0 };
+            map[catName].qty += 1;
+            map[catName].total += catPrice;
+          }
+        } else {
+          const catName = getOrderCategory(o);
+          const qty = getOrderQty(o);
+          const unitPrice = qty > 0 ? Math.round((o.total_price || 0) / qty) : 0;
+          if (!map[catName]) map[catName] = { name: catName, price: unitPrice, qty: 0, total: 0 };
+          map[catName].qty += qty;
+          map[catName].total += (o.total_price || 0);
+        }
+      }
+      return Object.values(map).sort((a, b) => a.name.localeCompare(b.name));
+    };
+
+    // Helper: build payment method recap dari satu list orders
+    const buildPaymentMethodRows = (orderList, defaultMethod) => {
+      const map = {};
+      for (const o of orderList) {
+        const method = getNormalizedPaymentMethod(o, defaultMethod);
+        if (!map[method]) map[method] = { method, count: 0, total: 0 };
+        map[method].count += 1;
+        map[method].total += (o.total_price || 0);
+      }
+      return sortPaymentMethodRows(Object.values(map));
+    };
+
+    // PO paid only
+    const poTicketSalesRows = buildTicketSalesMap(poPaid);
+    const poPaymentMethodRows = buildPaymentMethodRows(poPaid, 'Tidak Tercatat');
+    const poTotalTickets = poPaid.reduce((s, o) => s + getOrderQty(o), 0);
+
+    // OTS paid only
+    const otsTicketSalesRows = buildTicketSalesMap(otsPaid);
+    const otsPaymentMethodRows = buildPaymentMethodRows(otsPaid, 'OTS (Tunai/QRIS)');
+    const otsTotalTickets = otsPaid.reduce((s, o) => s + getOrderQty(o), 0);
+
     const generateRows = (orderList, isOtsList = false) => {
       if (orderList.length === 0) {
         return `
           <tr style="background-color: #ffffff;">
-            <td colspan="10" style="padding: 12px; border: 1px solid #cbd5e1; text-align: center; color: #64748b; font-style: italic; white-space: nowrap;">
+            <td colspan="11" style="padding: 12px; border: 1px solid #cbd5e1; text-align: center; color: #64748b; font-style: italic; white-space: nowrap;">
               Tidak ada data transaksi ${isOtsList ? 'Kasir Venue (OTS)' : 'Online Pre-Order (PO)'}.
             </td>
           </tr>
@@ -887,6 +968,8 @@ Terima Kasih!
         const categoryName = getOrderCategory(o);
         const qty = getOrderQty(o);
         const formattedName = formatGuestName(o.guest_name);
+        const paymentMethod = getNormalizedPaymentMethod(o, isOtsList ? 'OTS (Tunai/QRIS)' : 'Tidak Tercatat');
+        const { bg: pmBg, color: pmColor } = getPaymentMethodColors(paymentMethod);
 
         const rowBg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
         const statusBg = o.status === 'paid' ? '#e0f2fe' : o.status === 'need_reupload' ? '#fef3c7' : '#fef2f2';
@@ -902,6 +985,7 @@ Terima Kasih!
             <td style="padding: 8px 12px; border: 1px solid #cbd5e1; font-weight: bold; color: #0369a1; white-space: nowrap;">${categoryName}</td>
             <td style="padding: 8px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #0f172a; white-space: nowrap;">${qty}</td>
             <td style="padding: 8px 12px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold; color: #0f172a; white-space: nowrap;">${o.total_price || 0}</td>
+            <td style="padding: 8px 12px; border: 1px solid #cbd5e1; text-align: center; background-color: ${pmBg}; color: ${pmColor}; font-weight: bold; white-space: nowrap;">${paymentMethod}</td>
             <td style="padding: 8px 12px; border: 1px solid #cbd5e1; text-align: center; background-color: ${statusBg}; color: ${statusColor}; font-weight: bold; white-space: nowrap;">${o.status === 'paid' ? 'PAID' : o.status === 'need_reupload' ? 'REUPLOAD' : 'PENDING'}</td>
             <td style="padding: 8px 12px; border: 1px solid #cbd5e1; color: #64748b; white-space: nowrap;">${formatDateTime(o.created_at)}</td>
           </tr>
@@ -941,15 +1025,15 @@ Terima Kasih!
         <table border="0" cellspacing="0" cellpadding="0">
           <thead>
             <tr>
-              <th colspan="10" class="title-banner">LOKTIK TICKETING DIRECT — LAPORAN REKAPITULASI PENJUALAN</th>
+              <th colspan="11" class="title-banner">LOKTIK TICKETING DIRECT — LAPORAN REKAPITULASI PENJUALAN</th>
             </tr>
             <tr>
-              <th colspan="10" class="meta-info">EVENT: ${eventTitle} | TANGGAL CETAK: ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')}</th>
+              <th colspan="11" class="meta-info">EVENT: ${eventTitle} | TANGGAL CETAK: ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')}</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td colspan="10" style="height: 15px;"></td></tr>
-            
+            <tr><td colspan="11" style="height: 15px;"></td></tr>
+
             <!-- RINGKASAN PENJUALAN -->
             <tr>
               <td colspan="4" class="section-header">RINGKASAN PENJUALAN EVENT</td>
@@ -978,41 +1062,135 @@ Terima Kasih!
               <td class="summary-cell" style="background-color: #e0f2fe; color: #0f172a;">${totalTicketsSold}</td>
               <td class="summary-cell" style="background-color: #e0f2fe; text-align: right; font-size: 13px; color: #0f172a;">${totalOmset}</td>
             </tr>
-            <tr><td colspan="10" style="height: 20px;"></td></tr>
+            <tr><td colspan="11" style="height: 20px;"></td></tr>
+
+            <!-- REKAP PO: PER JENIS TIKET -->
+            <tr>
+              <td colspan="5" class="section-header">REKAP PO ONLINE — PER JENIS TIKET</td>
+            </tr>
+            <tr>
+              <td class="summary-header" style="text-align:left;">Nama Tiket</td>
+              <td class="summary-header">Harga Tiket (Rp)</td>
+              <td class="summary-header">Jumlah Terjual</td>
+              <td class="summary-header">Total Pendapatan (Rp)</td>
+              <td class="summary-cell" style="background-color:#0369a1;color:#fff;"></td>
+            </tr>
+            ${poTicketSalesRows.map((ts, i) => `
+            <tr style="background-color: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:bold;color:#0f172a;">${ts.name}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:right;color:#0369a1;font-weight:bold;">${ts.price}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:center;font-weight:bold;">${ts.qty}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:right;font-weight:bold;color:#0f172a;">${ts.total}</td>
+              <td style="border:1px solid #e2e8f0;"></td>
+            </tr>`).join('')}
+            <tr>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;background-color:#0284c7;color:#fff;font-weight:bold;">TOTAL PO</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;background-color:#e0f2fe;"></td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;background-color:#e0f2fe;text-align:center;font-weight:bold;">${poTotalTickets}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;background-color:#e0f2fe;text-align:right;font-weight:bold;">${poOmset}</td>
+              <td style="border:1px solid #e2e8f0;"></td>
+            </tr>
+
+            <!-- REKAP PO: PER METODE PEMBAYARAN -->
+            <tr>
+              <td colspan="4" class="section-header" style="background-color:#0369a1;">REKAP PO ONLINE — PER METODE PEMBAYARAN</td>
+            </tr>
+            <tr>
+              <td class="summary-header" style="text-align:left;">Metode Pembayaran</td>
+              <td class="summary-header">Jumlah Transaksi</td>
+              <td class="summary-header">Total Pendapatan (Rp)</td>
+              <td class="summary-cell" style="background-color:#0369a1;"></td>
+            </tr>
+            ${poPaymentMethodRows.map((pm, i) => `
+            <tr style="background-color: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:bold;color:${getPaymentMethodColors(pm.method).color};">${pm.method}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:center;font-weight:bold;">${pm.count}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:right;font-weight:bold;">${pm.total}</td>
+              <td style="border:1px solid #e2e8f0;"></td>
+            </tr>`).join('')}
+            <tr><td colspan="11" style="height: 20px;"></td></tr>
+
+            <!-- REKAP OTS: PER JENIS TIKET -->
+            <tr>
+              <td colspan="5" class="section-header">REKAP OTS VENUE — PER JENIS TIKET</td>
+            </tr>
+            <tr>
+              <td class="summary-header" style="text-align:left;">Nama Tiket</td>
+              <td class="summary-header">Harga Tiket (Rp)</td>
+              <td class="summary-header">Jumlah Terjual</td>
+              <td class="summary-header">Total Pendapatan (Rp)</td>
+              <td class="summary-cell" style="background-color:#0369a1;color:#fff;"></td>
+            </tr>
+            ${otsTicketSalesRows.map((ts, i) => `
+            <tr style="background-color: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:bold;color:#0f172a;">${ts.name}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:right;color:#0369a1;font-weight:bold;">${ts.price}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:center;font-weight:bold;">${ts.qty}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:right;font-weight:bold;color:#0f172a;">${ts.total}</td>
+              <td style="border:1px solid #e2e8f0;"></td>
+            </tr>`).join('')}
+            <tr>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;background-color:#0284c7;color:#fff;font-weight:bold;">TOTAL OTS</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;background-color:#e0f2fe;"></td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;background-color:#e0f2fe;text-align:center;font-weight:bold;">${otsTotalTickets}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;background-color:#e0f2fe;text-align:right;font-weight:bold;">${otsOmset}</td>
+              <td style="border:1px solid #e2e8f0;"></td>
+            </tr>
+
+            <!-- REKAP OTS: PER METODE PEMBAYARAN -->
+            <tr>
+              <td colspan="4" class="section-header" style="background-color:#0369a1;">REKAP OTS VENUE — PER METODE PEMBAYARAN</td>
+            </tr>
+            <tr>
+              <td class="summary-header" style="text-align:left;">Metode Pembayaran</td>
+              <td class="summary-header">Jumlah Transaksi</td>
+              <td class="summary-header">Total Pendapatan (Rp)</td>
+              <td class="summary-cell" style="background-color:#0369a1;"></td>
+            </tr>
+            ${otsPaymentMethodRows.map((pm, i) => `
+            <tr style="background-color: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;font-weight:bold;color:${getPaymentMethodColors(pm.method).color};">${pm.method}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:center;font-weight:bold;">${pm.count}</td>
+              <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:right;font-weight:bold;">${pm.total}</td>
+              <td style="border:1px solid #e2e8f0;"></td>
+            </tr>`).join('')}
+            <tr><td colspan="11" style="height: 25px;"></td></tr>
 
             <!-- TABEL 1: DETAIL DAFTAR TRANSAKSI PO ONLINE -->
             <tr>
-              <td colspan="10" class="section-header">1. TRANSAKSI PO ONLINE — ${poOrders.length} PESANAN</td>
+              <td colspan="11" class="section-header">1. TRANSAKSI PO ONLINE — ${poOrders.length} PESANAN</td>
             </tr>
             <tr>
               <td class="table-header" style="text-align: center; width: 40px; white-space: nowrap;">No</td>
-              <td class="table-header" style="text-align: center; white-space: nowrap;">Tipe Pesanan</td>
+              <td class="table-header" style="text-align: center; white-space: nowrap;">Tipe</td>
               <td class="table-header" style="white-space: nowrap;">Kode Tiket</td>
               <td class="table-header" style="white-space: nowrap;">Nama Pembeli</td>
               <td class="table-header" style="white-space: nowrap;">No WhatsApp</td>
               <td class="table-header" style="white-space: nowrap;">Kategori Tiket</td>
               <td class="table-header" style="text-align: center; white-space: nowrap;">Qty</td>
               <td class="table-header" style="text-align: right; white-space: nowrap;">Total Bayar (Rp)</td>
+              <td class="table-header" style="text-align: center; white-space: nowrap;">Metode Bayar</td>
               <td class="table-header" style="text-align: center; white-space: nowrap;">Status</td>
               <td class="table-header" style="white-space: nowrap;">Tanggal Pesan</td>
             </tr>
             ${generateRows(poOrders, false)}
 
-            <tr><td colspan="10" style="height: 25px;"></td></tr>
+            <tr><td colspan="11" style="height: 25px;"></td></tr>
 
             <!-- TABEL 2: DETAIL DAFTAR TRANSAKSI OTS VENUE -->
             <tr>
-              <td colspan="10" class="section-header">2. TRANSAKSI OTS VENUE — ${otsOrders.length} TRANSAKSI</td>
+              <td colspan="11" class="section-header">2. TRANSAKSI OTS VENUE — ${otsOrders.length} TRANSAKSI</td>
             </tr>
             <tr>
               <td class="table-header" style="text-align: center; width: 40px; white-space: nowrap;">No</td>
-              <td class="table-header" style="text-align: center; white-space: nowrap;">Tipe Pesanan</td>
+              <td class="table-header" style="text-align: center; white-space: nowrap;">Tipe</td>
               <td class="table-header" style="white-space: nowrap;">Kode Tiket</td>
               <td class="table-header" style="white-space: nowrap;">Nama Pembeli</td>
               <td class="table-header" style="white-space: nowrap;">No WhatsApp</td>
               <td class="table-header" style="white-space: nowrap;">Kategori Tiket</td>
               <td class="table-header" style="text-align: center; white-space: nowrap;">Qty</td>
               <td class="table-header" style="text-align: right; white-space: nowrap;">Total Bayar (Rp)</td>
+              <td class="table-header" style="text-align: center; white-space: nowrap;">Metode Bayar</td>
               <td class="table-header" style="text-align: center; white-space: nowrap;">Status</td>
               <td class="table-header" style="white-space: nowrap;">Tanggal Pesan</td>
             </tr>
@@ -1087,6 +1265,49 @@ Terima Kasih!
     const otsTickets = otsPaid.reduce((sum, o) => sum + getOrderQty(o), 0);
     const totalTicketsSold = poTickets + otsTickets;
 
+    // Helper: build ticket sales map dari satu list orders
+    const buildTicketSalesMapPdf = (orderList) => {
+      const map = {};
+      for (const o of orderList) {
+        if (o.tickets && o.tickets.length > 0) {
+          for (const t of o.tickets) {
+            const catName = t.ticket_categories?.name || 'Tiket Standard';
+            const catPrice = Number(t.ticket_categories?.price) || 0;
+            if (!map[catName]) map[catName] = { name: catName, price: catPrice, qty: 0, total: 0 };
+            map[catName].qty += 1;
+            map[catName].total += catPrice;
+          }
+        } else {
+          const catName = getOrderCategory(o);
+          const qty = getOrderQty(o);
+          const unitPrice = qty > 0 ? Math.round((o.total_price || 0) / qty) : 0;
+          if (!map[catName]) map[catName] = { name: catName, price: unitPrice, qty: 0, total: 0 };
+          map[catName].qty += qty;
+          map[catName].total += (o.total_price || 0);
+        }
+      }
+      return Object.values(map).sort((a, b) => a.name.localeCompare(b.name));
+    };
+
+    const buildPaymentMethodRowsPdf = (orderList, defaultMethod) => {
+      const map = {};
+      for (const o of orderList) {
+        const method = getNormalizedPaymentMethod(o, defaultMethod);
+        if (!map[method]) map[method] = { method, count: 0, total: 0 };
+        map[method].count += 1;
+        map[method].total += (o.total_price || 0);
+      }
+      return sortPaymentMethodRows(Object.values(map));
+    };
+
+    const poTicketSalesRows = buildTicketSalesMapPdf(poPaid);
+    const poPaymentMethodRows = buildPaymentMethodRowsPdf(poPaid, 'Tidak Tercatat');
+    const poTotalTickets = poPaid.reduce((s, o) => s + getOrderQty(o), 0);
+
+    const otsTicketSalesRows = buildTicketSalesMapPdf(otsPaid);
+    const otsPaymentMethodRows = buildPaymentMethodRowsPdf(otsPaid, 'OTS (Tunai/QRIS)');
+    const otsTotalTickets = otsPaid.reduce((s, o) => s + getOrderQty(o), 0);
+
     const reportWindow = window.open('', '_blank');
     if (!reportWindow) {
       showToast('Pop-up terblokir oleh browser. Izinkan pop-up untuk mencetak PDF.', 'eo');
@@ -1095,7 +1316,7 @@ Terima Kasih!
 
     const generatePoRows = (orderList) => {
       if (orderList.length === 0) {
-        return `<tr><td colspan="7" style="padding:12px;text-align:center;color:#6b7280;font-style:italic;">Tidak ada transaksi Online Pre-Order (PO).</td></tr>`;
+        return `<tr><td colspan="8" style="padding:12px;text-align:center;color:#6b7280;font-style:italic;">Tidak ada transaksi Online Pre-Order (PO).</td></tr>`;
       }
       return orderList.map((o, idx) => {
         const seed = parseInt(o.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
@@ -1103,6 +1324,8 @@ Terima Kasih!
         const categoryName = getOrderCategory(o);
         const qty = getOrderQty(o);
         const formattedName = formatGuestName(o.guest_name);
+        const paymentMethod = getNormalizedPaymentMethod(o, 'Tidak Tercatat');
+        const { bg: pmBg, color: pmColor } = getPaymentMethodColors(paymentMethod);
         return `
           <tr style="border-bottom:1px solid #e2e8f0;">
             <td style="padding:7px 10px;text-align:center;color:#64748b;font-weight:600;white-space:nowrap;">${idx + 1}</td>
@@ -1111,6 +1334,7 @@ Terima Kasih!
             <td style="padding:7px 10px;font-family:monospace;color:#475569;white-space:nowrap;">${o.guest_wa}</td>
             <td style="padding:7px 10px;color:#334155;font-weight:600;white-space:nowrap;">${categoryName} (${qty}x)</td>
             <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a;white-space:nowrap;">${formatRupiah(o.total_price)}</td>
+            <td style="padding:7px 10px;text-align:center;white-space:nowrap;background:${pmBg};color:${pmColor};font-weight:700;font-size:10px;">${paymentMethod}</td>
             <td style="padding:7px 10px;text-align:center;white-space:nowrap;">
               <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;background:${o.status === 'paid' ? '#f0fdf4' : '#fef2f2'};color:${o.status === 'paid' ? '#15803d' : '#b91c1c'};border:1px solid ${o.status === 'paid' ? '#bbf7d0' : '#fecaca'};">
                 ${o.status.toUpperCase()}
@@ -1131,6 +1355,8 @@ Terima Kasih!
         const categoryName = getOrderCategory(o);
         const qty = getOrderQty(o);
         const formattedName = formatGuestName(o.guest_name);
+        const paymentMethod = getNormalizedPaymentMethod(o, 'OTS (Tunai/QRIS)');
+        const { bg: pmBg, color: pmColor } = getPaymentMethodColors(paymentMethod);
         return `
           <tr style="border-bottom:1px solid #e2e8f0;">
             <td style="padding:7px 10px;text-align:center;color:#64748b;font-weight:600;white-space:nowrap;">${idx + 1}</td>
@@ -1138,6 +1364,7 @@ Terima Kasih!
             <td style="padding:7px 10px;font-weight:700;color:#0369a1;white-space:nowrap;">${formattedName}</td>
             <td style="padding:7px 10px;color:#334155;font-weight:600;white-space:nowrap;">${categoryName} (${qty}x)</td>
             <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a;white-space:nowrap;">${formatRupiah(o.total_price)}</td>
+            <td style="padding:7px 10px;text-align:center;white-space:nowrap;background:${pmBg};color:${pmColor};font-weight:700;font-size:10px;">${paymentMethod}</td>
             <td style="padding:7px 10px;text-align:center;white-space:nowrap;">
               <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;">
                 OTS LUNAS
@@ -1218,6 +1445,108 @@ Terima Kasih!
           </div>
         </div>
 
+        <!-- REKAP PO: PER JENIS TIKET -->
+        <div class="section-title" style="margin-top:0;">
+          <span>REKAP PO ONLINE — PER JENIS TIKET</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:left;">Nama Tiket</th>
+              <th style="text-align:right;">Harga Tiket</th>
+              <th style="text-align:center;">Jml Terjual</th>
+              <th style="text-align:right;">Total Pendapatan</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${poTicketSalesRows.map((ts, i) => `
+            <tr style="border-bottom:1px solid #e2e8f0;background:${i % 2 === 0 ? '#fff' : '#f8fafc'};">
+              <td style="padding:7px 10px;font-weight:700;color:#0f172a;">${ts.name}</td>
+              <td style="padding:7px 10px;text-align:right;font-family:monospace;color:#0369a1;font-weight:600;">${formatRupiah(ts.price)}</td>
+              <td style="padding:7px 10px;text-align:center;font-weight:700;">${ts.qty}</td>
+              <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a;">${formatRupiah(ts.total)}</td>
+            </tr>`).join('')}
+            <tr style="background:#0284c7;">
+              <td style="padding:7px 10px;color:#fff;font-weight:800;" colspan="2">TOTAL PO</td>
+              <td style="padding:7px 10px;text-align:center;color:#fff;font-weight:800;">${poTotalTickets}</td>
+              <td style="padding:7px 10px;text-align:right;color:#fff;font-weight:800;font-family:monospace;">${formatRupiah(poOmset)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- REKAP PO: PER METODE PEMBAYARAN -->
+        <div class="section-title">
+          <span>REKAP PO ONLINE — PER METODE PEMBAYARAN</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:left;">Metode Pembayaran</th>
+              <th style="text-align:center;">Jumlah Transaksi</th>
+              <th style="text-align:right;">Total Pendapatan</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${poPaymentMethodRows.map((pm, i) => `
+            <tr style="border-bottom:1px solid #e2e8f0;background:${i % 2 === 0 ? '#fff' : '#f8fafc'};">
+              <td style="padding:7px 10px;font-weight:700;color:${getPaymentMethodColors(pm.method).color};">${pm.method}</td>
+              <td style="padding:7px 10px;text-align:center;font-weight:700;">${pm.count}</td>
+              <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;">${formatRupiah(pm.total)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+
+        <!-- REKAP OTS: PER JENIS TIKET -->
+        <div class="section-title">
+          <span>REKAP OTS VENUE — PER JENIS TIKET</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:left;">Nama Tiket</th>
+              <th style="text-align:right;">Harga Tiket</th>
+              <th style="text-align:center;">Jml Terjual</th>
+              <th style="text-align:right;">Total Pendapatan</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${otsTicketSalesRows.map((ts, i) => `
+            <tr style="border-bottom:1px solid #e2e8f0;background:${i % 2 === 0 ? '#fff' : '#f8fafc'};">
+              <td style="padding:7px 10px;font-weight:700;color:#0f172a;">${ts.name}</td>
+              <td style="padding:7px 10px;text-align:right;font-family:monospace;color:#0369a1;font-weight:600;">${formatRupiah(ts.price)}</td>
+              <td style="padding:7px 10px;text-align:center;font-weight:700;">${ts.qty}</td>
+              <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;color:#0f172a;">${formatRupiah(ts.total)}</td>
+            </tr>`).join('')}
+            <tr style="background:#0284c7;">
+              <td style="padding:7px 10px;color:#fff;font-weight:800;" colspan="2">TOTAL OTS</td>
+              <td style="padding:7px 10px;text-align:center;color:#fff;font-weight:800;">${otsTotalTickets}</td>
+              <td style="padding:7px 10px;text-align:right;color:#fff;font-weight:800;font-family:monospace;">${formatRupiah(otsOmset)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- REKAP OTS: PER METODE PEMBAYARAN -->
+        <div class="section-title">
+          <span>REKAP OTS VENUE — PER METODE PEMBAYARAN</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:left;">Metode Pembayaran</th>
+              <th style="text-align:center;">Jumlah Transaksi</th>
+              <th style="text-align:right;">Total Pendapatan</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${otsPaymentMethodRows.map((pm, i) => `
+            <tr style="border-bottom:1px solid #e2e8f0;background:${i % 2 === 0 ? '#fff' : '#f8fafc'};">
+              <td style="padding:7px 10px;font-weight:700;color:${getPaymentMethodColors(pm.method).color};">${pm.method}</td>
+              <td style="padding:7px 10px;text-align:center;font-weight:700;">${pm.count}</td>
+              <td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;">${formatRupiah(pm.total)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+
         <!-- TABLE 1: PRE-ORDER (PO ONLINE) -->
         <div class="section-title">
           <span>1. DAFTAR PESANAN ONLINE (PRE-ORDER / PO)</span>
@@ -1232,6 +1561,7 @@ Terima Kasih!
               <th>No WhatsApp</th>
               <th>Kategori Tiket</th>
               <th style="text-align:right;">Total Bayar</th>
+              <th style="text-align:center;">Metode Bayar</th>
               <th style="text-align:center;">Status</th>
             </tr>
           </thead>
@@ -1250,9 +1580,10 @@ Terima Kasih!
             <tr>
               <th style="text-align:center;width:30px;">#</th>
               <th>Kode Tiket</th>
-              <th>Metode Pembayaran</th>
+              <th>Nama / Label</th>
               <th>Kategori Tiket</th>
               <th style="text-align:right;">Total Bayar</th>
+              <th style="text-align:center;">Metode Bayar</th>
               <th style="text-align:center;">Status</th>
             </tr>
           </thead>

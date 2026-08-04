@@ -154,6 +154,7 @@ export const Checkout = () => {
         total_price: totalAmount,
         payment_proof_url: proofUrl,
         status: 'pending',
+        payment_method: paymentTab === 'bank' ? 'Transfer Bank' : 'QRIS',
       };
 
       const newOrder = await createGuestOrder(orderPayload, selectedItems);

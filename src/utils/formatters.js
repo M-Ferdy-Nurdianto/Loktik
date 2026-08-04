@@ -89,3 +89,24 @@ export const formatTicketUnitCode = (barcodeUuid, fallbackId = null) => {
 
   return 'TIKET';
 };
+
+/**
+ * Normalizes payment method labels so reports can group equivalent values reliably.
+ */
+export const normalizePaymentMethod = (paymentMethod, options = {}) => {
+  const { isOts = false, fallback = null } = options;
+  const raw = String(paymentMethod || '').trim();
+
+  if (!raw) {
+    if (fallback) return fallback;
+    return isOts ? 'OTS (Tunai/QRIS)' : 'Tidak Tercatat';
+  }
+
+  const normalized = raw.toLowerCase();
+
+  if (normalized.includes('qris')) return 'QRIS';
+  if (normalized === 'tf' || normalized.includes('transfer') || normalized.includes('bank')) return 'Transfer Bank';
+  if (normalized.includes('cash') || normalized.includes('tunai')) return 'CASH';
+
+  return raw;
+};

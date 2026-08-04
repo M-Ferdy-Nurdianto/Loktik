@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
     guest_ig VARCHAR(50),
     total_price DECIMAL(12, 2) NOT NULL,
     payment_proof_url TEXT,
+    payment_method VARCHAR(50), -- 'Transfer Bank', 'QRIS', 'CASH'
     status VARCHAR(20) NOT NULL DEFAULT 'pending', -- 'pending', 'need_reupload', 'paid', 'cancelled'
     is_ots BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
