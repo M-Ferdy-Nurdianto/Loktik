@@ -35,11 +35,6 @@ export const EODashboard = () => {
     totalRevenue: 0,
   });
 
-  const [waStats, setWaStats] = useState({
-    wa_quota: 0,
-    wa_messages_sent: 0,
-  });
-
   // liveEoData: data terbaru dari DB (bukan session cache)
   // Dipakai untuk resolveWhatsAppMode agar tidak stale
   const [liveEoData, setLiveEoData]   = useState(null);
@@ -63,6 +58,12 @@ export const EODashboard = () => {
   // resolveWhatsAppMode — pakai effectiveUser agar dapat data terbaru dari DB
   const waMode      = resolveWhatsAppMode(effectiveUser);
   const hasBotAddon = waMode === 'quota';
+
+  // waStats: derive langsung dari effectiveUser — single source of truth, tidak ada state terpisah
+  const waStats = {
+    wa_quota:         effectiveUser?.wa_quota         ?? 0,
+    wa_messages_sent: effectiveUser?.wa_messages_sent ?? 0,
+  };
 
   const fetchLiveStats = async () => {
     try {
@@ -92,29 +93,34 @@ export const EODashboard = () => {
       // Fetch data EO terbaru dari Supabase — override session yang mungkin stale
       if (user?.id) {
         try {
-          const { data: eoRow } = await supabase
+          // Query by id (primary), fallback by name jika tidak ketemu
+          let eoRow = null;
+          const { data: eoById } = await supabase
             .from('eo_accounts')
             .select('wa_quota, wa_messages_sent, bot_access_bonus')
             .eq('id', user.id)
             .maybeSingle();
 
+          if (eoById) {
+            eoRow = eoById;
+          } else if (user.name || user.username) {
+            // Fallback: cari by name jika id tidak match (session mungkin punya id lama)
+            const { data: eoByName } = await supabase
+              .from('eo_accounts')
+              .select('wa_quota, wa_messages_sent, bot_access_bonus')
+              .ilike('name', (user.name || user.username).trim())
+              .maybeSingle();
+            if (eoByName) eoRow = eoByName;
+          }
+
           if (eoRow) {
             setLiveEoData(eoRow);
-            setWaStats({
-              wa_quota:         eoRow.wa_quota         ?? 0,
-              wa_messages_sent: eoRow.wa_messages_sent ?? 0,
-            });
           } else {
-            setWaStats({
-              wa_quota:         user?.wa_quota         ?? 0,
-              wa_messages_sent: user?.wa_messages_sent ?? 0,
-            });
+            // Tidak ada data dari DB — biarkan liveEoData null, effectiveUser pakai session
           }
-        } catch (_) {
-          setWaStats({
-            wa_quota:         user?.wa_quota         ?? 0,
-            wa_messages_sent: user?.wa_messages_sent ?? 0,
-          });
+        } catch (err) {
+          console.warn('[EODashboard] fetchLiveStats: gagal fetch eo row', err);
+          // liveEoData tetap null, effectiveUser fallback ke session
         } finally {
           setLiveEoLoading(false);
         }
@@ -136,19 +142,43 @@ export const EODashboard = () => {
     const handleQuotaUpdate = (e) => {
       const { wa_quota, wa_messages_sent } = e.detail || {};
       if (wa_quota === undefined && wa_messages_sent === undefined) return;
-      setWaStats((prev) => ({
-        wa_quota:         wa_quota         ?? prev.wa_quota,
-        wa_messages_sent: wa_messages_sent ?? prev.wa_messages_sent,
+      // Update liveEoData — waStats akan derive otomatis dari effectiveUser
+      setLiveEoData((prev) => ({
+        ...(prev || {}),
+        wa_quota:         wa_quota         ?? prev?.wa_quota         ?? 0,
+        wa_messages_sent: wa_messages_sent ?? prev?.wa_messages_sent ?? 0,
       }));
-      setLiveEoData((prev) => prev ? {
-        ...prev,
-        wa_quota:         wa_quota         ?? prev.wa_quota,
-        wa_messages_sent: wa_messages_sent ?? prev.wa_messages_sent,
-      } : prev);
     };
     window.addEventListener('wa-quota-updated', handleQuotaUpdate);
     return () => window.removeEventListener('wa-quota-updated', handleQuotaUpdate);
   }, []);
+
+  // ── Realtime Supabase: subscribe perubahan kuota WA dari sisi admin (top-up) ──
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`eo_quota_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'eo_accounts',
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newRow = payload.new;
+          if (!newRow) return;
+          setLiveEoData((prev) => ({ ...(prev || {}), ...newRow }));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   const handleLogout = () => {
     logout();

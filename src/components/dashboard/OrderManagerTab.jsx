@@ -176,16 +176,32 @@ export const OrderManagerTab = () => {
   const fetchLiveEoData = async (eoId) => {
     if (!eoId) return;
     try {
-      const { data: eoRow } = await supabase
+      // Query by id (primary)
+      let eoRow = null;
+      const { data: eoById } = await supabase
         .from('eo_accounts')
         .select('wa_quota, wa_messages_sent, bot_access_bonus')
         .eq('id', eoId)
         .maybeSingle();
 
+      if (eoById) {
+        eoRow = eoById;
+      } else if (eoUsername) {
+        // Fallback: cari by name jika id tidak match
+        const { data: eoByName } = await supabase
+          .from('eo_accounts')
+          .select('wa_quota, wa_messages_sent, bot_access_bonus')
+          .ilike('name', eoUsername.trim())
+          .maybeSingle();
+        if (eoByName) eoRow = eoByName;
+      }
+
       if (eoRow) {
         setLiveEoData(eoRow);
       }
-    } catch (_) {}
+    } catch (err) {
+      console.warn('[OrderManagerTab] fetchLiveEoData error:', err);
+    }
   };
 
   useEffect(() => {
