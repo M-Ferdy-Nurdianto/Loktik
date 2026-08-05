@@ -138,6 +138,17 @@ export const OrderManagerTab = () => {
   const ticketRef = useRef(null);
   const lastWaSendTimeRef = useRef(0);
   const botServerUrl = import.meta.env.VITE_WA_BOT_URL || 'http://localhost:5000';
+  const waProvider = import.meta.env.VITE_WA_PROVIDER || 'wweb'; // 'wweb' | 'fonnte'
+
+  // Helper untuk tentukan endpoint berdasarkan provider
+  const getWaEndpoint = (path) => {
+    if (waProvider === 'fonnte') {
+      // Vercel serverless function path (relative, melalui vercel.json rewrite /api/... -> /api/...)
+      return `/api/send-wa`;
+    }
+    // whatsapp-web.js bot server (absolute URL)
+    return `${botServerUrl}${path}`;
+  };
 
   const fetchData = async (username) => {
     if (!username) return;
@@ -467,7 +478,7 @@ Terima Kasih!
     const cekTiketUrl = `${siteUrl}/?cek=${dispatch.orderLookupCode}`;
 
     try {
-      const response = await fetch(`${botServerUrl}/api/send-ticket-wa`, {
+      const response = await fetch(getWaEndpoint('/api/send-ticket-wa'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -790,7 +801,7 @@ Terima Kasih!
           const eventName = updatedOrder.events?.name || 'Event LokTik';
 
           try {
-            const response = await fetch(`${botServerUrl}/api/send-ticket-wa`, {
+            const response = await fetch(getWaEndpoint('/api/send-ticket-wa'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

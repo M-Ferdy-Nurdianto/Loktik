@@ -80,8 +80,18 @@ Terima Kasih!
           url: (!isMixed && ticketQrUrl) ? ticketQrUrl : '',
         }),
       });
+const fonnteData = await response.json();
 
-      const fonnteData = await response.json();
+      // Fonnte balas {status: true/false, code, message, ...} — cek status sebelum success
+      if (fonnteData.status === false) {
+        console.error('Fonnte error:', fonnteData);
+        return res.status(500).json({
+          success: false,
+          provider: 'fonnte',
+          error: fonnteData.reason || fonnteData.message || 'Gagal kirim via Fonnte',
+        });
+      }
+
       return res.json({ success: true, provider: 'fonnte', data: fonnteData });
     }
 
