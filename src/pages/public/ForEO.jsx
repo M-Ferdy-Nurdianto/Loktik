@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { FaqSection } from '../../components/landing/FaqSection';
+import { buildWhatsAppUrl } from '../../utils/whatsappLink';
 import { ForEoPricing } from '../../components/eo/ForEoPricing';
 
 export const ForEO = () => {
@@ -196,7 +197,7 @@ export const ForEO = () => {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <a
-            href="https://wa.me/6285765907580?text=Halo%20Admin%20LokTik,%20saya%20tertarik%20memesan%20layanan%20platform%20LokTik%20untuk%20event%20saya."
+            href={buildWhatsAppUrl('6285765907580', 'Halo Admin LokTik, saya tertarik memesan layanan platform LokTik untuk event saya.')}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto touch-press"

@@ -7,6 +7,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { BottomSheet } from '../ui/BottomSheet';
+import { buildWhatsAppUrl } from '../../utils/whatsappLink';
 
 // ─── Nomor WA Admin LokTik ───────────────────────────────────────────────────
 const ADMIN_WA = '6285765907580';
@@ -245,7 +246,7 @@ const TierCard = ({ tier, onDetail }) => (
 
       {/* CTA Utama */}
       <a
-        href={`https://wa.me/${ADMIN_WA}?text=${tier.waText}`}
+        href={buildWhatsAppUrl(ADMIN_WA, tier.waText)}
         target="_blank"
         rel="noopener noreferrer"
         className="block touch-press"
@@ -341,7 +342,7 @@ const TierDetailContent = ({ tier }) => (
 
     {/* Tombol pesan di dalam sheet */}
     <a
-      href={`https://wa.me/${ADMIN_WA}?text=${tier.waText}`}
+      href={buildWhatsAppUrl(ADMIN_WA, tier.waText)}
       target="_blank"
       rel="noopener noreferrer"
       className="block touch-press pt-2"
@@ -441,7 +442,7 @@ const AddOnCard = ({ pkg }) => (
 
     <div className="pt-1">
       <a
-        href={`https://wa.me/${ADMIN_WA}?text=${pkg.waText}`}
+        href={buildWhatsAppUrl(ADMIN_WA, pkg.waText)}
         target="_blank"
         rel="noopener noreferrer"
         className="block touch-press"

@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { CustomSelect } from '../../components/ui/CustomSelect';
 import { formatDate } from '../../utils/formatters';
+import { buildWhatsAppUrl } from '../../utils/whatsappLink';
 import { topUpEoWaQuotaInDb } from '../../services/apiAdmin';
 import {
   getAllEoAccounts,
@@ -761,7 +762,7 @@ export const AdminDashboard = () => {
                     {/* No. WA */}
                     <div className="bg-neutral-950 rounded-lg p-2.5 space-y-0.5">
                       <p className="text-[9px] font-bold uppercase text-neutral-500">No. WA</p>
-                      <a href={`https://wa.me/${eo.wa}`} target="_blank" rel="noreferrer"
+                      <a href={buildWhatsAppUrl(eo.wa)} target="_blank" rel="noreferrer"
                         className="text-brand-green font-bold font-mono text-[11px] hover:underline flex items-center gap-1">
                         <MessageSquare className="w-3 h-3 shrink-0" />{eo.wa}
                       </a>

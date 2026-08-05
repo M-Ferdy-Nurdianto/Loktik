@@ -12,6 +12,7 @@ import { TicketGraphic } from './TicketGraphic';
 import { supabase } from '../../services/supabase';
 import { useToast } from '../../context/ToastContext';
 import { resolveWhatsAppMode } from '../../utils/resolveWhatsAppMode';
+import { buildWhatsAppUrl } from '../../utils/whatsappLink';
 import { deductWaQuota } from '../../services/apiEo';
 
 export const OrderManagerTab = () => {
@@ -436,7 +437,7 @@ ${footerText}
 Terima Kasih!
 - Panitia ${eventName} via LokTik.web.id`;
 
-    window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(messageText)}`, '_blank');
+    window.open(buildWhatsAppUrl(cleanNumber, messageText), '_blank');
   };
 
   const sendAutoTicketViaBot = async (order, ticketUrl) => {
@@ -1883,7 +1884,7 @@ Terima Kasih!
                       <td className="p-3 font-bold text-white">{formatGuestName(o.guest_name)}</td>
                       <td className="p-3">
                         <a
-                          href={`https://wa.me/${o.guest_wa.replace(/[^0-9]/g, '')}`}
+                          href={buildWhatsAppUrl(o.guest_wa)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center space-x-1 text-brand-blue hover:underline font-mono"
