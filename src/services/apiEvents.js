@@ -398,8 +398,6 @@ export const updateEventData = async (eventId, eventPayload, categoryRows) => {
   if (eventError) throw new Error(`Gagal memperbarui event: ${eventError.message}`);
 
   if (categoryRows && categoryRows.length > 0) {
-    await supabase.from('ticket_categories').delete().eq('event_id', eventId);
-
     const formattedCategories = [];
     categoryRows.forEach((cat) => {
       // 1. Tiket Utama (PO)
@@ -427,11 +425,47 @@ export const updateEventData = async (eventId, eventPayload, categoryRows) => {
       }
     });
 
-    const { error: tiersError } = await supabase
+    // Sync categories in place instead of delete-all + reinsert. Deleting old rows
+    // first breaks FK RESTRICT (tickets.ticket_category_id) once tickets are sold,
+    // which made the delete fail with a 409 Conflict and left duplicate categories.
+    const { data: existingCats } = await supabase
       .from('ticket_categories')
-      .insert(formattedCategories);
+      .select('id, name')
+      .eq('event_id', eventId);
 
-    if (tiersError) throw new Error(`Gagal memperbarui kategori tiket: ${tiersError.message}`);
+    const existingByName = new Map((existingCats || []).map((c) => [c.name, c.id]));
+    const wantedNames = new Set(formattedCategories.map((c) => c.name));
+
+    for (const row of formattedCategories) {
+      const existingId = existingByName.get(row.name);
+      const { error: rowError } = existingId
+        ? await supabase.from('ticket_categories').update(row).eq('id', existingId)
+        : await supabase.from('ticket_categories').insert(row);
+      if (rowError) throw new Error(`Gagal memperbarui kategori tiket: ${rowError.message}`);
+    }
+
+    // Remove categories that no longer exist in the form — but keep any that are
+    // still referenced by sold tickets (FK RESTRICT + keep historical data).
+    const obsoleteIds = (existingCats || [])
+      .filter((c) => !wantedNames.has(c.name))
+      .map((c) => c.id);
+
+    if (obsoleteIds.length > 0) {
+      const { data: referenced } = await supabase
+        .from('tickets')
+        .select('ticket_category_id')
+        .in('ticket_category_id', obsoleteIds);
+
+      const referencedSet = new Set((referenced || []).map((t) => t.ticket_category_id));
+      const deletableIds = obsoleteIds.filter((id) => !referencedSet.has(id));
+      if (deletableIds.length > 0) {
+        const { error: delError } = await supabase
+          .from('ticket_categories')
+          .delete()
+          .in('id', deletableIds);
+        if (delError) throw new Error(`Gagal menghapus kategori tiket: ${delError.message}`);
+      }
+    }
   }
 
   return true;
