@@ -10,8 +10,22 @@ const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 
 const app = express();
-app.use(cors());
+
+// Konfigurasi CORS untuk mengizinkan Private Network Access (Vercel -> Localhost)
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type, Authorization');
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+// (cors package dihapus dari middleware karena sudah di-handle custom header di atas)
+
 app.use(express.json());
+
 
 const PORT = process.env.WA_BOT_PORT || 5000;
 
