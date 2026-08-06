@@ -328,10 +328,10 @@ export const Scanner = ({ eventId }) => {
       </Button>
 
       {scanResult && createPortal(
-        <div className="fixed inset-0 z-[99999] w-screen h-screen bg-black/90 backdrop-blur-md flex items-end sm:items-center justify-center overflow-y-auto">
+        <div className="fixed inset-0 z-[99999] w-screen h-[100dvh] bg-black/90 backdrop-blur-md flex items-end sm:items-center justify-center overflow-hidden">
           {/* Mobile: slide-up sheet. Desktop: centered card */}
           <div
-            className={`w-full sm:max-w-lg sm:mx-4 sm:my-auto rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 space-y-4 shadow-[0_-10px_60px_rgba(0,0,0,0.8)] border-t-2 sm:border-2 ${
+            className={`w-full max-h-[90dvh] overflow-y-auto sm:max-w-lg sm:mx-4 sm:my-auto rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 space-y-4 shadow-[0_-10px_60px_rgba(0,0,0,0.8)] border-t-2 sm:border-2 ${
               scanResult.status === 'SUCCESS'
                 ? 'bg-[#0d170f] border-brand-green'
                 : scanResult.status === 'PENDING_CONFIRM'

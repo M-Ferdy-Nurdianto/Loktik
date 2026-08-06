@@ -6,8 +6,10 @@ import { Button } from '../ui/Button';
 import { compressImageToWebP } from '../../utils/imageCompress';
 import { uploadEventPoster, uploadQrisCode, updateEventData } from '../../services/apiEvents';
 import { supabase } from '../../services/supabase';
+import { useToast } from '../../context/ToastContext';
 
 export const EditEventModal = ({ event, onSaved, onCancel }) => {
+  const { showToast } = useToast();
   const payDetails = event.payment_details || {};
 
   const [formData, setFormData] = useState({
@@ -66,7 +68,10 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
   };
 
   const handleRemoveTier = (idx) => {
-    if (tiers.length > 1) setTiers(tiers.filter((_, i) => i !== idx));
+    if (tiers.length > 1) {
+      setTiers(tiers.filter((_, i) => i !== idx));
+      showToast('Kategori tiket berhasil dihapus dari draf.', 'eo');
+    }
   };
 
   const handleTierChange = (idx, field, val) => {

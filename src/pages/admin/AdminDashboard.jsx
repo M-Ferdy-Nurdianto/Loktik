@@ -17,10 +17,12 @@ import {
   resetEoWaQuota,
 } from '../../services/apiEo';
 import { FactoryResetView } from '../../components/admin/FactoryResetView';
+import { useToast } from '../../context/ToastContext';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { showToast } = useToast();
 
   const getOneMonthExpiry = () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -125,7 +127,7 @@ export const AdminDashboard = () => {
       setEoAccounts((prev) =>
         prev.map((a) => (a.id === eoId ? { ...a, status: acc.status } : a))
       );
-      alert(`Gagal mengubah status EO: ${err.message}`);
+      showToast(`Gagal mengubah status EO: ${err.message}`, 'admin');
     }
   };
 
@@ -263,7 +265,7 @@ export const AdminDashboard = () => {
       setShowAddModal(false);
     } catch (err) {
       console.error('[AdminDashboard] handleAddEoSubmit ERROR:', err);
-      alert(err.message || 'Gagal membuat akun EO.');
+      showToast(err.message || 'Gagal membuat akun EO.', 'admin');
     }
   };
 
@@ -293,7 +295,7 @@ export const AdminDashboard = () => {
       // Jalankan RPC top-up ke Supabase — await agar tahu berhasil/gagal
       const result = await topUpEoWaQuotaInDb(selectedEo.id, quotaToAdd);
       if (!result.success) {
-        alert(`Gagal top up: ${result.message}`);
+        showToast(`Gagal top up: ${result.message}`, 'admin');
         return;
       }
 
@@ -339,7 +341,7 @@ export const AdminDashboard = () => {
       closeTopUpModal();
     } catch (err) {
       console.error('[AdminDashboard] handleTopUpSubmit ERROR:', err);
-      alert(`Gagal top up kuota: ${err.message}`);
+      showToast(`Gagal top up kuota: ${err.message}`, 'admin');
     }
   };
 

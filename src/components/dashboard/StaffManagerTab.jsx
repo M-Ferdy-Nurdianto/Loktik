@@ -17,7 +17,6 @@ export const StaffManagerTab = () => {
   const [staffList, setStaffList] = useState([]);
   const [events, setEvents] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const loadData = async (username) => {
@@ -66,10 +65,9 @@ export const StaffManagerTab = () => {
         permissions: formData.permissions,
       });
 
-      setToastMsg(`AKUN STAF "${formData.username.toUpperCase()}" BERHASIL DIBUAT!`);
+      showToast(`AKUN STAF "${formData.username.toUpperCase()}" BERHASIL DIBUAT!`, 'eo');
       setShowForm(false);
       loadData(eoUsername);
-      setTimeout(() => setToastMsg(''), 4000);
     } catch (err) {
       showToast(err.message || 'Gagal membuat akun staf.', 'eo');
     }
@@ -80,8 +78,7 @@ export const StaffManagerTab = () => {
       try {
         await deleteStaffAccount(id);
         loadData(eoUsername);
-        setToastMsg('AKUN STAF BERHASIL DIHAPUS!');
-        setTimeout(() => setToastMsg(''), 3000);
+        showToast('AKUN STAF BERHASIL DIHAPUS!', 'eo');
       } catch (err) {
         showToast(err.message || 'Gagal menghapus staf', 'eo');
       }
@@ -102,8 +99,7 @@ export const StaffManagerTab = () => {
     const loginLink = `${window.location.origin}/gate/${targetSlug}`;
     const text = `INFORMASI AKUN STAF LOKTIK\nStaf: ${staf.name}\nUsername: ${staf.username}\nPassword: ${staf.password}\nLink Gate: ${loginLink}`;
     navigator.clipboard.writeText(text);
-    setToastMsg('INFO AKUN STAF DISALIN KE CLIPBOARD!');
-    setTimeout(() => setToastMsg(''), 3000);
+    showToast('INFO AKUN STAF DISALIN KE CLIPBOARD!', 'eo');
   };
 
   return (
@@ -143,13 +139,6 @@ export const StaffManagerTab = () => {
           <span>{showForm ? 'BATAL' : 'TAMBAH STAF BARU'}</span>
         </Button>
       </div>
-
-      {toastMsg && (
-        <div className="p-3 bg-brand-green/20 border border-brand-green text-brand-green font-bold text-xs rounded flex items-center space-x-2 uppercase">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{toastMsg}</span>
-        </div>
-      )}
 
       {showForm && (
         <StaffFormModal
