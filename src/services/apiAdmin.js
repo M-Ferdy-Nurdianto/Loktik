@@ -164,7 +164,7 @@ const deleteBatchWithRetry = async (bucketName, paths, attempt = 0) => {
     // Supabase remove() mengembalikan array FileObject yang benar-benar terhapus.
     // Kita TIDAK boleh blind-trust paths — kita harus cek data response.
     // Jika data array tersedia, tentukan mana yang benar-benar terhapus.
-    if (Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data)) {
       const deletedNames = new Set(data.map((f) => f.name));
       // data[].name adalah basename; paths bisa berupa nested path (folder/file).
       // Cocokkan berdasarkan akhiran path agar kompatibel dengan subfolder.
@@ -178,7 +178,7 @@ const deleteBatchWithRetry = async (bucketName, paths, attempt = 0) => {
       return { deleted, failed };
     }
 
-    // data kosong/null → API versi lama atau semua berhasil tanpa detail.
+    // data null/undefined → API versi lama atau respons tanpa detail.
     // Lakukan trust paths tapi tandai sebagai deleted.
     return { deleted: paths, failed: [] };
   }
