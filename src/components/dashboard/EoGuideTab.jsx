@@ -56,7 +56,7 @@ export const EoGuideTab = () => {
           <ul className="space-y-2 mt-2 ml-1">
             <li className="flex items-start gap-2">
               <span className="shrink-0 mt-0.5"><span className="inline-flex items-center rounded-sm bg-brand-green px-1.5 py-0 text-[9px] font-black uppercase tracking-wider text-black">PAID</span></span>
-              <span>Udah lunas. Tiket otomatis terkirim.</span>
+              <span>Udah lunas &amp; di-approve. Tiket aktif dan siap didownload pembeli.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="shrink-0 mt-0.5"><span className="inline-flex items-center rounded-sm border border-neutral-500 px-1.5 py-0 text-[9px] font-black uppercase tracking-wider text-neutral-400">PENDING</span></span>
@@ -67,6 +67,14 @@ export const EoGuideTab = () => {
               <span>Bukti transfer ditolak atau nggak valid, pembeli harus kirim ulang.</span>
             </li>
           </ul>
+          <p className="pt-2 border-t border-neutral-800 mt-3">
+            Klik <strong className="text-brand-green font-black uppercase">APPROVE</strong> setelah cek bukti transfer buat verifikasi & aktifin tiket —
+            gak perlu kirim WA apa-apa dulu. Pembeli otomatis bisa cari &amp; download E-Tiket-nya sendiri di website
+            pakai <strong className="text-white">Kode ID Pesanan</strong> yang mereka simpan pas checkout (tombol <strong className="text-brand-blue">"CEK TIKET SAYA"</strong> di halaman utama).
+          </p>
+          <p>
+            Kirim WA ke pembeli sifatnya <strong className="text-white">opsional</strong> — tombol <strong className="text-brand-purple font-black uppercase">WA MANUAL</strong> bakal buka WhatsApp kamu dengan pesan &amp; gambar tiket siap kirim, kamu tinggal pencet Send manual dari HP/WA Web kamu sendiri. Selain WA, kamu juga bebas nyebarin info tiket lewat story/feed IG, grup Telegram, atau kanal lain — pembeli tetap bisa akses tiketnya kapan aja lewat kode pesanan tanpa gantung ke satu channel doang.
+          </p>
         </GuideBlock>
 
         <GuideBlock

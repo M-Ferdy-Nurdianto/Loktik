@@ -136,11 +136,17 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_quota INT;
+    v_end_po TIMESTAMPTZ;
 BEGIN
-    SELECT quota INTO v_quota
+    SELECT quota, end_po INTO v_quota, v_end_po
     FROM public.ticket_categories
     WHERE id = target_category_id
     FOR UPDATE;
+
+    -- Validasi Expired
+    IF v_end_po IS NOT NULL AND NOW() > v_end_po THEN
+        RAISE EXCEPTION 'Waktu pembelian tiket sudah berakhir (Expired).';
+    END IF;
 
     -- If quota is NULL, it is UNLIMITED (PO mode)
     IF v_quota IS NULL THEN

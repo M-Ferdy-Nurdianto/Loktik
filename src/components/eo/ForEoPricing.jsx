@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ArrowRight, Bot, CheckCircle2, ChevronRight, Clock3,
-  DollarSign, Info, MessageSquare, Sparkles, Zap,
+  DollarSign, Info, MessageSquare, Sparkles, Zap, AlertTriangle,
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -371,6 +371,19 @@ const AddOnCard = ({ pkg }) => (
         : 'border-neutral-700 bg-[#121212]'
     }`}
   >
+    {/* OVERLAY MAINTENANCE */}
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/75 backdrop-blur-[2px] p-4 text-center">
+      <div className="bg-black/90 border border-neutral-700 p-4 rounded-xl flex flex-col items-center shadow-2xl">
+        <AlertTriangle className="w-8 h-8 text-neutral-400 mb-2" />
+        <span className="text-sm font-black text-white uppercase tracking-widest">
+          UNDER MAINTENANCE
+        </span>
+        <span className="text-[10px] text-neutral-400 font-bold uppercase mt-1">
+          PAKET INI SEMENTARA TIDAK TERSEDIA
+        </span>
+      </div>
+    </div>
+
     {pkg.highlight && (
       <div className="absolute top-0 right-0">
         <div className="bg-brand-green text-black text-[9px] font-black uppercase px-3 py-1 tracking-widest rounded-bl-md">
@@ -441,23 +454,16 @@ const AddOnCard = ({ pkg }) => (
     </div>
 
     <div className="pt-1">
-      <a
-        href={buildWhatsAppUrl(ADMIN_WA, pkg.waText)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block touch-press"
+      <Button
+        variant="outline"
+        fullWidth
+        size="md"
+        disabled
+        className="min-h-[44px] font-black justify-center flex items-center gap-2 text-[11px] sm:text-xs uppercase tracking-wider border-neutral-700 text-neutral-500 bg-neutral-900/50 cursor-not-allowed opacity-80"
       >
-        <Button
-          variant="green"
-          fullWidth
-          size="md"
-          className="min-h-[44px] font-black justify-center flex items-center gap-2 text-[11px] sm:text-xs uppercase tracking-wider"
-        >
-          <Zap className="w-4 h-4 shrink-0" />
-          <span>BELI {pkg.name} VIA WA</span>
-          <ArrowRight className="w-4 h-4 shrink-0" />
-        </Button>
-      </a>
+        <AlertTriangle className="w-4 h-4 shrink-0" />
+        <span>UNDER MAINTENANCE</span>
+      </Button>
     </div>
   </Card>
 );

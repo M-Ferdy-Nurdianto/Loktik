@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, X, MessageSquare, Inbox, RefreshCw, Eye, Send, Bot, Banknote, ShoppingBag, Clock, Filter, Layers, ChevronDown, ChevronUp, Sparkles, Key, FileSpreadsheet, FileText } from 'lucide-react';
+import { Check, X, MessageSquare, Inbox, RefreshCw, Eye, Send, Bot, Banknote, ShoppingBag, Clock, Filter, Layers, ChevronDown, ChevronUp, Sparkles, Key, FileSpreadsheet, FileText, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -31,7 +31,12 @@ export const OrderManagerTab = () => {
     : user;
   // resolveWhatsAppMode — SINGLE SOURCE OF TRUTH untuk mode pengiriman WA
   const waMode = resolveWhatsAppMode(effectiveUser); // 'quota' | 'manual'
-  const hasBotAccess = waMode === 'quota';
+  // FEATURE FLAG SEMENTARA: layanan bot WA (auto-send) dimatikan total di
+  // frontend EO sampai gateway (Fonnte) stabil di production. Approve tetap
+  // jalan normal (tidak butuh WA sama sekali) — pembeli download tiket
+  // sendiri di web, EO bisa kirim WA manual/opsional atau broadcast socmed.
+  const BOT_WA_ENABLED = false;
+  const hasBotAccess = BOT_WA_ENABLED && waMode === 'quota';
 
   const formatOrderTicketCategories = (order) => {
     if (!order.tickets || order.tickets.length === 0) return 'Standard Ticket';
@@ -657,6 +662,40 @@ Terima Kasih!
       } else {
         sendManualWhatsAppMessage({ ...updatedOrder, _updatedDispatch: updatedDispatch }, primaryImageUrl);
       }
+    } catch (err) {
+      showToast(err.message || 'Gagal memproses persetujuan.', 'eo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Approve TANPA kirim WA sama sekali — cuma verifikasi bukti bayar & aktifkan
+  // tiket (generate grafis + QR). Pembeli bisa langsung cek/download tiketnya
+  // sendiri di web pakai Kode ID Pesanan. Kirim WA (kalau EO mau) jadi aksi
+  // terpisah & opsional lewat tombol "WA MANUAL" setelah order berstatus PAID.
+  const handleApproveOnly = async (order) => {
+    try {
+      setLoading(true);
+      await updateOrderStatus(order.id, 'paid');
+      const updatedOrder = { ...order, status: 'paid' };
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? updatedOrder : o)));
+
+      const dispatch = buildTicketDispatchPayload(updatedOrder);
+      const ticketUnits = getOrderTicketUnits(updatedOrder);
+
+      showToast('Menyiapkan E-Ticket grafis...', 'info');
+
+      for (const t of ticketUnits) {
+        const hasGrafis = t.ticket_image_url && !t.ticket_image_url.includes('api.qrserver.com');
+        if (!hasGrafis) {
+          const imageUrl = await generateTicketImage(updatedOrder, t);
+          if (imageUrl && t.id) {
+            await supabase.from('tickets').update({ ticket_image_url: imageUrl }).eq('id', t.id);
+          }
+        }
+      }
+
+      showToast('Pesanan disetujui! Tiket sudah aktif & bisa didownload pembeli di web.', 'eo');
     } catch (err) {
       showToast(err.message || 'Gagal memproses persetujuan.', 'eo');
     } finally {
@@ -1942,23 +1981,14 @@ Terima Kasih!
                       <td className="p-3 text-right">
                         {o.status === 'pending' && (
                           <div className="flex items-center justify-end space-x-1.5 whitespace-nowrap">
-                            {hasBotAccess && (
-                              <button
-                                type="button"
-                                onClick={() => handleApprove(o, 'bot')}
-                                className="h-8 px-3 font-black text-[10px] tracking-wider uppercase bg-brand-green/10 border border-brand-green/70 text-brand-green hover:bg-brand-green hover:text-black rounded-md transition-all shadow-[0_0_12px_rgba(57,255,20,0.15)] flex items-center justify-center space-x-1 shrink-0"
-                              >
-                                <Bot className="w-3.5 h-3.5 shrink-0" />
-                                <span>APPROVE (BOT)</span>
-                              </button>
-                            )}
                             <button
                               type="button"
-                              onClick={() => handleApprove(o, 'manual')}
-                              className="h-8 px-3 font-black text-[10px] tracking-wider uppercase bg-brand-purple/10 border border-brand-purple/70 text-brand-purple hover:bg-brand-purple hover:text-white rounded-md transition-all flex items-center justify-center space-x-1 shrink-0"
+                              onClick={() => handleApproveOnly(o)}
+                              title="Verifikasi bukti bayar & aktifkan tiket. Pembeli bisa langsung download sendiri di web. Kirim WA nanti opsional."
+                              className="h-8 px-3 font-black text-[10px] tracking-wider uppercase bg-brand-green/10 border border-brand-green/70 text-brand-green hover:bg-brand-green hover:text-black rounded-md transition-all shadow-[0_0_12px_rgba(57,255,20,0.15)] flex items-center justify-center space-x-1 shrink-0"
                             >
-                              <Send className="w-3.5 h-3.5 shrink-0" />
-                              <span>{hasBotAccess ? 'WA MANUAL' : 'APPROVE (WA MANUAL)'}</span>
+                              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                              <span>APPROVE</span>
                             </button>
                             <button
                               type="button"
@@ -1972,23 +2002,14 @@ Terima Kasih!
                         )}
                         {o.status === 'paid' && (
                           <div className="flex items-center justify-end space-x-1.5 whitespace-nowrap">
-                            {hasBotAccess && (
-                              <button
-                                type="button"
-                                onClick={() => handleResend(o, 'bot')}
-                                className="h-8 px-3 font-black text-[10px] tracking-wider uppercase bg-neutral-900 border border-neutral-700 text-neutral-300 hover:border-brand-green hover:text-brand-green rounded-md transition-all flex items-center justify-center space-x-1 shrink-0"
-                              >
-                                <Bot className="w-3.5 h-3.5 text-brand-green shrink-0" />
-                                <span>BOT RE-SEND</span>
-                              </button>
-                            )}
                             <button
                               type="button"
                               onClick={() => handleResend(o, 'manual')}
+                              title="Opsional: kirim link/gambar tiket manual lewat WA. Pembeli tetap bisa download sendiri via Kode ID Pesanan tanpa ini."
                               className="h-8 px-3 font-black text-[10px] tracking-wider uppercase bg-brand-purple/10 border border-brand-purple/70 text-brand-purple hover:bg-brand-purple hover:text-white rounded-md transition-all flex items-center justify-center space-x-1 shrink-0"
                             >
                               <Send className="w-3.5 h-3.5 shrink-0" />
-                              <span>{hasBotAccess ? 'WA MANUAL' : 'KIRIM ULANG WA'}</span>
+                              <span>WA MANUAL (OPSIONAL)</span>
                             </button>
                           </div>
                         )}

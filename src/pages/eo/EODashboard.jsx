@@ -57,7 +57,11 @@ export const EODashboard = () => {
 
   // resolveWhatsAppMode — pakai effectiveUser agar dapat data terbaru dari DB
   const waMode      = resolveWhatsAppMode(effectiveUser);
-  const hasBotAddon = waMode === 'quota';
+  // Layanan bot WA auto-send sementara dimatikan total di frontend EO
+  // (lihat catatan sama di OrderManagerTab.jsx: BOT_WA_ENABLED). Approve
+  // tiket tetap normal tanpa WA; pembeli download tiket sendiri di web.
+  const BOT_WA_ENABLED = false;
+  const hasBotAddon = BOT_WA_ENABLED && waMode === 'quota';
 
   // waStats: derive langsung dari effectiveUser — single source of truth, tidak ada state terpisah
   const waStats = {

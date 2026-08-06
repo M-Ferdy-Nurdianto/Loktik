@@ -53,6 +53,19 @@ export const Terms = () => {
             <li>Apabila tiket sudah dipindai (*is_scanned = true*), tiket otomatis hangus dan tidak dapat dipergunakan kembali.</li>
           </ul>
         </Card>
+
+        {/* Section 4 */}
+        <Card variant="dark" className="p-4 sm:p-6 space-y-2.5 border-neutral-800">
+          <div className="flex items-center space-x-2 text-brand-purple">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+            <h2 className="text-sm sm:text-base font-extrabold uppercase text-white">4. CARA PENGIRIMAN &amp; PENGAMBILAN E-TIKET</h2>
+          </div>
+          <ul className="text-xs text-neutral-400 font-medium space-y-2 list-disc pl-4 leading-relaxed">
+            <li>Setelah bukti pembayaran diverifikasi &amp; disetujui (*Approve*) oleh Panitia Event, e-tiket Pembeli otomatis aktif dan dapat diakses/diunduh mandiri kapan saja melalui fitur <strong>"CEK TIKET SAYA"</strong> di website menggunakan <strong>Kode ID Pesanan</strong>.</li>
+            <li>Pembeli <strong>wajib menyimpan Kode ID Pesanan</strong> yang diberikan saat checkout. Kehilangan kode ini dapat menghambat proses pengambilan e-tiket.</li>
+            <li>Pengiriman e-tiket melalui WhatsApp oleh Panitia Event (baik otomatis maupun manual) bersifat <strong>opsional/tambahan</strong> dan bukan satu-satunya metode penyerahan e-tiket resmi dari LokTik.</li>
+          </ul>
+        </Card>
       </div>
     </div>
   );

@@ -61,7 +61,6 @@ export const Checkout = () => {
   const [proofFile, setProofFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [completedOrder, setCompletedOrder] = useState(null);
   const [copied, setCopied] = useState(false);
   const [showWaConfirmModal, setShowWaConfirmModal] = useState(false);
 
@@ -159,8 +158,16 @@ export const Checkout = () => {
 
       const newOrder = await createGuestOrder(orderPayload, selectedItems);
       setShowWaConfirmModal(false);
-      setCompletedOrder(newOrder);
-      showToast('PESANAN BERHASIL DIBUAT! TIKET SEDANG DIVERIFIKASI PANITIA.', 'buyer');
+      
+      navigate('/order-success', {
+        state: {
+          event: event,
+          order: newOrder,
+          items: selectedItems,
+          totalAmount: totalAmount,
+          guestName: formData.guestName,
+        }
+      });
     } catch (err) {
       setShowWaConfirmModal(false);
       const errTxt = err.message || 'Gagal memproses transaksi. Coba lagi.';
@@ -171,64 +178,6 @@ export const Checkout = () => {
     }
   };
 
-  if (completedOrder) {
-    const seed = parseInt(completedOrder.id.replace(/[^0-9]/g, '').substring(0, 4) || '1312');
-    const prettyCode = generatePrettyRedeemCode(event.name, seed);
-
-    const handleCopyCode = () => {
-      navigator.clipboard.writeText(prettyCode);
-      showToast(`KODE ID ${prettyCode} BERHASIL DISALIN!`, 'buyer');
-    };
-
-    return (
-      <div className="max-w-xl mx-auto px-4 py-12 text-left space-y-6">
-        <Card variant="blue" className="space-y-5 p-6 sm:p-8 border border-brand-blue/50 shadow-[0_0_50px_rgba(6,182,212,0.3)]">
-          <div className="flex items-center space-x-3 border-b border-neutral-800 pb-4">
-            <CheckCircle2 className="w-8 h-8 text-brand-blue shrink-0" />
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black uppercase text-white tracking-wider">PESANAN TERKIRIM!</h1>
-              <p className="text-xs font-bold text-neutral-300 uppercase">TIKET SEDANG DIVERIFIKASI PANITIA EVENT</p>
-            </div>
-          </div>
-
-          {/* Copyable Order ID Code Box */}
-          <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 space-y-2 text-center">
-            <p className="text-[11px] text-neutral-400 font-bold uppercase tracking-wider">KODE ID PESANAN (UNTUK CEK TIKET):</p>
-            <p className="text-3xl font-black font-mono text-brand-blue tracking-widest">{prettyCode}</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCopyCode}
-              className="mt-2 text-xs font-black uppercase inline-flex items-center space-x-1.5 py-1.5 px-4"
-            >
-              <Copy className="w-3.5 h-3.5 text-brand-blue" />
-              <span>SALIN KODE ID PESANAN</span>
-            </Button>
-          </div>
-
-          <div className="p-3 bg-brand-blue/10 border border-brand-blue/30 rounded-lg text-xs text-neutral-300 font-medium leading-relaxed">
-            📌 <span className="font-bold text-brand-blue">SIMPAN KODE ANDA:</span> Salin dan simpan Kode ID <span className="font-black text-white font-mono">{prettyCode}</span> di atas. Kode ini dapat Anda gunakan kapan saja untuk mengecek status persetujuan e-ticket resmi Anda melalui tombol <span className="font-bold text-brand-blue">"CEK TIKET"</span> di navigasi atas.
-          </div>
-
-          <div className="p-4 bg-neutral-950 rounded-lg border border-neutral-800/80 space-y-1.5 text-xs font-bold">
-            <div className="flex justify-between text-neutral-400">
-              <span>STATUS:</span>
-              <Badge variant="purple" className="text-[10px]">MENUNGGU VERIFIKASI BUKTI</Badge>
-            </div>
-            <div className="flex justify-between text-neutral-400">
-              <span>TOTAL BAYAR:</span>
-              <span className="text-brand-yellow font-mono">{formatRupiah(totalAmount)}</span>
-            </div>
-          </div>
-
-          <Button variant="blue" fullWidth onClick={() => navigate('/')} className="py-3 font-black text-xs uppercase">
-            KEMBALI KE BERANDA
-          </Button>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-6 sm:space-y-8 text-left pb-16">

@@ -14,7 +14,7 @@ export const TermsSection = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-neutral-300">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs text-neutral-300">
         <Card variant="dark" className="p-5 space-y-3 border-neutral-800">
           <div className="flex items-center space-x-2 text-brand-blue">
             <ShieldCheck className="w-5 h-5" />
@@ -42,6 +42,16 @@ export const TermsSection = () => {
           </div>
           <p className="text-neutral-400 font-medium leading-relaxed">
             Satu QR Code tiket berlaku buat 1 kali scan pas ganti tiket fisik di venue. Begitu beres di-scan, status tiket otomatis hangus biar gak dipake ulang.
+          </p>
+        </Card>
+
+        <Card variant="dark" className="p-5 space-y-3 border-neutral-800">
+          <div className="flex items-center space-x-2 text-brand-purple">
+            <FileText className="w-5 h-5" />
+            <h3 className="text-sm font-extrabold uppercase text-white">4. CARA TERIMA E-TIKET</h3>
+          </div>
+          <p className="text-neutral-400 font-medium leading-relaxed">
+            Begitu bukti transfer di-approve panitia, e-tiket kamu langsung aktif &amp; bisa didownload sendiri kapan aja di website pakai Kode ID Pesanan. Kirim ke WhatsApp cuma opsi tambahan dari panitia, bukan satu-satunya jalan — jadi <strong className="text-white">wajib simpan Kode ID Pesanan kamu</strong>.
           </p>
         </Card>
       </div>

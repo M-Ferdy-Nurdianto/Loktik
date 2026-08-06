@@ -82,23 +82,25 @@ Terima Kasih!
       });
 const fonnteData = await response.json();
 
-      // Fonnte balas {status: true/false, code, message, ...} — cek status sebelum success
-      if (fonnteData.status === false) {
-        console.error('Fonnte error:', fonnteData);
-        return res.status(500).json({
+      // Fonnte balikin { status: true/false, reason: "..." } — jangan asumsikan sukses
+      const fonnteOk = fonnteData?.status === true || fonnteData?.status === 'true';
+      if (!fonnteOk) {
+        console.error('Fonnte gagal kirim:', fonnteData);
+        return res.status(502).json({
           success: false,
           provider: 'fonnte',
-          error: fonnteData.reason || fonnteData.message || 'Gagal kirim via Fonnte',
+          error: fonnteData?.reason || 'Fonnte gagal mengirim pesan.',
+          data: fonnteData,
         });
       }
-
       return res.json({ success: true, provider: 'fonnte', data: fonnteData });
     }
 
-    // 2. Fallback Response untuk Vercel Serverless Direct
-    return res.json({
-      success: true,
-      message: 'Permintaan kirim WA Serverless Vercel berhasil diproses.',
+    // 2. FONNTE_TOKEN belum di-set di Environment Variables server
+    console.error('FONNTE_TOKEN tidak ditemukan di environment variables.');
+    return res.status(500).json({
+      success: false,
+      error: 'FONNTE_TOKEN belum diset di Environment Variables server.',
       targetWa,
     });
   } catch (err) {

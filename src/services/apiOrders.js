@@ -35,7 +35,10 @@ export const createGuestOrder = async (orderPayload, items) => {
         qty_requested: item.quantity,
       });
 
-      if (rpcError || !success) {
+      if (rpcError) {
+        throw new Error(rpcError.message || `Gagal memesan tiket '${item.categoryName}'.`);
+      }
+      if (!success) {
         throw new Error(`Kuota tiket '${item.categoryName}' habis atau tidak mencukupi.`);
       }
     }

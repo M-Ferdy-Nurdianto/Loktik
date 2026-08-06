@@ -158,12 +158,15 @@ export const getActiveEvents = async () => {
     return cacheStore.activeEvents;
   }
 
-  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Consider today's events as active
+  const todayIso = today.toISOString();
+
   const { data, error } = await supabase
     .from('events')
     .select('id, slug, name, description, location, poster_url, event_date, open_gate, status, payment_details, ticket_categories(price)')
     .eq('status', 'active')
-    .gte('event_date', fourteenDaysAgo)
+    .gte('event_date', todayIso)
     .order('event_date', { ascending: true });
 
   if (error) throw new Error(error.message);

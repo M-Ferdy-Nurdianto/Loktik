@@ -8,6 +8,7 @@ import { RefreshCw } from 'lucide-react';
 
 const EventDetail = lazy(() => import('./pages/public/EventDetail').then(m => ({ default: m.EventDetail })));
 const Checkout = lazy(() => import('./pages/public/Checkout').then(m => ({ default: m.Checkout })));
+const OrderSuccess = lazy(() => import('./pages/public/OrderSuccess').then(m => ({ default: m.OrderSuccess })));
 const ForEO = lazy(() => import('./pages/public/ForEO').then(m => ({ default: m.ForEO })));
 const Terms = lazy(() => import('./pages/public/Terms').then(m => ({ default: m.Terms })));
 const EOLogin = lazy(() => import('./pages/eo/EOLogin').then(m => ({ default: m.EOLogin })));
@@ -41,6 +42,7 @@ export const App = () => {
                 <Route path="/gate/:eventSlug" element={<GatePortal />} />
                 <Route path="/event/:slug" element={<EventDetail />} />
                 <Route path="/event/:slug/checkout" element={<Checkout />} />
+                <Route path="/order-success" element={<OrderSuccess />} />
               </Routes>
             </Suspense>
           </main>

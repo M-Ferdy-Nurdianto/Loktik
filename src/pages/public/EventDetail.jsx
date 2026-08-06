@@ -271,15 +271,17 @@ export const EventDetail = () => {
               {(event.ticket_categories || []).map((tier) => {
                 const currentQty = quantities[tier.id] || 0;
                 const isUnlimited = tier.quota === null || tier.quota === undefined;
+                const isExpired = tier.end_po && new Date(tier.end_po) < new Date();
                 const isSoldOut = !isUnlimited && tier.quota <= 0;
+                const isDisabled = isSoldOut || isExpired;
 
                 return (
                   <Card key={tier.id} variant="dark" hover className="flex flex-col justify-between space-y-4 p-4 sm:p-5 border border-neutral-800 hover:border-brand-blue/60 transition-colors">
                     <div className="space-y-2">
                       <div className="flex justify-between items-start gap-2">
                         <h3 className="text-sm sm:text-base font-extrabold uppercase text-white leading-tight">{tier.name}</h3>
-                        <Badge variant={isSoldOut ? 'red' : 'blue'} className="shrink-0 text-[9px] font-extrabold">
-                          {isSoldOut ? 'HABIS' : isUnlimited ? 'OPEN PO' : `SISA ${tier.quota}`}
+                        <Badge variant={isExpired ? 'red' : (isSoldOut ? 'red' : 'blue')} className="shrink-0 text-[9px] font-extrabold">
+                          {isExpired ? 'EXPIRED' : (isSoldOut ? 'HABIS' : isUnlimited ? 'OPEN PO' : `SISA ${tier.quota}`)}
                         </Badge>
                       </div>
                       {tier.description && (
@@ -294,7 +296,7 @@ export const EventDetail = () => {
                       <span className="text-[10px] font-bold uppercase text-neutral-400">JUMLAH TIKET:</span>
                       <div className="flex items-center space-x-2.5">
                         <button
-                          disabled={currentQty === 0 || isSoldOut}
+                          disabled={currentQty === 0 || isDisabled}
                           onClick={() => updateQuantity(tier.id, -1, tier.quota)}
                           className="w-8 h-8 bg-neutral-800 text-white rounded-lg flex items-center justify-center hover:bg-brand-red disabled:opacity-30 active:scale-95 transition-transform touch-press"
                           aria-label="Kurangi tiket"
@@ -303,7 +305,7 @@ export const EventDetail = () => {
                         </button>
                         <span className="w-6 text-center font-extrabold text-base text-white">{currentQty}</span>
                         <button
-                          disabled={isSoldOut}
+                          disabled={isDisabled}
                           onClick={() => updateQuantity(tier.id, 1, tier.quota)}
                           className="w-8 h-8 bg-brand-blue text-black rounded-lg flex items-center justify-center hover:bg-[#009fb9] disabled:opacity-30 active:scale-95 transition-transform touch-press"
                           aria-label="Tambah tiket"
