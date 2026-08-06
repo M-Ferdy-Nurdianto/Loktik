@@ -57,6 +57,7 @@ export const MyEventsTab = ({ onNavigateToCreate }) => {
     if (!window.confirm(`Hapus event "${eventName}" beserta seluruh tiket dan gambar di storage?`)) return;
     try {
       setLoading(true);
+      showToast(`Menghapus event "${eventName}"... mohon tunggu.`, 'eo');
       await deleteEventAndFiles(eventId);
       showToast(`Event "${eventName}" dan gambar berhasil dihapus.`, 'eo');
       await fetchEvents(eoUsername);
