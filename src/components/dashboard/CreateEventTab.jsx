@@ -79,13 +79,13 @@ export const CreateEventTab = ({ onEventCreated }) => {
       const t = tiers[idx];
       if (t.startPo) {
         if (isNaN(new Date(t.startPo).getTime())) {
-          showToast(`Tier #${idx + 1}: Waktu Mulai PO belum lengkap (pastikan tanggal & jam terisi).`, 'eo');
+          showToast(`Tier #${idx + 1}: Tanggal Mulai PO tidak valid.`, 'eo');
           return;
         }
       }
       if (t.endPo) {
         if (isNaN(new Date(t.endPo).getTime())) {
-          showToast(`Tier #${idx + 1}: Waktu Berakhir PO belum lengkap (pastikan tanggal & jam terisi).`, 'eo');
+          showToast(`Tier #${idx + 1}: Tanggal Berakhir PO tidak valid.`, 'eo');
           return;
         }
       }
@@ -303,12 +303,12 @@ export const CreateEventTab = ({ onEventCreated }) => {
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <span className="text-[9px] text-neutral-400 font-bold block mb-1">START PO (TGL & JAM)</span>
-                            <input type="datetime-local" value={t.startPo || ''} onChange={(e) => handleTierChange(idx, 'startPo', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-[10px] text-white" />
+                            <span className="text-[9px] text-neutral-400 font-bold block mb-1">START PO (TANGGAL)</span>
+                            <input type="date" value={t.startPo || ''} onChange={(e) => handleTierChange(idx, 'startPo', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-[10px] text-white" />
                           </div>
                           <div>
-                            <span className="text-[9px] text-neutral-400 font-bold block mb-1">END PO (TGL & JAM)</span>
-                            <input type="datetime-local" value={t.endPo || ''} onChange={(e) => handleTierChange(idx, 'endPo', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-[10px] text-white" />
+                            <span className="text-[9px] text-neutral-400 font-bold block mb-1">END PO (TANGGAL)</span>
+                            <input type="date" value={t.endPo || ''} onChange={(e) => handleTierChange(idx, 'endPo', e.target.value)} className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-[10px] text-white" />
                           </div>
                         </div>
                       </div>
