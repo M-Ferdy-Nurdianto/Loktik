@@ -110,13 +110,13 @@ export const useAuth = () => {
 
       let targetSlug = staff.event_slug;
       if (!targetSlug || targetSlug === 'all-events' || targetSlug === 'all') {
-        targetSlug = 'nama-fest-2026-0260';
+        targetSlug = ''; // Will redirect to /gate directly for auto-resolution
       }
 
       return {
         success: true,
         role: 'staff',
-        redirectTo: `/gate/${targetSlug}`,
+        redirectTo: targetSlug ? `/gate/${targetSlug}` : '/gate',
       };
     }
 

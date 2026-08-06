@@ -39,6 +39,7 @@ export const App = () => {
                 <Route path="/eo/login" element={<EOLogin />} />
                 <Route path="/eo/dashboard" element={<EODashboard />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/gate" element={<GatePortal />} />
                 <Route path="/gate/:eventSlug" element={<GatePortal />} />
                 <Route path="/event/:slug" element={<EventDetail />} />
                 <Route path="/event/:slug/checkout" element={<Checkout />} />

@@ -8,7 +8,6 @@ export const StaffFormModal = ({ events = [], onSubmit, onCancel }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState(events[0]?.id || 'SEMUA_EVENT');
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = (e) => {
@@ -18,9 +17,7 @@ export const StaffFormModal = ({ events = [], onSubmit, onCancel }) => {
       setErrorMsg('Username dan Password wajib diisi!');
       return;
     }
-    const assignedEvent = (events && events.length > 0)
-      ? (events.find((ev) => ev.id === selectedEventId) || events[0])
-      : { id: 'SEMUA_EVENT', name: 'Semua Event', slug: 'all-events' };
+    const assignedEvent = { id: 'SEMUA_EVENT', name: 'Semua Event', slug: 'all-events' };
 
     onSubmit({
       name: username.trim(),
@@ -32,13 +29,7 @@ export const StaffFormModal = ({ events = [], onSubmit, onCancel }) => {
     });
   };
 
-  const eventOptions = [
-    { value: 'SEMUA_EVENT', label: 'SEMUA EVENT ACARA' },
-    ...(events || []).map((ev) => ({
-      value: ev.id,
-      label: `${ev.name.toUpperCase()} (${ev.slug})`,
-    })),
-  ];
+
 
   return (
     <Card variant="dark" className="p-4 border border-brand-green/40 bg-[#121212] space-y-4">
@@ -89,15 +80,7 @@ export const StaffFormModal = ({ events = [], onSubmit, onCancel }) => {
           </div>
         </div>
 
-        <div>
-          <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">EVENT DITUGASKAN:</label>
-          <CustomSelect
-            options={eventOptions}
-            value={selectedEventId}
-            onChange={(val) => setSelectedEventId(val)}
-            accentColor="green"
-          />
-        </div>
+
 
         <div className="flex gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onCancel} className="w-1/3 text-xs uppercase">BATAL</Button>

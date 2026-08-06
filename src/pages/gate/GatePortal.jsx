@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { QrCode, Users, Ticket, LogOut, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../../services/supabase';
-import { getEventBySlug } from '../../services/apiEvents';
+import { getEventBySlug, getAllEventsForEo } from '../../services/apiEvents';
 import { useAuth } from '../../hooks/useAuth';
 import { GatePinLock } from './GatePinLock';
 import { Scanner } from './Scanner';
@@ -14,10 +14,12 @@ import { useToast } from '../../context/ToastContext';
 
 export const GatePortal = () => {
   const { eventSlug } = useParams();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { showToast } = useToast();
 
   const [event, setEvent] = useState(null);
+  const [eoEvents, setEoEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
   const [isPinVerified, setIsPinVerified] = useState(false);
@@ -29,16 +31,42 @@ export const GatePortal = () => {
     ? user.permissions
     : { canScan: true, canOts: true, canViewOrders: true };
 
-  useEffect(() => {
-    const fetchEvent = async () => {
+    const fetchEventData = async () => {
+      if (!user) return; // wait for user
       try {
         setLoading(true);
         setErrorMsg(null);
+
+        // Fetch all active events for this EO to populate dropdown
+        const eoName = user.eo_username || user.username || user.name;
+        const allEvents = await getAllEventsForEo(eoName);
+        const activeEvents = allEvents.filter(e => e.status === 'active');
+        setEoEvents(activeEvents);
+
+        if (!eventSlug) {
+          if (activeEvents.length > 0) {
+            navigate(`/gate/${activeEvents[0].slug}`, { replace: true });
+            return;
+          } else {
+            setErrorMsg('EO ini belum memiliki event aktif.');
+            setLoading(false);
+            return;
+          }
+        }
+
         const data = await getEventBySlug(eventSlug);
         setEvent(data);
 
         // Auto verify if staff or EO logged in
         if (user?.role === 'staff' || user?.role === 'eo' || user?.role === 'admin') {
+          // If staff is bound to a specific event, check it. Otherwise allow if global.
+          if (user.role === 'staff' && user.event_slug && user.event_slug !== 'all-events' && user.event_slug !== 'all') {
+            if (user.event_slug !== data.slug) {
+               setErrorMsg('Anda tidak ditugaskan untuk event ini.');
+               setLoading(false);
+               return;
+            }
+          }
           setIsPinVerified(true);
         } else {
           const savedPinSession = sessionStorage.getItem(`gate_auth_${eventSlug}`);
@@ -53,8 +81,8 @@ export const GatePortal = () => {
       }
     };
 
-    if (eventSlug) fetchEvent();
-  }, [eventSlug, user]);
+    fetchEventData();
+  }, [eventSlug, user, navigate]);
 
   // Set default active tab according to allowed permissions
   useEffect(() => {
@@ -144,9 +172,22 @@ export const GatePortal = () => {
       <div className="block sm:hidden bg-[#0f0f0f] border-b border-neutral-800 px-4 py-3">
         {/* Row 1: event name + logout */}
         <div className="flex items-center justify-between gap-2">
-          <h1 className="text-xl font-black uppercase tracking-tight text-white leading-none truncate">
-            {event.name}
-          </h1>
+          {eoEvents.length > 1 ? (
+            <select 
+              value={event.slug}
+              onChange={(e) => {
+                setIsPinVerified(false); // require re-pin on switch
+                navigate(`/gate/${e.target.value}`);
+              }}
+              className="text-lg font-black uppercase tracking-tight text-brand-green bg-transparent border-b-2 border-brand-green/30 outline-none leading-tight truncate appearance-none max-w-[70%]"
+            >
+              {eoEvents.map(ev => <option key={ev.id} value={ev.slug} className="bg-neutral-900 text-white">{ev.name}</option>)}
+            </select>
+          ) : (
+            <h1 className="text-xl font-black uppercase tracking-tight text-brand-green leading-none truncate">
+              {event.name}
+            </h1>
+          )}
           <button
             type="button"
             onClick={handleGateLogout}
@@ -177,10 +218,23 @@ export const GatePortal = () => {
 
       {/* ── DESKTOP HEADER ── */}
       <div className="hidden sm:flex bg-[#121212] p-4 sm:p-5 border-b border-neutral-800 items-center justify-between gap-3 sm:rounded-t">
-        <div className="space-y-0.5">
-          <h1 className="text-2xl font-black uppercase tracking-tight text-white leading-none">
-            {event.name}
-          </h1>
+        <div className="space-y-1">
+          {eoEvents.length > 1 ? (
+            <select 
+              value={event.slug}
+              onChange={(e) => {
+                setIsPinVerified(false); // require re-pin on switch
+                navigate(`/gate/${e.target.value}`);
+              }}
+              className="text-2xl font-black uppercase tracking-tight text-brand-green bg-transparent border-b-2 border-brand-green/30 outline-none leading-none appearance-none cursor-pointer hover:border-brand-green transition-colors"
+            >
+              {eoEvents.map(ev => <option key={ev.id} value={ev.slug} className="bg-neutral-900 text-white">{ev.name}</option>)}
+            </select>
+          ) : (
+            <h1 className="text-2xl font-black uppercase tracking-tight text-brand-green leading-none">
+              {event.name}
+            </h1>
+          )}
           {user?.name && (
             <p className="text-[11px] font-mono text-neutral-500">{user.name}</p>
           )}

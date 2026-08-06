@@ -27,6 +27,21 @@ export const StaffGuide = () => {
       
       <div className="space-y-3">
         <GuideBlock
+          title="Cara Login & Mulai Jaga Gate"
+          icon={<ScanLine className="w-4 h-4" />}
+        >
+          <p>
+            Sebelum bisa mulai scan tiket pengunjung, pastikan kamu sudah:
+          </p>
+          <ul className="list-disc ml-4 mt-2 space-y-1">
+            <li>Minta <strong>Username & Password Akun Staf</strong> ke ketua panitia (EO).</li>
+            <li>Minta <strong>PIN Gate Venue (4-Digit)</strong> khusus untuk event hari ini.</li>
+          </ul>
+          <p className="mt-2">
+            Login ke web pakai akun staf-mu, lalu masukkan PIN 4-Digit saat diminta. Kalau benar, kamu akan langsung diarahkan ke layar scanner kamera!
+          </p>
+        </GuideBlock>
+        <GuideBlock
           title="Arti Status Hasil Scan"
           icon={<Info className="w-4 h-4" />}
         >

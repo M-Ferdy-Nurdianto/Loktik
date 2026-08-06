@@ -32,16 +32,24 @@ export const EoGuideTab = () => {
 
       <div className="space-y-4">
         <GuideBlock
-          title="Bikin Event Baru"
+          title="Bikin Event Baru & Pembayaran"
           icon={<Ticket className="w-4 h-4" />}
         >
           <p>
-            Kalau kamu mau rilis event, pastikan siapkan poster dengan rasio 4:5 (wajib vertikal biar rapi di katalog). 
-            Buka menu <strong className="text-brand-green font-black uppercase">CREATE</strong> di sidebar kiri. 
-            Isi nama event, kategori tiket yang mau dijual, dan batas waktu pre-order (PO).
+            Buka menu <strong className="text-brand-green font-black uppercase">CREATE</strong>. Isi nama acara, deskripsi, dan unggah poster berukuran 4:5 (wajib vertikal biar rapi di katalog).
           </p>
+          <p className="mt-2 text-brand-green font-bold uppercase text-[10px] tracking-widest">METODE PEMBAYARAN TIKET</p>
           <p>
-            Setelah selesai, klik tombol Simpan. Event kamu bakal langsung live di halaman utama LokTik dan siap terima pembeli saat itu juga.
+            Untuk opsi pembayaran dari pembeli, kamu bebas memilih sesuai kebutuhan:
+          </p>
+          <ul className="list-disc ml-4 space-y-1">
+            <li><strong>Hanya pakai QRIS:</strong> Kosongkan kolom Bank/No Rekening, dan langsung unggah gambar QRIS kamu.</li>
+            <li><strong>Hanya pakai Bank Transfer:</strong> Isi nama Bank dan Nomor Rekening, lalu biarkan kolom unggah QRIS kosong.</li>
+            <li><strong>Pakai Keduanya:</strong> Isi no rekening DAN unggah gambar QRIS agar pembeli lebih leluasa.</li>
+          </ul>
+          <p className="mt-2 text-brand-blue font-bold uppercase text-[10px] tracking-widest">TIKET & PUBLIKASI</p>
+          <p>
+            Jangan lupa isi kategori tiket (Tier), harga, dan batas tanggal PO (Pre-Order). Setelah selesai, klik <strong className="text-brand-green font-black uppercase">PUBLIKASIKAN EVENT SEKARANG</strong>. Event kamu langsung *live* di halaman utama LokTik saat itu juga!
           </p>
         </GuideBlock>
 
@@ -91,15 +99,26 @@ export const EoGuideTab = () => {
         </GuideBlock>
 
         <GuideBlock
-          title="Mengatur Tim Staf Gate"
+          title="Akun Staf vs PIN 4-Digit Gate"
           icon={<Users className="w-4 h-4" />}
         >
           <p>
-            Buka menu <strong className="text-brand-green font-black uppercase">STAFF GATE</strong> buat bikin akun khusus staf scanner di lapangan. 
-            Masukin nama dan bikin password/PIN simpel buat mereka login.
+            Buat jaga pintu acara (scanning tiket masuk), sistem ini memakai dua lapis agar aman dan rapi. Bedanya:
           </p>
-          <p>
-            Status akun bakal otomatis ACTIVE. Kalau staf udah selesai tugas, shift-nya habis, atau ada masalah di lapangan, ganti statusnya jadi SUSPENDED biar mereka nggak bisa akses sistem scan lagi dari HP mereka.
+          <ul className="list-disc ml-4 mt-2 space-y-2">
+            <li>
+              <strong>1. Akun Staf Gate:</strong> Ini ibarat "KTP" milik si panitia penjaga pintu. Kamu buat akun ini di menu <strong className="text-brand-green font-black uppercase">STAFF GATE</strong>. Satu akun (username & password) ini dipakai si penjaga untuk masuk ke dalam web LokTik.
+            </li>
+            <li>
+              <strong>2. PIN Gate Venue (4-Digit):</strong> Ini ibarat "Kunci Gembok" khusus untuk satu event tertentu saja. PIN ini kamu buat saat di form Create Event tadi. Tujuannya: Walaupun penjaga punya akun (KTP), mereka tetap harus minta Kunci (PIN 4-digit) ke kamu untuk bisa mengakses event tersebut dan mulai menyeken tiket.
+            </li>
+          </ul>
+          <div className="bg-neutral-900/50 p-3 mt-3 border border-neutral-800 rounded">
+            <span className="text-brand-green font-bold text-[10px] uppercase block mb-1">Alur Kerja Staf Lapangan:</span>
+            Staf Buka Web ➔ Login pakai Akun Staf ➔ Pilih Event ➔ Masukkan PIN 4-Digit Event ➔ Mulai Scan Tiket!
+          </div>
+          <p className="mt-2">
+            Jika staf udah selesai tugas shift-nya, ubah status akunnya jadi <strong className="text-brand-red">SUSPENDED</strong> di menu Staff Gate biar mereka nggak bisa login lagi dari HP mereka.
           </p>
         </GuideBlock>
       </div>
