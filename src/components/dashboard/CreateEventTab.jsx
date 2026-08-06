@@ -70,9 +70,26 @@ export const CreateEventTab = ({ onEventCreated }) => {
     }
 
     const eventTime = new Date(formData.eventDate).getTime();
+    if (isNaN(eventTime)) {
+      showToast('Tanggal Acara & Open Gate belum lengkap atau tidak valid (pastikan jam terisi).', 'eo');
+      return;
+    }
 
     for (let idx = 0; idx < tiers.length; idx++) {
       const t = tiers[idx];
+      if (t.startPo) {
+        if (isNaN(new Date(t.startPo).getTime())) {
+          showToast(`Tier #${idx + 1}: Waktu Mulai PO belum lengkap (pastikan tanggal & jam terisi).`, 'eo');
+          return;
+        }
+      }
+      if (t.endPo) {
+        if (isNaN(new Date(t.endPo).getTime())) {
+          showToast(`Tier #${idx + 1}: Waktu Berakhir PO belum lengkap (pastikan tanggal & jam terisi).`, 'eo');
+          return;
+        }
+      }
+
       if (t.startPo && t.endPo) {
         const startTime = new Date(t.startPo).getTime();
         const endTime = new Date(t.endPo).getTime();
