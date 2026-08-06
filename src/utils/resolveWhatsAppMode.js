@@ -24,10 +24,12 @@
  * @returns {'quota'|'manual'}
  */
 export const resolveWhatsAppMode = (user) => {
-  if (!user) return 'manual';
+  return 'manual'; // DISABLED FOR NOW
+  
+  // if (!user) return 'manual';
 
   // Admin selalu punya akses penuh (pakai quota mode)
-  if (user.role === 'admin') return 'quota';
+  // if (user.role === 'admin') return 'quota';
 
   // Staff tidak mengirim WA langsung
   if (user.role !== 'eo') return 'manual';

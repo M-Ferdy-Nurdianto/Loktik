@@ -245,6 +245,7 @@ export const getEventBySlug = async (slug) => {
     .from('ticket_categories')
     .select('id, name, price, quota, start_po, end_po, description')
     .eq('event_id', event.id)
+    .eq('is_active', true)
     .not('name', 'ilike', '%— OTS%');
 
   const res = { ...event, ticket_categories: tiers || [] };
@@ -461,12 +462,22 @@ export const updateEventData = async (eventId, eventPayload, categoryRows) => {
 
       const referencedSet = new Set((referenced || []).map((t) => t.ticket_category_id));
       const deletableIds = obsoleteIds.filter((id) => !referencedSet.has(id));
+      const keepButHideIds = obsoleteIds.filter((id) => referencedSet.has(id));
+
       if (deletableIds.length > 0) {
         const { error: delError } = await supabase
           .from('ticket_categories')
           .delete()
           .in('id', deletableIds);
         if (delError) throw new Error(`Gagal menghapus kategori tiket: ${delError.message}`);
+      }
+
+      if (keepButHideIds.length > 0) {
+        const { error: hideError } = await supabase
+          .from('ticket_categories')
+          .update({ is_active: false })
+          .in('id', keepButHideIds);
+        if (hideError) throw new Error(`Gagal menyembunyikan kategori tiket lama: ${hideError.message}`);
       }
     }
   }
@@ -534,6 +545,7 @@ export const getOtsTickets = async (eventId) => {
     .from('ticket_categories')
     .select('id, name, price, quota, description')
     .eq('event_id', eventId)
+    .eq('is_active', true)
     .ilike('name', '%— OTS%');
   if (error) throw new Error(error.message);
   return data || [];
@@ -550,6 +562,7 @@ export const getPresaleTickets = async (eventId) => {
     .from('ticket_categories')
     .select('id, name, price, quota, start_po, end_po, description')
     .eq('event_id', eventId)
+    .eq('is_active', true)
     .not('name', 'ilike', '%— OTS%');
   if (error) throw new Error(error.message);
   return data || [];

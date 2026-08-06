@@ -33,7 +33,7 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
   useEffect(() => {
     const fetchTiers = async () => {
       try {
-        const { data } = await supabase.from('ticket_categories').select('*').eq('event_id', event.id);
+        const { data } = await supabase.from('ticket_categories').select('*').eq('event_id', event.id).eq('is_active', true);
         if (data && data.length > 0) {
           const combinedTiers = [];
           data.forEach(t => {

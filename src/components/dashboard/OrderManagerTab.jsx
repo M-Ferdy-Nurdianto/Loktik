@@ -177,17 +177,8 @@ export const OrderManagerTab = () => {
   };
 
   const checkBotStatus = async () => {
-    try {
-      const res = await fetch(`${botServerUrl}/api/status`);
-      if (res.ok) {
-        const data = await res.json();
-        setBotStatus(data.botState === 'connected' ? 'online' : 'connecting');
-      } else {
-        setBotStatus('offline');
-      }
-    } catch (e) {
-      setBotStatus('offline');
-    }
+    setBotStatus('offline');
+    return;
   };
 
   const fetchLiveEoData = async (eoId) => {
