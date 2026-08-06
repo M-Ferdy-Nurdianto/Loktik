@@ -235,7 +235,7 @@ export const OrderManagerTab = () => {
     ? orders
     : orders.filter((o) => o.event_id === selectedEventId);
 
-  const isOtsOrder = (o) => Boolean(o.guest_name && (o.guest_name.startsWith('OTS') || o.guest_name.startsWith('Pembeli OTS')));
+  const isOtsOrder = (o) => Boolean(o.is_ots);
 
   const poOrders = filteredOrders.filter((o) => !isOtsOrder(o));
   const otsOrders = filteredOrders.filter((o) => isOtsOrder(o));

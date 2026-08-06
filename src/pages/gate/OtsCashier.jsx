@@ -18,6 +18,7 @@ export const OtsCashier = ({ eventId }) => {
   const [selectedCatId, setSelectedCatId] = useState('');
   const [qty, setQty] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [guestName, setGuestName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
 
@@ -71,7 +72,7 @@ export const OtsCashier = ({ eventId }) => {
       const timestamp = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
       const orderPayload = {
         event_id: eventId,
-        guest_name: `OTS (${paymentMethod === 'QRIS' ? 'QRIS' : 'CASH'})`,
+        guest_name: guestName.trim() ? guestName.trim().toUpperCase() : `OTS (${paymentMethod === 'QRIS' ? 'QRIS' : 'CASH'})`,
         guest_wa: '080000000000',
         guest_ig: 'OTS Venue',
         total_price: totalPrice,
@@ -96,6 +97,7 @@ export const OtsCashier = ({ eventId }) => {
       setSuccessMsg(succMsg);
       showToast(succMsg, 'staff');
       setQty(1);
+      setGuestName('');
     } catch (err) {
       showToast(err.message || 'Gagal memproses transaksi OTS.', 'staff');
     } finally {
@@ -121,6 +123,18 @@ export const OtsCashier = ({ eventId }) => {
         )}
 
         <form onSubmit={handleSubmitOts} className="space-y-4">
+          {/* Guest Name Optional */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 block">NAMA PEMBELI (OPSIONAL):</label>
+            <input
+              type="text"
+              placeholder="Contoh: Budi"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              className="w-full bg-[#181818] border border-neutral-800 text-white text-sm font-bold px-3 py-2.5 rounded focus:border-brand-purple outline-none"
+            />
+          </div>
+
           {/* Ticket Category 1-Tap Selectable Cards */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 block">PILIH KATEGORI TIKET:</label>

@@ -16,7 +16,7 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
     name: event.name || '',
     location: event.location || '',
     eventDate: event.event_date ? new Date(event.event_date).toISOString().slice(0, 16) : '',
-    openGate: event.open_gate ? new Date(event.open_gate).toISOString().slice(0, 16) : '',
+    openGateTime: event.open_gate ? new Date(event.open_gate).toTimeString().slice(0, 5) : '',
     description: event.description || '',
     bankName: payDetails.bank_name || payDetails.bank || 'BCA',
     accountNumber: payDetails.account_no || payDetails.number || '',
@@ -123,7 +123,7 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
         description: formData.description,
         poster_url: posterUrl,
         event_date: new Date(formData.eventDate).toISOString(),
-        open_gate: new Date(formData.openGate || formData.eventDate).toISOString(),
+        open_gate: new Date(`${formData.eventDate.split('T')[0]}T${formData.openGateTime || formData.eventDate.split('T')[1]}`).toISOString(),
         payment_details: {
           bank_name: formData.bankName,
           account_no: formData.accountNumber,
@@ -185,8 +185,8 @@ export const EditEventModal = ({ event, onSaved, onCancel }) => {
                   <input type="datetime-local" required value={formData.eventDate} onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })} className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-[11px] text-white" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">OPEN GATE:</label>
-                  <input type="datetime-local" value={formData.openGate} onChange={(e) => setFormData({ ...formData, openGate: e.target.value })} className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-[11px] text-white" />
+                  <label className="text-[10px] font-black uppercase text-neutral-400 block mb-1">OPEN GATE (JAM):</label>
+                  <input type="time" value={formData.openGateTime} onChange={(e) => setFormData({ ...formData, openGateTime: e.target.value })} className="w-full px-2.5 py-1.5 bg-neutral-950 border border-neutral-800 rounded text-[11px] text-white" />
                 </div>
               </div>
 
