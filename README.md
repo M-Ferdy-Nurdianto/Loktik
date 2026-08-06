@@ -1,8 +1,19 @@
 # LokTik
 
+> ⚠️ **PERHATIAN: REPOSITORY INI HANYA UNTUK BAHAN DOKUMENTASI DAN PORTOFOLIO** ⚠️
+>
+> Source code (SC) di dalam repository ini **DILARANG KERAS** untuk disalin, digandakan, didistribusikan, dijual, atau digunakan untuk keperluan komersial maupun pribadi oleh pihak manapun tanpa izin tertulis dari pemilik (Ferdy Nurdianto). Repository ini bersifat *closed-source* dan dipublikasikan murni sebagai dokumentasi serta referensi portofolio.
+
 **Platform Tiket Digital & POS Venue — Direct Ke Panitia Event**
 
-LokTik adalah platform ticketing berbasis web yang memungkinkan Event Organizer (EO) membuat event, menjual tiket digital (presale + OTS), memverifikasi pembayaran, mengirim e-tiket otomatis via WhatsApp, dan melakukan scan/check-in tiket di gate venue. Seluruh dana pembayaran langsung masuk rekening panitia (tanpa potongan platform) dan tiket dikirim lewat WhatsApp dengan gambar grafis + QR code unik.
+**Apa itu LokTik?**
+LokTik adalah solusi platform *ticketing* modern berbasis web yang dibangun khusus untuk memudahkan Event Organizer (EO), promotor, dan komunitas independen dalam menyelenggarakan acara. LokTik mendisrupsi model *ticketing* konvensional dengan memotong perantara (middleman), sehingga seluruh ekosistem transaksi berjalan secara langsung (direct).
+
+Fitur unggulan LokTik:
+- **0% Potongan Komisi:** Seluruh dana pembayaran tiket langsung masuk ke rekening bank atau QRIS milik panitia EO. LokTik tidak memotong, menahan, atau mengendapkan dana sepeser pun.
+- **E-Tiket WhatsApp Otomatis:** Setelah pembayaran divalidasi, pembeli langsung menerima e-tiket berbentuk gambar grafis estetik yang dilengkapi *QR code* unik langsung via WhatsApp.
+- **Sistem POS & Scanner Terpadu:** Membantu panitia di *gate venue* (pintu masuk) dengan aplikasi scanner yang bisa diakses di HP apa saja, mencegah tiket palsu/ganda, serta kasir OTS (On The Spot) untuk pembelian tiket langsung di lokasi.
+- **Manajemen Event Mandiri:** EO bisa dengan mudah membuat tier tiket (Presale, Normal, VIP), memantau statistik penjualan secara *real-time*, dan mengelola staf *gate*.
 
 ---
 
@@ -410,22 +421,22 @@ npm run dev            # http://localhost:3000 (auto-open browser)
 
 ---
 
-## Catatan Penggunaan
+## Catatan Penggunaan & Dokumentasi
 
-- Repository ini **hanya untuk penggunaan internal** oleh tim pengembang LokTik.
-- Dilarang meng-clone, mempublikasikan, atau meng-klaim sebagai portofolio pribadi atau komersial tanpa persetujuan tertulis dari pemilik hak cipta.
-- Semua kontribusi harus melalui pull request yang disetujui oleh pemilik repository.
+- Repository ini **hanya untuk bahan dokumentasi dan portofolio** oleh pengembang LokTik.
+- **DILARANG KERAS** meng-clone, menyalin, menggunakan (*deploy*), memodifikasi, mempublikasikan, atau meng-klaim source code (SC) ini sebagai milik pribadi atau untuk tujuan komersial maupun non-komersial tanpa persetujuan tertulis dari pemilik hak cipta.
+- Segala bentuk pelanggaran hak cipta atas source code ini dapat ditindak sesuai hukum yang berlaku.
 
 ---
 
 ## Hak Cipta & Lisensi
 
-```
-© 2024‑2026 Ferdy Nurdianto. Semua hak dilindungi.
+```text
+© 2024‑2026 Ferdy Nurdianto. Semua hak dilindungi (All Rights Reserved).
 
-Lisensi: **All Rights Reserved**
+Lisensi: PROPRIETARY (TIDAK OPEN SOURCE)
 
-Penggunaan, distribusi, atau modifikasi kode tanpa izin tertulis dari pemilik hak cipta dilarang keras.
+Source code ini BUKAN open source. Penggunaan, distribusi, komersialisasi, atau modifikasi kode ini oleh pihak manapun sangat dilarang keras.
 ```
 
 ---

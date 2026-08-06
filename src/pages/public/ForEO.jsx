@@ -29,8 +29,8 @@ export const ForEO = () => {
       desc: 'Satu QR Code tiket cuma bisa di-scan 1 kali pas penukaran tiket fisik di venue. Setelah di-scan, status tiket otomatis terkunci biar nggak bisa dipake ganda.',
     },
     {
-      title: '5. RETENSI DATA EVENT & TIKET (OTOMATIS HAPUS 2 MINGGU)',
-      desc: 'Demi menjaga server tetep ringan & kenceng, data transaksi & tiket event bakal otomatis terhapus bersih dari database 2 minggu setelah tanggal acara kelar.',
+      title: '5. RETENSI DATA EVENT & TIKET (OTOMATIS HAPUS 7 HARI)',
+      desc: 'Demi menjaga server tetep ringan & kenceng, data transaksi & tiket event bakal otomatis terhapus bersih dari database 7 hari setelah tanggal acara kelar.',
     },
   ];
 
@@ -177,10 +177,10 @@ export const ForEO = () => {
       <Card variant="dark" className="p-4 sm:p-5 border border-brand-yellow/60 bg-brand-yellow/10 space-y-2">
         <div className="flex items-center space-x-2 text-brand-yellow">
           <Clock className="w-5 h-5 shrink-0" />
-          <h3 className="text-xs sm:text-sm font-black uppercase tracking-wide">PENTING: ATURAN RETENSI DATA EVENT (OTOMATIS HAPUS 2 MINGGU)</h3>
+          <h3 className="text-xs sm:text-sm font-black uppercase tracking-wide">PENTING: ATURAN RETENSI DATA EVENT (OTOMATIS HAPUS 7 HARI)</h3>
         </div>
         <p className="text-xs text-neutral-200 font-medium leading-relaxed sm:pl-7">
-          Setiap data event, daftar transaksi pesanan, tiket QR Code, dan bukti bayar yang sudah selesai akan <strong className="text-brand-yellow underline">otomatis dibersihkan &amp; dihapus oleh sistem 14 hari (2 minggu) setelah tanggal event berakhir</strong>. Harap lakukan ekspor/rekapan data penjualan sebelum batas waktu tersebut (peta tombol <strong className="text-brand-blue">EXPORT EXCEL</strong> &amp; <strong className="text-brand-purple">EXPORT PDF</strong> tersedia di Dashboard EO).
+          Setiap data event, daftar transaksi pesanan, tiket QR Code, dan bukti bayar yang sudah selesai akan <strong className="text-brand-yellow underline">otomatis dibersihkan &amp; dihapus oleh sistem 7 hari setelah tanggal event berakhir</strong>. Harap lakukan ekspor/rekapan data penjualan sebelum batas waktu tersebut (peta tombol <strong className="text-brand-blue">EXPORT EXCEL</strong> &amp; <strong className="text-brand-purple">EXPORT PDF</strong> tersedia di Dashboard EO).
         </p>
       </Card>
 
